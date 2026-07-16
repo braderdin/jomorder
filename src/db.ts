@@ -158,4 +158,43 @@ export async function updateStatusPenghantaran(
 
 // End: Fasa 5 - Subscription Cache + Order Lifecycle Persistence
 
+// Start: Fasa 6 - Full Order State Machine Persistence
+// Fasal 7 Strategy 1 (RLS via kedai_id binding) + Fasal 4 (SOA).
+// `updateOrderState` commit penuh status_pembayaran + status_penghantaran
+// dalam satu PATCH atomik (simulasi transaction) bagi elak race-condition
+// bila admin override / pelanggan bayar serentak.
+
+/** Payload state mesin pesanan (Strategy 3 commit point). */
+export interface OrderStatePayload {
+  status_pembayaran?: string;
+  status_penghantaran?: string;
+  bukti_resit_url?: string;
+}
+
+/**
+ * Persist penuh state mesin pesanan ke rekod_pesanan.
+ * Query diikat ke kedai_id (multi-tenant isolation, Fasal 7 Strategy 1).
+ * @returns true jika PATCH berjaya
+ */
+export async function updateOrderState(
+  env: Env,
+  orderId: number,
+  kedaiId: string,
+  payload: OrderStatePayload
+): Promise<boolean> {
+  const url = `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?id=eq.${orderId}&kedai_id=eq.${kedaiId}`;
+  try {
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+      body: JSON.stringify(payload),
+    });
+    return res.ok;
+  } catch {
+    return false; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+
+// End: Fasa 6 - Full Order State Machine Persistence
+
 // End: JomOrder Fasa 4 - Supabase Data Layer (Fail 1)

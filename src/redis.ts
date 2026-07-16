@@ -116,4 +116,27 @@ export async function getSubscriptionCache(
 
 // End: Fasa 5 - Subscription Status Cache
 
+// Start: Fasa 6 - Subscription Cache Invalidation Hook
+// Fasal 7 Strategy 2 (Redis fast-path shield).
+// Dipanggil bila admin buat manual override (status langganan / tamat timestamp)
+// supaya cache `sub:{id}` digugur serentak & next read paksa fetch DB segar.
+export async function invalidateSubscriptionCache(
+  env: Env,
+  telegramId: number
+): Promise<void> {
+  await redisCommand(env, ['DEL', subKey(telegramId)]);
+}
+
+/** Gugur cache untuk senarai peniaga serentak (batch, untuk scheduler loop). */
+export async function invalidateSubscriptionCacheBatch(
+  env: Env,
+  telegramIds: number[]
+): Promise<void> {
+  for (const id of telegramIds) {
+    await invalidateSubscriptionCache(env, id);
+  }
+}
+
+// End: Fasa 6 - Subscription Cache Invalidation Hook
+
 // End: JomOrder Fasa 4 - Upstash Redis State & Cart Engine (Fail 2)

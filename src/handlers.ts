@@ -3,10 +3,11 @@
 // Fasal 6 (escape + mobile keyboard) + Fasal 4 (SOA)
 import { Env, TelegramUpdate, MerchantState } from './types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, customerMenuKeyboard } from './telegram';
-import { checkMerchantExists, daftarKedaiPermulaan, ambilKedaiBerhampiran } from './db';
-import { setState, getState } from './redis';
+import { checkMerchantExists, daftarKedaiPermulaan, ambilKedaiBerhampiran, updateOrderState } from './db';
+import { setState, getState, invalidateSubscriptionCacheBatch } from './redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from './subscription';
 import { isSearchRestricted, transitionOrderStatus, OrderLifecycle } from './orders';
+import { dispatchSubscriptionAlerts } from './services/scheduler';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -33,6 +34,8 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       const subStatus = await getSubscriptionStatus(env, cb.from.id);
       const next = await transitionOrderStatus(env, orderId, kedaiId, currentStatus, subStatus);
       if (next) {
+        // Fasa 6: Persist penuh state mesin pesanan ke DB (atomik via updateOrderState)
+        await updateOrderState(env, orderId, kedaiId, { status_penghantaran: next });
         await sendMessage(
           env,
           cbChatId,
@@ -170,5 +173,20 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), merchantMenuKeyboard());
 }
+
+// Start: Fasa 6 - Scheduled Maintenance Wiring
+// Mengikat scheduler amaran (HAMPIR_TAMAT/TAMAT) dengan cache invalidation hook.
+// Dipanggil dari cron / scheduled invocation (index.ts) bagi loop automasi penuh.
+export async function runScheduledMaintenance(env: Env): Promise<number> {
+  // 1. Scan + flag + dispatch amaran ke peniaga
+  const scanned = await dispatchSubscriptionAlerts(env);
+  // 2. Invalidate cache untuk semua peniaga terjejas supaya next read segar
+  const ids = scanned.map((r) => r.telegramId);
+  if (ids.length > 0) {
+    await invalidateSubscriptionCacheBatch(env, ids);
+  }
+  return ids.length;
+}
+// End: Fasa 6 - Scheduled Maintenance Wiring
 
 // End: JomOrder Fasa 4 - Message Router & Onboarding Logic (Fail 3)
