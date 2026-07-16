@@ -4,11 +4,12 @@
 import { Env, TelegramUpdate, MerchantState } from './types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, customerMenuKeyboard } from './telegram';
 import { checkMerchantExists, daftarKedaiPermulaan, ambilKedaiBerhampiran, updateOrderState, commitOrderPayload } from './db';
-import { setState, getState, invalidateSubscriptionCacheBatch } from './redis';
+import { setState, getState, invalidateSubscriptionCache, invalidateSubscriptionCacheBatch } from './redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from './subscription';
 import { isSearchRestricted, transitionOrderStatus, OrderLifecycle } from './orders';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
 import { generateDuitNowQrText, buildPaymentReceiptLayout } from './services/payment';
+import { buildDecisionCaption } from './services/admin';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -83,6 +84,61 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       return;
     }
     // End: Fasa 7 - Payment Confirmation (DuitNow QR Checkout)
+
+    // Start: Fasa 8 - Admin Approval Gateway callback router
+    // Nod payload: approve_shop:{shopId}:{merchantTgId} | reject_shop:{shopId}:{merchantTgId}
+    if (data.startsWith('approve_shop:') || data.startsWith('reject_shop:')) {
+      const parts = data.split(':');
+      const shopId = parts[1] || '';
+      const merchantTgId = Number(parts[2] || 0);
+      const approved = data.startsWith('approve_shop:');
+
+      // Switch status_kedai di Supabase (service_role bypass RLS, Fasal 7 Strategy 1)
+      const patchUrl = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${shopId}`;
+      await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({ status_kedai: approved ? 'DILULUSKAN' : 'DITOLAK' }),
+      });
+
+      // Clear Redis cache segera (Fasal 7 Strategy 2)
+      if (merchantTgId) await invalidateSubscriptionCache(env, merchantTgId);
+
+      // Answer callback (buang spinner) - inline fetch, tiada tambah file
+      await fetch(
+        `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callback_query_id: cb.id,
+            text: approved ? '✅ Diluluskan' : '⛔ Ditolak',
+          }),
+        }
+      );
+
+      // Kapsyen ke admin + notifikasi terus ke peniaga
+      await sendMessage(env, cbChatId, buildDecisionCaption(approved, shopId), merchantMenuKeyboard());
+      if (merchantTgId) {
+        await sendMessage(
+          env,
+          merchantTgId,
+          escapeMarkdownV2(
+            approved
+              ? '🎉 Permohonan kedai ANDA DILULUSKAN! Anda kini boleh terima pesanan.'
+              : '⛔ Permohonan kedai anda DITOLAK. Sila hubungi sokongan.'
+          ),
+          merchantMenuKeyboard()
+        );
+      }
+      return;
+    }
+    // End: Fasa 8 - Admin Approval Gateway callback router
+
     return; // callback lain diabaikan buat masa ini
   }
   // End: Fasa 5 - Order Lifecycle callback router
