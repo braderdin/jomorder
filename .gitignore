@@ -148,6 +148,9 @@ vite.config.ts.timestamp-*
 env.local
 .dev.vars
 
+# Hidden local session tracker (Fasal: Local Dev Log - never commit)
+.memory_hidden/
+
 
 # Secrets & Templates
 .dev.vars

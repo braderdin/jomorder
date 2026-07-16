@@ -84,4 +84,36 @@ export async function getCart(
   }
 }
 
+// Start: Fasa 5 - Subscription Status Cache (Free-tier quota shield)
+// Fasal 7 Strategy 2: cache langganan di Redis supaya setiap mesej masuk
+// tak perlu tembak Supabase. Key namespace selari `state:{id}` engine.
+const SUB_TTL_SECONDS = 300; // 5-min cache window untuk elak spike DB
+const subKey = (id: number) => `sub:${id}`;
+
+/** Tulis status langganan ke cache Redis (fast-path). */
+export async function setSubscriptionCache(
+  env: Env,
+  telegramId: number,
+  status: string
+): Promise<void> {
+  await redisCommand(env, [
+    'SET',
+    subKey(telegramId),
+    status,
+    'EX',
+    SUB_TTL_SECONDS,
+  ]);
+}
+
+/** Baca status langganan dari cache; null jika tiada / tamat tempoh. */
+export async function getSubscriptionCache(
+  env: Env,
+  telegramId: number
+): Promise<string | null> {
+  const raw = await redisCommand(env, ['GET', subKey(telegramId)]);
+  return typeof raw === 'string' ? raw : null;
+}
+
+// End: Fasa 5 - Subscription Status Cache
+
 // End: JomOrder Fasa 4 - Upstash Redis State & Cart Engine (Fail 2)

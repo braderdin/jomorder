@@ -53,6 +53,12 @@ ALTER TABLE senarai_kedai
     ADD COLUMN IF NOT EXISTS merchant_telegram_id TEXT UNIQUE;
 -- End: Fasa 4
 
+-- Start: Fasa 5 - Tambah tamat_langganan_pada (subscription expiry timestamp)
+-- Fasal 13: DDL sync log. Rekod masa tepat langganan tamat untuk grace-period.
+ALTER TABLE senarai_kedai
+    ADD COLUMN IF NOT EXISTS tamat_langganan_pada TIMESTAMPTZ;
+-- End: Fasa 5
+
 CREATE INDEX IF NOT EXISTS idx_senarai_kedai_geo
     ON senarai_kedai (latitude_kedai, longitude_kedai);
 

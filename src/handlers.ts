@@ -6,7 +6,7 @@ import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, customerMenuKeyboa
 import { checkMerchantExists, daftarKedaiPermulaan, ambilKedaiBerhampiran } from './db';
 import { setState, getState } from './redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from './subscription';
-import { isSearchRestricted } from './orders';
+import { isSearchRestricted, transitionOrderStatus, OrderLifecycle } from './orders';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -19,6 +19,40 @@ function daftarKedaiKeyboard() {
 
 /** Routing utama untuk setiap update masuk. */
 export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<void> {
+  // Start: Fasa 5 - Order Lifecycle callback router (PENDING->MEMASAK->DELIVERY->COMPLETED)
+  // Callback data format: order_next:{orderId}:{kedaiId}:{currentStatus}
+  const cb = update.callback_query;
+  if (cb?.from) {
+    const cbChatId = cb.message?.chat.id ?? cb.from.id;
+    const data = cb.data || '';
+    if (data.startsWith('order_next:')) {
+      const parts = data.split(':');
+      const orderId = Number(parts[1]);
+      const kedaiId = parts[2] || '';
+      const currentStatus = (parts[3] || 'PENDING') as OrderLifecycle;
+      const subStatus = await getSubscriptionStatus(env, cb.from.id);
+      const next = await transitionOrderStatus(env, orderId, kedaiId, currentStatus, subStatus);
+      if (next) {
+        await sendMessage(
+          env,
+          cbChatId,
+          escapeMarkdownV2(`✅ Pesanan #${orderId} dikemas kini: ${currentStatus} → ${next}`),
+          merchantMenuKeyboard()
+        );
+      } else {
+        await sendMessage(
+          env,
+          cbChatId,
+          escapeMarkdownV2('⚠️ Tidak dapat kemas kini pesanan \\(sudah COMPLETED atau disekat grace-period\\)\\.'),
+          merchantMenuKeyboard()
+        );
+      }
+      return;
+    }
+    return; // callback lain diabaikan buat masa ini
+  }
+  // End: Fasa 5 - Order Lifecycle callback router
+
   const msg = update.message;
   if (!msg?.from) return;
 

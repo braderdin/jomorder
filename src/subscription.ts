@@ -4,6 +4,7 @@
 
 import { Env } from './types';
 import { sendMessage, escapeMarkdownV2 } from './telegram';
+import { getSubscriptionCache, setSubscriptionCache } from './redis';
 
 /** Status langganan peniaga (selaras schema senarai_kedai.status_langganan). */
 export type LanggananStatus = 'AKTIF' | 'HAMPIR_TAMAT' | 'TAMAT';
@@ -22,7 +23,9 @@ export function normalizeLangganan(raw: string | null | undefined): LanggananSta
 }
 
 /**
- * Dapatkan status langganan peniaga dari senarai_kedai.
+ * Dapatkan status langganan peniaga dengan Redis cache-first pattern.
+ * Setiap mesej masuk periksa Redis (sub:{id}) dulu sebelum tembak Supabase
+ * untuk lindungi free-tier quota dari traffic spike (Fasal 7 Strategy 2).
  * RLS bypass via service_role; query diikat ke merchant_telegram_id (Fasal 7 S1).
  * Soft-fail: jika gagal, return 'AKTIF' (fail-open, Fasal 7 S4).
  */
@@ -30,6 +33,10 @@ export async function getSubscriptionStatus(
   env: Env,
   telegramId: number
 ): Promise<LanggananStatus> {
+  // Fast-path: Redis cache (Fasal 7 Strategy 2)
+  const cached = await getSubscriptionCache(env, telegramId);
+  if (cached) return normalizeLangganan(cached);
+
   const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${telegramId}&select=status_langganan&limit=1`;
   try {
     const res = await fetch(url, {
@@ -43,7 +50,9 @@ export async function getSubscriptionStatus(
     if (!res.ok) return 'AKTIF';
     const rows = (await res.json()) as Array<{ status_langganan?: string }>;
     if (!Array.isArray(rows) || rows.length === 0) return 'AKTIF';
-    return normalizeLangganan(rows[0].status_langganan);
+    const status = normalizeLangganan(rows[0].status_langganan);
+    await setSubscriptionCache(env, telegramId, status);
+    return status;
   } catch {
     return 'AKTIF';
   }

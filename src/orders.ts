@@ -2,7 +2,9 @@
 // Fasal 4 (SOA) + Fasal 7 Strategy 3 (cart buffer -> rekod_pesanan commit)
 // Fasa 5: PENDING -> MEMASAK -> DELIVERY -> COMPLETED dengan Grace Period guard.
 
+import { Env } from './types';
 import { LanggananStatus } from './subscription';
+import { updateStatusPenghantaran } from './db';
 
 /** Kitar hayat pesanan (selaras rekod_pesanan.status_penghantaran). */
 export type OrderLifecycle = 'PENDING' | 'MEMASAK' | 'DELIVERY' | 'COMPLETED';
@@ -55,5 +57,36 @@ export function canMerchantUpdateOrder(
 export function isSearchRestricted(merchantStatus: LanggananStatus): boolean {
   return merchantStatus === 'TAMAT';
 }
+
+// Start: Fasa 5 - Order Lifecycle Persistence (DB commit on transition)
+/**
+ * Lakukan peralihan status pesanan & PERSIST ke rekod_pesanan.status_penghantaran.
+ * Grace Period: jika langganan TAMAT tetapi pesanan masih aktif, benarkan.
+ *
+ * @param env bindings Worker
+ * @param orderId ID rekod_pesanan
+ * @param kedaiId UUID kedai (RLS isolation - Fasal 7 Strategy 1)
+ * @param currentStatus status semasa (daripada DB / callback)
+ * @param merchantStatus status langganan peniaga (untuk Grace guard)
+ * @returns status baharu jika berjaya; null jika disekat/gagal
+ */
+export async function transitionOrderStatus(
+  env: Env,
+  orderId: number,
+  kedaiId: string,
+  currentStatus: OrderLifecycle,
+  merchantStatus: LanggananStatus
+): Promise<OrderLifecycle | null> {
+  // Grace Period guard: halang update jika tak dibenarkan
+  if (!canMerchantUpdateOrder(merchantStatus, currentStatus)) return null;
+
+  const next = nextOrderState(currentStatus);
+  if (!next) return null; // sudah COMPLETED
+
+  const ok = await updateStatusPenghantaran(env, orderId, kedaiId, next);
+  return ok ? next : null;
+}
+
+// End: Fasa 5 - Order Lifecycle Persistence (DB commit on transition)
 
 // End: JomOrder Fasa 5 - Order Lifecycle State Manager (Fail 2)
