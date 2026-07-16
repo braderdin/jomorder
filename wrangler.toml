@@ -1,0 +1,33 @@
+# Start: JomOrder Fasa 3 - Cloudflare Worker Blueprint
+# Fasal 11 (wrangler.toml consistency) - bindings selaras 1:1 dengan src/types.ts Env
+name = "jomorder-worker"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Variables (bukan-rahsia, selamat dibaca awam)
+[vars]
+SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"
+SUPABASE_ANON_KEY = "YOUR-ANON-KEY"
+UPSTASH_REDIS_REST_URL = "https://YOUR-UPSTASH-ENDPOINT.upstash.io"
+
+# Secrets (rahsia - isi guna: npx wrangler secret put <NAME>)
+# TELEGRAM_BOT_TOKEN
+# X_TELEGRAM_BOT_API_SECRET_TOKEN
+# SUPABASE_SERVICE_ROLE_KEY
+# UPSTASH_REDIS_REST_TOKEN
+
+# R2 Bucket (Fasal 8 media optimization) - optional
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "jomorder-media"
+
+# KV Namespace (Fasal 7 Strategy 2 fallback state) - optional
+[[kv_namespaces]]
+binding = "MERCHANT_STATE"
+id = "REPLACE-WITH-KV-ID"
+
+# Observability
+[observability]
+enabled = true
+# End: JomOrder Fasa 3 - Cloudflare Worker Blueprint
