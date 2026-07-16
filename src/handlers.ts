@@ -2,9 +2,11 @@
 // Fasal 7 Strategy 2 (state persist) + Strategy 1 (RLS DB check)
 // Fasal 6 (escape + mobile keyboard) + Fasal 4 (SOA)
 import { Env, TelegramUpdate, MerchantState } from './types';
-import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from './telegram';
-import { checkMerchantExists, daftarKedaiPermulaan } from './db';
+import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, customerMenuKeyboard } from './telegram';
+import { checkMerchantExists, daftarKedaiPermulaan, ambilKedaiBerhampiran } from './db';
 import { setState, getState } from './redis';
+import { getSubscriptionStatus, sendExpiryAlert, isExpired } from './subscription';
+import { isSearchRestricted } from './orders';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -18,21 +20,45 @@ function daftarKedaiKeyboard() {
 /** Routing utama untuk setiap update masuk. */
 export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<void> {
   const msg = update.message;
-  if (!msg?.text || !msg.from) return;
+  if (!msg?.from) return;
 
   const chatId = msg.chat.id;
   const tgId = msg.from.id;
-  const text = msg.text.trim();
+
+  // Fasa 5: Pelanggan hantar lokasi -> RPC ambil_kedai_berhampiran auto-exclude TAMAT
+  if (msg.location) {
+    const kedai = await ambilKedaiBerhampiran(env, msg.location.latitude, msg.location.longitude);
+    if (kedai.length === 0) {
+      await sendMessage(env, chatId, escapeMarkdownV2('Tiada kedai berdekatan dalam radius 10km 🍽️'));
+      return;
+    }
+    const senarai = kedai
+      .map((k, i) => `${i + 1}\\. ${escapeMarkdownV2(k.nama_kedai)} \\(${k.jarak_km.toFixed(1)}km\\)`)
+      .join('\n');
+    await sendMessage(env, chatId, escapeMarkdownV2('📍 Kedai Berdekatan:\\n') + senarai, customerMenuKeyboard());
+    return;
+  }
+
+  const text = (msg.text || '').trim();
 
   // Langkah A: 💼 Menu Peniaga
   if (text === '💼 Menu Peniaga') {
+    // Fasa 5: Semak langganan & amarankan jika TAMAT / HAMPIR_TAMAT
+    const subStatus = await getSubscriptionStatus(env, tgId);
+    if (subStatus !== 'AKTIF') {
+      await sendExpiryAlert(env, chatId, subStatus, 'Kedai Anda');
+    }
     const state: MerchantState = {
       merchant_telegram_id: tgId,
       step: 'browsing_menu',
       last_active: new Date().toISOString(),
     };
     await setState(env, state);
-    await sendMessage(env, chatId, escapeMarkdownV2('📋 Menu Peniaga dibuka!'), merchantMenuKeyboard());
+    // TAMAT masih dibenarkan akses rekod pesanan berjalan (Grace Period)
+    const notis = isExpired(subStatus)
+      ? ' \\(Akses pesanan berjalan dibenarkan sehingga siap\\)'
+      : '';
+    await sendMessage(env, chatId, escapeMarkdownV2('📋 Menu Peniaga dibuka!' + notis), merchantMenuKeyboard());
     return;
   }
 
@@ -49,6 +75,29 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       chatId,
       escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:'),
       daftarKedaiKeyboard()
+    );
+    return;
+  }
+
+  // Fasa 5: Pelanggan / Peniaga minta carian kedai berdekatan
+  if (text === '📍 Kedai Berdekatan') {
+    // Guard lapisan ke-2: halang merchant TAMAT buka carian pelanggan baharu
+    const subStatus = await getSubscriptionStatus(env, tgId);
+    if (isSearchRestricted(subStatus)) {
+      await sendExpiryAlert(env, chatId, subStatus, 'Kedai Anda');
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('🚫 Carian pelanggan baharu disekat \\(langganan tamat\\)\\. Sila perbaharui\\.'),
+        merchantMenuKeyboard()
+      );
+      return;
+    }
+    await sendMessage(
+      env,
+      chatId,
+      escapeMarkdownV2('Sila hantar 📍 lokasi anda untuk cari kedai berdekatan 🔎'),
+      customerMenuKeyboard()
     );
     return;
   }
