@@ -1,0 +1,20 @@
+// Start: JomOrder Fasa 4 - TypeScript Compiler Config
+// Fasal 4 (TS backend) + Fasal 11 (env binding) - aligned to Cloudflare Workers runtime
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", ".git"]
+}
+// End: JomOrder Fasa 4 - TypeScript Compiler Config

@@ -48,8 +48,16 @@ CREATE TABLE IF NOT EXISTS senarai_kedai (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Start: Fasa 4 - Tambah merchant_telegram_id (onboarding Telegram lookup)
+ALTER TABLE senarai_kedai
+    ADD COLUMN IF NOT EXISTS merchant_telegram_id TEXT UNIQUE;
+-- End: Fasa 4
+
 CREATE INDEX IF NOT EXISTS idx_senarai_kedai_geo
     ON senarai_kedai (latitude_kedai, longitude_kedai);
+
+CREATE INDEX IF NOT EXISTS idx_senarai_kedai_tgid
+    ON senarai_kedai (merchant_telegram_id);
 
 ALTER TABLE senarai_kedai ENABLE ROW LEVEL SECURITY;
 
