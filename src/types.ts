@@ -1,6 +1,6 @@
 // Start: JomOrder Fasa 3 - Core Type Definitions
-// Fasal 4 (Separation of Concerns) + Fasal 11 (Env Bindings)
-// Standard JomOrder secret names (tiada .dev.vars dikesan, guna standard)
+// Fasal 4 (Separation of Concerns) + Fasal 11 (Env Bindings aligned to wrangler.toml)
+// Standard JomOrder secret names (selaras dengan wrangler.toml variables & secrets)
 
 // Cloudflare Runtime Types (minimal declare untuk compile tanpa workers-types)
 declare abstract class R2Bucket {
@@ -14,21 +14,25 @@ declare abstract class KVNamespace {
   delete(key: string): Promise<void>;
 }
 
-/** Cloudflare Worker Environment Bindings */
+/** Cloudflare Worker Environment Bindings (single source of truth = wrangler.toml) */
 export interface Env {
-  // Telegram Integration
-  TELEGRAM_BOT_TOKEN: string;
-  TELEGRAM_SECRET_TOKEN: string; // Validates X-Telegram-Bot-Api-Secret-Token
+  // Telegram Integration (Fasal 6 + Fasal 10)
+  TELEGRAM_BOT_TOKEN: string; // Secret: bot API token
+  X_TELEGRAM_BOT_API_SECRET_TOKEN: string; // Secret: validates X-Telegram-Bot-Api-Secret-Token header
 
-  // Supabase Multi-Tenant DB
-  SUPABASE_URL: string;
-  SUPABASE_ANON_KEY: string;
-  SUPABASE_SERVICE_ROLE_KEY: string;
+  // Supabase Multi-Tenant DB (Fasal 7 Strategy 1 RLS)
+  SUPABASE_URL: string; // Variable: project URL
+  SUPABASE_ANON_KEY: string; // Variable: public anon key
+  SUPABASE_SERVICE_ROLE_KEY: string; // Secret: service role (server-side only)
 
-  // Optional R2 Storage (Fasal 8)
+  // Upstash Redis State Engine (Fasal 7 Strategy 2 + Strategy 3 cart buffer)
+  UPSTASH_REDIS_REST_URL: string; // Variable: REST endpoint
+  UPSTASH_REDIS_REST_TOKEN: string; // Secret: REST auth token
+
+  // Optional R2 Storage (Fasal 8 media optimization)
   R2_BUCKET?: R2Bucket;
 
-  // Optional KV / Redis State Engine (Fasal 7 Strategy 2)
+  // Optional KV fallback state (Fasal 7 Strategy 2)
   MERCHANT_STATE?: KVNamespace;
 }
 
