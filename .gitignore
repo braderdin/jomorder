@@ -155,3 +155,4 @@ env.local
 .env.local
 .env.example
 .vscode/
+PROJECT_STRUCTURE.md
