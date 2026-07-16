@@ -3,11 +3,12 @@
 // Fasal 6 (escape + mobile keyboard) + Fasal 4 (SOA)
 import { Env, TelegramUpdate, MerchantState } from './types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, customerMenuKeyboard } from './telegram';
-import { checkMerchantExists, daftarKedaiPermulaan, ambilKedaiBerhampiran, updateOrderState } from './db';
+import { checkMerchantExists, daftarKedaiPermulaan, ambilKedaiBerhampiran, updateOrderState, commitOrderPayload } from './db';
 import { setState, getState, invalidateSubscriptionCacheBatch } from './redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from './subscription';
 import { isSearchRestricted, transitionOrderStatus, OrderLifecycle } from './orders';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
+import { generateDuitNowQrText, buildPaymentReceiptLayout } from './services/payment';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -52,6 +53,36 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       }
       return;
     }
+    // Start: Fasa 7 - Payment Confirmation (DuitNow QR Checkout)
+    // Callback data format: pay_now:{orderId}:{kedaiId}:{customerId}
+    if (data.startsWith('pay_now:')) {
+      const parts = data.split(':');
+      const orderId = Number(parts[1]);
+      const kedaiId = parts[2] || '';
+      const customerId = Number(parts[3] || cb.from.id);
+      const ok = await updateOrderState(env, orderId, kedaiId, {
+        status_pembayaran: 'TELAH_BAYAR',
+      });
+      if (ok) {
+        // Alert segera ke peniaga bila pelanggan tandakan 'PAID'
+        await sendMessage(
+          env,
+          Number(kedaiId),
+          escapeMarkdownV2(`🔔 PESANAN #${orderId} TELAH DIBAYAR! Sila sediakan makanan.`),
+          merchantMenuKeyboard()
+        );
+        await sendMessage(
+          env,
+          cbChatId,
+          escapeMarkdownV2(`✅ Terima kasih! Pembayaran RM untuk pesanan #${orderId} disahkan.`),
+          customerMenuKeyboard()
+        );
+      } else {
+        await sendMessage(env, cbChatId, escapeMarkdownV2('⚠️ Gagal sahkan bayaran. Cuba lagi.'), customerMenuKeyboard());
+      }
+      return;
+    }
+    // End: Fasa 7 - Payment Confirmation (DuitNow QR Checkout)
     return; // callback lain diabaikan buat masa ini
   }
   // End: Fasa 5 - Order Lifecycle callback router
@@ -171,8 +202,89 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     return;
   }
 
+  // Start: Fasa 7 - Checkout Flow (Cart Verification + Payment Screen)
+  // Pelanggan tekan "💳 Bayar Sekarang" -> papar semakan cart + skrin bayaran DuitNow QR
+  if (text === '💳 Bayar Sekarang') {
+    await handleCheckout(env, chatId, tgId);
+    return;
+  }
+  // End: Fasa 7 - Checkout Flow (Cart Verification + Payment Screen)
+
   await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), merchantMenuKeyboard());
 }
+
+/**
+ * handleCheckout
+ * Papar semakan kandungan cart (Fasal 7 Strategy 3 buffer), jana teks DuitNow QR,
+ * dan beri butang "Saya Dah Bayar" (callback pay_now) untuk sahkan pembayaran.
+ */
+async function handleCheckout(env: Env, chatId: number, tgId: number): Promise<void> {
+  const state = await getState(env, tgId);
+  const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
+  if (!buffer || !buffer.items || buffer.items.length === 0) {
+    await sendMessage(env, chatId, escapeMarkdownV2('🛒 Cart anda kosong. Sila pilih menu dulu.'), customerMenuKeyboard());
+    return;
+  }
+
+  // 1. Papar semakan cart
+  const verifyLines = buffer.items
+    .map((it) => `${escapeMarkdownV2(it.nama)} x${it.kuantiti} = RM${(it.kuantiti * it.harga_seunit).toFixed(2)}`)
+    .join('\n');
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2('🧾 SEMAKAN PESANAN:\\n') + verifyLines + escapeMarkdownV2(`\\nJUMLAH: RM${buffer.total.toFixed(2)}`),
+    customerMenuKeyboard()
+  );
+
+  // 2. Commit cart buffer ke rekod_pesanan formal (Fasal 7 Strategy 3 commit point)
+  const orderId = await commitOrderPayload(env, {
+    kedaiId: buffer.kedaiId,
+    customerTelegramId: tgId,
+    customerName: String(tgId),
+    items: buffer.items.map((it) => ({
+      item_id: it.item_id,
+      nama: it.nama,
+      kuantiti: it.kuantiti,
+      harga_seunit: it.harga_seunit,
+    })),
+    totalAmount: buffer.total,
+    deliveryLat: buffer.deliveryLat,
+    deliveryLng: buffer.deliveryLng,
+    orderRef: `JO-${tgId}-${Date.now()}`,
+  });
+  const committedId = orderId ?? 0;
+
+  // 3. Jana teks DuitNow QR & papar skrin bayaran
+  const qrText = generateDuitNowQrText(buffer.kedaiId, buffer.total, `JO-${committedId}`);
+  const receipt = buildPaymentReceiptLayout({
+    orderId: `JO-${committedId}`,
+    merchantName: buffer.kedaiId,
+    customerName: String(tgId),
+    items: buffer.items.map((it) => ({ name: it.nama, qty: it.kuantiti, price: it.harga_seunit })),
+    totalAmount: buffer.total,
+    deliveryLat: buffer.deliveryLat,
+    deliveryLng: buffer.deliveryLng,
+  });
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2('📲 BAYAR MELALUI DUITNOW QR:\\n') + escapeMarkdownV2(qrText) + '\n\n' + receipt,
+    {
+      inline_keyboard: [[{ text: '✅ Saya Dah Bayar', callback_data: `pay_now:${committedId}:${buffer.kedaiId}:${tgId}` }]],
+    }
+  );
+}
+
+/** Struktur cart buffer pelanggan (Strategy 3 JSONB). */
+interface CartBuffer {
+  kedaiId: string;
+  items: Array<{ item_id: string; nama: string; kuantiti: number; harga_seunit: number }>;
+  total: number;
+  deliveryLat: number;
+  deliveryLng: number;
+}
+// End: Fasa 7 - Checkout Flow (Cart Verification + Payment Screen)
 
 // Start: Fasa 6 - Scheduled Maintenance Wiring
 // Mengikat scheduler amaran (HAMPIR_TAMAT/TAMAT) dengan cache invalidation hook.

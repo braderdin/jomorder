@@ -197,4 +197,67 @@ export async function updateOrderState(
 
 // End: Fasa 6 - Full Order State Machine Persistence
 
+// Start: Fasa 7 - Order Commit Transaction (Checkout Lifecycle)
+// Fasal 7 Strategy 3 (Cart Buffering commit) + Strategy 1 (RLS kedai_id binding).
+// `commitOrderPayload` compile buffer JSONB pelanggan menjadi rekod_pesanan formal
+// HANYA semasa pengesahan pesanan + pembayaran eksplisit (commit point tunggal).
+
+/** Item final dalam cart pelanggan (Strategy 3 JSONB buffer). */
+export interface BuyerCartItem {
+  item_id: string;
+  nama: string;
+  kuantiti: number;
+  harga_seunit: number;
+}
+
+/** Payload pesanan final sebelum di-INSERT ke rekod_pesanan. */
+export interface CommitOrderInput {
+  kedaiId: string;
+  customerTelegramId: number;
+  customerName: string;
+  items: BuyerCartItem[];
+  totalAmount: number;
+  deliveryLat: number;
+  deliveryLng: number;
+  orderRef: string;
+}
+
+/**
+ * Insert rekod pesanan formal ke rekod_pesanan (commit point).
+ * Diikat ke kedai_id untuk pengasingan multi-tenant (Fasal 7 Strategy 1).
+ * @returns orderId (number) jika berjaya, atau null jika gagal (soft-fail).
+ */
+export async function commitOrderPayload(
+  env: Env,
+  input: CommitOrderInput
+): Promise<number | null> {
+  const url = `${env.SUPABASE_URL}/rest/v1/rekod_pesanan`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...supabaseHeaders(env), Prefer: 'return=representation' },
+      body: JSON.stringify({
+        kedai_id: input.kedaiId,
+        customer_telegram_id: String(input.customerTelegramId),
+        customer_name: input.customerName,
+        cart_items: input.items, // JSONB buffer (Strategy 3)
+        jumlah_amaun: input.totalAmount,
+        status_pembayaran: 'MENUNGGU_BAYARAN',
+        status_penghantaran: 'PENDING',
+        koordinat_penghantaran: `(${input.deliveryLat},${input.deliveryLng})`,
+        rujukan_pesanan: input.orderRef,
+        created_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ id: number }>;
+    if (Array.isArray(rows) && rows.length > 0) return rows[0].id;
+    return null;
+  } catch {
+    return null; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+
+// End: Fasa 7 - Order Commit Transaction (Checkout Lifecycle)
+
 // End: JomOrder Fasa 4 - Supabase Data Layer (Fail 1)

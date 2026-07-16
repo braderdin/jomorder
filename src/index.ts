@@ -2,10 +2,32 @@
 // Fasal 10 (Webhook Guard) + Fasal 4 (SOA) + Fasal 11 (env binding consistency)
 import { Env, TelegramUpdate } from './types';
 import { parseUpdate } from './telegram';
-import { handleUpdate } from './handlers';
+import { handleUpdate, runScheduledMaintenance } from './handlers';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    // Start: Fasa 7 - Cloudflare Cron Upkeep Endpoint (GET /cron/maintenance)
+    // Mendengar Cloudflare Cron Triggers dengan selamat; hanya GET dibenarkan.
+    // GET lain (smoke test) → 200 PASS. Endpoint ini pull scheduler engine.
+    if (request.method === 'GET' && url.pathname.endsWith('/cron/maintenance')) {
+      try {
+        const scanned = await runScheduledMaintenance(env);
+        return new Response(
+          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'maintenance', merchants_notified: scanned }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        // Soft 200 (Fasal 7 Strategy 4) — jangan biarkan cron gagal keras
+        return new Response(
+          JSON.stringify({ status: 'DEGRADED', service: 'JomOrder', error: (err as Error).message }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    // End: Fasa 7 - Cloudflare Cron Upkeep Endpoint
+
     // Start: Webhook Guard (Fasal 10)
     if (request.method !== 'POST') {
       // Smoke Test Harmonization: GET ping → 200 PASS (bukan deadlock)
