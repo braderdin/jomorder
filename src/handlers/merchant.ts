@@ -275,19 +275,23 @@ export async function handleMerchantMessage(
   // Semak state sedia ada (Fasal 7 Strategy 2)
   const current = await getState(env, tgId);
   if (current?.step === 'awaiting_shop_name') {
-    const ok = await daftarKedaiPermulaan(env, tgId, text);
+    // Langkah B: simpan nama kedai, minta lokasi native Telegram (Fasal 7 Strategy 2).
     const next: MerchantState = {
       merchant_telegram_id: tgId,
       shop_name: text,
-      step: ok ? 'idle' : 'awaiting_shop_name',
+      step: 'awaiting_shop_location',
       last_active: new Date().toISOString(),
     };
     await setState(env, next);
     await sendMessage(
       env,
       chatId,
-      escapeMarkdownV2(ok ? `✅ Kedai "${text}" berjaya didaftarkan!` : '❌ Gagal daftar. Cuba lagi.'),
-      merchantMenuKeyboard()
+      escapeMarkdownV2(`📍 Terima kasih! Kedai "${text}" disimpan sementara. Sila hantar 📍 lokasi kedai anda untuk melengkapkan pendaftaran.`),
+      {
+        keyboard: [[{ text: '📍 Kongsi Lokasi Kedai', request_location: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: false,
+      }
     );
     return;
   }
@@ -306,4 +310,51 @@ export async function handleMerchantMessage(
 
   await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), merchantMenuKeyboard());
 }
+
+// Start: Phase 23 - Merchant Geolocation Intercept (awaiting_shop_location)
+// Tangkap native Telegram location object, kunci lat/long, dan commit ke
+// senarai_kedai via daftarKedaiPermulaan (Fasal 7 Strategy 2 + Strategy 1).
+// Return true jika lokasi diuruskan (halang lencongan ke customer pipeline).
+export async function handleMerchantLocation(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  latitude: number,
+  longitude: number
+): Promise<boolean> {
+  const current = await getState(env, tgId);
+  if (!current || current.step !== 'awaiting_shop_location') return false;
+
+  const namaKedai = current.shop_name || 'Kedai Tanpa Nama';
+  const ok = await daftarKedaiPermulaan(env, tgId, namaKedai, latitude, longitude);
+  const next: MerchantState = {
+    merchant_telegram_id: tgId,
+    shop_name: namaKedai,
+    step: ok ? 'idle' : 'awaiting_shop_location',
+    last_active: new Date().toISOString(),
+  };
+  await setState(env, next);
+  if (ok) {
+    await sendMessage(
+      env,
+      chatId,
+      escapeMarkdownV2(`✅ Kedai "${namaKedai}" berjaya didaftarkan dengan lokasi! Status: MENUNGGU PENGESAHAN. Sila tunggu kelulusan admin.`),
+      merchantMenuKeyboard()
+    );
+  } else {
+    await sendMessage(
+      env,
+      chatId,
+      escapeMarkdownV2('❌ Gagal daftar lokasi. Sila hantar 📍 lokasi kedai anda sekali lagi.'),
+      {
+        keyboard: [[{ text: '📍 Kongsi Lokasi Kedai', request_location: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: false,
+      }
+    );
+  }
+  return true;
+}
+// End: Phase 23 - Merchant Geolocation Intercept
+
 // End: JomOrder Fasa 9 - Modular Merchant Handler (File 2)

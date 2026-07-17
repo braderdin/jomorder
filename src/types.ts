@@ -90,6 +90,7 @@ export interface TelegramLocation {
 export type MerchantStep =
   | 'idle'
   | 'awaiting_shop_name'
+  | 'awaiting_shop_location'
   | 'awaiting_location'
   | 'browsing_menu'
   | 'awaiting_order_confirm';

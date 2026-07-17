@@ -2,11 +2,25 @@
 // Fasal 4 (SOA) + Fasal 9 (modular split). Strip berat ke ./handlers/merchant & ./handlers/customer.
 // Distributor sahaja: terima update, delegate ke modul khusus. Orchestrate cron maintenance.
 import { Env, TelegramUpdate } from './types';
-import { handleMerchantCallback, handleMerchantMessage } from './handlers/merchant';
+import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation } from './handlers/merchant';
+import { getState } from './redis';
 import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon } from './handlers/customer';
 import { handleAdminMessage } from './handlers/admin';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
+import { sendMessage, escapeMarkdownV2 } from './telegram';
+
+/** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
+function unifiedGreetingKeyboard() {
+  return {
+    keyboard: [
+      [{ text: '🏪 Daftar Kedai Saya' }, { text: '📍 Kedai Berdekatan' }],
+      [{ text: '💼 Menu Peniaga' }, { text: '🛒 Troli' }],
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+}
 
 /** Routing utama — delegate ke modul merchant/customer mengikut jenis update. */
 export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<void> {
@@ -29,11 +43,31 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   const chatId = msg.chat.id;
   const tgId = msg.from.id;
 
-  // Customer: geolocation match
+  // Start: Phase 23 - /start unified greeting menu (Fasal 6 responsive keyboard)
+  if ((msg.text || '').trim() === '/start') {
+    await sendMessage(
+      env,
+      chatId,
+      escapeMarkdownV2('🤖 Selamat datang ke JomOrder! Saya pembantu pesanan makanan anda.\n\nPeniaga: daftar kedai & terima pesanan.\nPelanggan: cari kedai berdekatan & buat pesanan.'),
+      unifiedGreetingKeyboard()
+    );
+    return;
+  }
+  // End: Phase 23 - /start unified greeting menu
+
+  // Start: Phase 23 - Geolocation routing (merchant intercept vs customer pipeline)
+  // Jika peniaga sedang dalam awaiting_shop_location, lokasi ke merchant handler.
+  // Else, lokasi pelanggan ke customer handler (Haversine search).
   if (msg.location) {
+    const mState = await getState(env, tgId);
+    if (mState && mState.step === 'awaiting_shop_location') {
+      await handleMerchantLocation(env, chatId, tgId, msg.location.latitude, msg.location.longitude);
+      return;
+    }
     await handleCustomerLocation(env, chatId, msg.location.latitude, msg.location.longitude);
     return;
   }
+  // End: Phase 23 - Geolocation routing
 
   const text = (msg.text || '').trim();
 
@@ -63,7 +97,17 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   }
   // End: Fasa 15 - Customer Coupon Router hook
 
-  // Default: semua teks lain → merchant handler (dashboard/daftar/fallback)
+  // Start: Phase 23 - Merchant state prefix routing ('merchant:' namespace guard)
+  // Jika state peniaga wujud (namespace jo:state:{id}), delegate ke merchant handler.
+  // Default: semua teks lain -> merchant handler (dashboard/daftar/fallback).
+  const state = await getState(env, tgId);
+  if (state && (state.step.startsWith('merchant:') || state.step !== 'idle')) {
+    await handleMerchantMessage(env, chatId, tgId, text);
+    return;
+  }
+  // End: Phase 23 - Merchant state prefix routing
+
+  // Default fallback -> merchant handler
   await handleMerchantMessage(env, chatId, tgId, text);
 }
 

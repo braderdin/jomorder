@@ -74,11 +74,15 @@ export async function checkMerchantExists(
   }
 }
 
-/** Rekod permulaan peniaga baharu ke senarai_kedai (onboarding Langkah A). */
+/** Rekod permulaan peniaga baharu ke senarai_kedai (onboarding Langkah A).
+ * Lat/long diambil dari native Telegram location semasa Langkah B (Fasal 7 Strategy 2).
+ * Optional: jika tiada, default 0 (fallback soft-fail). */
 export async function daftarKedaiPermulaan(
   env: Env,
   telegramId: number,
-  namaKedai: string
+  namaKedai: string,
+  lat?: number,
+  lng?: number
 ): Promise<boolean> {
   const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai`;
   try {
@@ -91,8 +95,8 @@ export async function daftarKedaiPermulaan(
         nama_pemilik: 'PEMILIK_BAHARU',
         emel_pemilik: `${telegramId}@jomorder.local`,
         no_telefon_sim: String(telegramId),
-        latitude_kedai: 0,
-        longitude_kedai: 0,
+        latitude_kedai: typeof lat === 'number' ? lat : 0,
+        longitude_kedai: typeof lng === 'number' ? lng : 0,
         status_kedai: 'MENUNGGU_PENGESAHAN',
       }),
     });
