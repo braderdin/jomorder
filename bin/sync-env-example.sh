@@ -71,5 +71,18 @@ while IFS= read -r line; do
 done < "$ENV_EXAMPLE"
 # End: Phase 27 - Vercel Config ID Drift Guard
 
+# Start: Phase 28 - Public Caching Token Drift Guard
+# Sahkan konfigurasi token caching awam wujud: PUBLIC_STATS_TTL (cache window)
+# dan UPSTASH_REDIS_REST_URL/TOKEN (grid storage). Auto-append jika hilang.
+PUBLIC_CACHE_KEYS=("PUBLIC_STATS_TTL" "UPSTASH_REDIS_REST_URL" "UPSTASH_REDIS_REST_TOKEN")
+for pkey in "${PUBLIC_CACHE_KEYS[@]}"; do
+  if ! grep -qE "^[[:space:]]*#?[[:space:]]*${pkey}=" "$ENV_EXAMPLE"; then
+    echo "${pkey}=\"__SET_${pkey}_HERE__\"" >> "$ENV_EXAMPLE"
+    echo "[DRIFT] Tambah kunci caching awam hilang ke .env.example: ${pkey}"
+    APPENDED=$((APPENDED + 1))
+  fi
+done
+# End: Phase 28 - Public Caching Token Drift Guard
+
 exit 0
 # End: Phase 26 - Environment Drift Guard Utility

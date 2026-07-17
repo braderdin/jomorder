@@ -45,6 +45,20 @@ export interface Env {
   ADMIN_TELEGRAM_ID: string; // Variable: admin gateway Telegram ID (Fasa 8 approval)
   R2_PUBLIC_URL: string; // Variable: public R2 CDN base URL (Fasal 8 media)
   // End: Fasa 9 - Environment Hardening
+
+  // Start: Phase 28 - Public Redis Caching Grid config (Fasal 11 alignment)
+  // PUBLIC_STATS_TTL=60 -> sepadan dengan cache window analytics.ts.
+  PUBLIC_STATS_TTL?: string | number; // Variable: public stats cache lifespan (saat)
+  // End: Phase 28 - Public Redis Caching Grid config
+}
+
+/** Safe public cache payload (Phase 28 - elak compilation drift). */
+export interface PublicStatsCache {
+  total_shops: number;
+  total_orders: number;
+  total_gmv_rm: number;
+  status: 'OK' | 'CACHED' | 'DEGRADED';
+  cached_at?: string; // ISO timestamp bila payload di-cache
 }
 
 /** Telegram Incoming Update Payload (subset untuk Fasa 3) */

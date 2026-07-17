@@ -80,11 +80,13 @@ export default {
     if (request.method === 'GET' && url.pathname.endsWith('/api/public-stats')) {
       try {
         const payload = await handlePublicStats(env);
+        // Cache-Control diharmonikan dengan PUBLIC_STATS_TTL=60 (Phase 28 grid).
+        // s-maxage=60 -> Cloudflare edge cache sebaris dengan Redis 60s window.
         return new Response(JSON.stringify(payload), {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
-            'Cache-Control': 'public, max-age=60, s-maxage=60',
+            'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=30',
           },
         });
       } catch (err) {

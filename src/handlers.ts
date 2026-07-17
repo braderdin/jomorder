@@ -192,12 +192,15 @@ export async function runScheduledMaintenance(env: Env): Promise<number> {
 }
 // End: Fasa 6 - Scheduled Maintenance Wiring
 
-// Start: Phase 27 - Public Stats Controller Linkage
+// Start: Phase 28 - Public Stats Controller Linkage (Redis KV bindings passthrough)
 // Expose unauthenticated aggregate stats untuk frontend hydration (ganti N/A).
 // Dipanggil dari index.ts GET /api/public-stats (bypass webhook secret).
-export async function handlePublicStats(env: Env) {
-  return await fetchPublicStats(env);
+// Env penuh (termasuk UPSTASH_REDIS_REST_URL/TOKEN) diserahkan ke analytics
+// layer supaya cache grid 60s boleh dimanfaatkan tanpa re-fetch binding.
+export async function handlePublicStats(env: Env): Promise<ReturnType<typeof fetchPublicStats> extends Promise<infer T> ? T : never> {
+  const payload = await fetchPublicStats(env);
+  return payload;
 }
-// End: Phase 27 - Public Stats Controller Linkage
+// End: Phase 28 - Public Stats Controller Linkage
 
 // End: JomOrder Fasa 9 - Core Distributor Router (File 4)

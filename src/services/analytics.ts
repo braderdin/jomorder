@@ -5,6 +5,49 @@
 
 import { Env } from '../types';
 
+// Start: Phase 28 - Public Redis Caching Grid (Upstash 60s TTL)
+// Cache agregat awam di Upstash Redis untuk elak database hammering.
+// Key global: jo:public:stats. Fail-safe: fallback ke live DB fetch jika Redis timeout.
+const PUBLIC_STATS_KEY = 'jo:public:stats';
+const PUBLIC_STATS_TTL = 60; // saat (PUBLIC_STATS_TTL=60)
+
+/** Executor REST ke Upstash Redis (selari pattern redis.ts). */
+async function redisCacheGet(env: Env, key: string): Promise<string | null> {
+  try {
+    const res = await fetch(env.UPSTASH_REDIS_REST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+      },
+      body: JSON.stringify([['GET', key]]),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as Array<{ result: unknown }>;
+    const r = data?.[0]?.result;
+    return typeof r === 'string' ? r : null;
+  } catch {
+    return null; // Redis timeout -> fallback
+  }
+}
+
+/** Tulis cache dengan EX TTL (fail-safe swallow error). */
+async function redisCacheSet(env: Env, key: string, value: string, ttl: number): Promise<void> {
+  try {
+    await fetch(env.UPSTASH_REDIS_REST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+      },
+      body: JSON.stringify([['SET', key, value, 'EX', ttl]]),
+    });
+  } catch {
+    // swallow - caching bukan kritikal
+  }
+}
+// End: Phase 28 - Public Redis Caching Grid
+
 /** Struktur metrik SaaS terkumpul (selari dengan get_saas_metrics() RPC). */
 export interface SaasMetrics {
   total_active_merchants: number;
@@ -64,6 +107,18 @@ export interface PublicStats {
  * Soft-fail: return zero payload jika DB/network gagal (Fasal 7 Strategy 4).
  */
 export async function fetchPublicStats(env: Env): Promise<PublicStats> {
+  // Start: Phase 28 - Cache read path (Redis 60s grid)
+  try {
+    const cached = await redisCacheGet(env, PUBLIC_STATS_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached) as PublicStats;
+      return { ...parsed, status: 'CACHED' };
+    }
+  } catch {
+    // parse error -> biar jatuh ke live fetch
+  }
+  // End: Phase 28 - Cache read path
+
   const base = `${env.SUPABASE_URL}/rest/v1`;
   const headers = {
     apikey: env.SUPABASE_ANON_KEY,
@@ -89,12 +144,20 @@ export async function fetchPublicStats(env: Env): Promise<PublicStats> {
         totalGmv = od.reduce((s, r) => s + (parseFloat(r.total_amount) || 0), 0);
       }
     }
-    return {
+    const payload: PublicStats = {
       total_shops: totalShops,
       total_orders: totalOrders,
       total_gmv_rm: Math.round(totalGmv * 100) / 100,
       status: 'OK',
     };
+    // Start: Phase 28 - Cache write path (background, fail-safe)
+    try {
+      await redisCacheSet(env, PUBLIC_STATS_KEY, JSON.stringify(payload), PUBLIC_STATS_TTL);
+    } catch {
+      // swallow - cache write bukan kritikal
+    }
+    // End: Phase 28 - Cache write path
+    return payload;
   } catch {
     // Soft-fail (Fasal 7 Strategy 4) - return zeroed safe payload
     return { total_shops: 0, total_orders: 0, total_gmv_rm: 0, status: 'DEGRADED' };
