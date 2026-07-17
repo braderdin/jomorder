@@ -8,7 +8,7 @@ import {
   customerMenuKeyboard,
   merchantMenuKeyboard,
 } from '../telegram';
-import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState } from '../db';
+import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState, getMenuByKedaiId } from '../db';
 import { getState, setState } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert } from '../subscription';
 import { isSearchRestricted } from '../orders';
@@ -250,4 +250,122 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
     }
   );
 }
+
+// Start: Phase 24 - Dynamic Menu Browsing & Interactive Cart Populatio
+// Fasal 6 (mobile keyboard max 2 btn/row) + Fasal 7 Strategy 3 (cart buffer).
+// handleViewShopMenu: papar menu tersedia dengan inline "Tambah" button.
+// handleAddToCart: increment item ke cart_buffer Redis (state engine).
+
+/**
+ * Papar menu kedai kepada pelanggan dengan inline keyboard tambah item.
+ * Setiap item = 1 baris 1 butang (selamat <=2 btn/row, Fasal 6).
+ * callback_data: add_to_cart:ITEM_ID:KEDAI_ID
+ */
+export async function handleViewShopMenu(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  kedaiId: string
+): Promise<boolean> {
+  const menu = await getMenuByKedaiId(env, kedaiId);
+  if (menu.length === 0) {
+    await sendMessage(
+      env,
+      chatId,
+      escapeMarkdownV2('🍽️ Maaf, tiada hidangan tersedia buat masa ini.'),
+      customerMenuKeyboard()
+    );
+    return true;
+  }
+
+  const lines = menu
+    .map((m) => `${escapeMarkdownV2(m.nama_hidangan)} \\- RM${m.harga.toFixed(2)}`)
+    .join('\n');
+
+  const keyboard = menu.map((m) => {
+    const shortName = m.nama_hidangan.length > 24 ? m.nama_hidangan.slice(0, 24) + '...' : m.nama_hidangan;
+    return [
+      {
+        text: `➕ ${shortName}`,
+        callback_data: `add_to_cart:${m.id}:${kedaiId}`,
+      },
+    ];
+  });
+
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2('📋 SILA PILIH HIDANGAN:\\n') + lines,
+    { inline_keyboard: keyboard }
+  );
+  return true;
+}
+
+/**
+ * Tambah item ke cart buffer pelanggan (Fasal 7 Strategy 3).
+ * Increment kuantiti jika item wujud, else push baru. Rewrite ke Redis.
+ */
+export async function handleAddToCart(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  itemId: string,
+  kedaiId: string
+): Promise<boolean> {
+  const menu = await getMenuByKedaiId(env, kedaiId);
+  const item = menu.find((m) => String(m.id) === itemId);
+  if (!item) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Item tidak dijumpai dalam menu.'), customerMenuKeyboard());
+    return true;
+  }
+
+  const state = await getState(env, tgId);
+  const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
+  const items = buffer?.items ? [...buffer.items] : [];
+
+  const existing = items.find((it) => it.item_id === itemId);
+  if (existing) {
+    existing.kuantiti += 1;
+  } else {
+    items.push({
+      item_id: itemId,
+      nama: item.nama_hidangan,
+      kuantiti: 1,
+      harga_seunit: item.harga,
+    });
+  }
+
+  const total = items.reduce((s, it) => s + it.kuantiti * it.harga_seunit, 0);
+  const nextBuffer: CartBuffer = {
+    kedaiId,
+    items,
+    total,
+    deliveryLat: buffer?.deliveryLat ?? 0,
+    deliveryLng: buffer?.deliveryLng ?? 0,
+    appliedCoupon: buffer?.appliedCoupon,
+    discountedTotal: buffer?.discountedTotal,
+  };
+
+  if (state) {
+    await setState(env, { ...state, cart_buffer: nextBuffer } as never);
+  } else {
+    await setState(env, {
+      merchant_telegram_id: tgId,
+      step: 'browsing_menu',
+      cart_buffer: nextBuffer,
+      last_active: new Date().toISOString(),
+    } as never);
+  }
+
+  const added = items.find((it) => it.item_id === itemId);
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2(`✅ ${item.nama_hidangan} ditambah ke troli (x${added?.kuantiti ?? 1}). Jumlah: RM${total.toFixed(2)}.`),
+    customerMenuKeyboard()
+  );
+  return true;
+}
+// End: Phase 24 - Dynamic Menu Browsing & Interactive Cart Populatio
+
 // End: JomOrder Fasa 9 - Modular Customer Handler (File 3)

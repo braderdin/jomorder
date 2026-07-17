@@ -285,6 +285,53 @@ export async function commitOrderPayload(
   }
 }
 
+// Start: Phase 24 - Dynamic Menu Browsing (Multi-Tenant Menu Query Ingestion)
+// Fasal 7 Strategy 1 (kedai_id binding) + Strategy 4 (soft-fail timeout).
+// Query PostgREST ke menu_makanan, filter kedai_id + status_tersedia=true.
+// Return [] kosong jika connection timeout / gagal (soft-fail).
+
+/** Item menu tersedia untuk paparan pelanggan. */
+export interface MenuMakananItem {
+  id: number;
+  nama_hidangan: string;
+  harga: number;
+}
+
+/**
+ * Ambil senarai hidangan tersedia untuk satu kedai.
+ * Diikat ke kedai_id untuk pengasingan multi-tenant (Fasal 7 Strategy 1).
+ * Soft-fail: return [] jika fetch gagal / timeout.
+ */
+export async function getMenuByKedaiId(
+  env: Env,
+  kedaiId: string
+): Promise<MenuMakananItem[]> {
+  const url = `${env.SUPABASE_URL}/rest/v1/menu_makanan?kedai_id=eq.${encodeURIComponent(
+    kedaiId
+  )}&status_tersedia=eq.true&select=id,nama_hidangan,harga&order=nama_hidangan.asc`;
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: supabaseHeaders(env),
+    });
+    if (!res.ok) return [];
+    const rows = (await res.json()) as Array<{
+      id: number;
+      nama_hidangan: string;
+      harga: number;
+    }>;
+    if (!Array.isArray(rows)) return [];
+    return rows.map((r) => ({
+      id: r.id,
+      nama_hidangan: r.nama_hidangan,
+      harga: typeof r.harga === 'number' ? r.harga : Number(r.harga) || 0,
+    }));
+  } catch {
+    return []; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Phase 24 - Dynamic Menu Browsing
+
 // End: Fasa 7 - Order Commit Transaction (Checkout Lifecycle)
 
 // End: JomOrder Fasa 4 - Supabase Data Layer (Fail 1)

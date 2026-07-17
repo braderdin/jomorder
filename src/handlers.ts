@@ -4,7 +4,7 @@
 import { Env, TelegramUpdate } from './types';
 import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation } from './handlers/merchant';
 import { getState } from './redis';
-import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon } from './handlers/customer';
+import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon, handleViewShopMenu, handleAddToCart } from './handlers/customer';
 import { handleAdminMessage } from './handlers/admin';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
@@ -33,6 +33,21 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     if (await handleMerchantCallback(env, cb, cbChatId, data)) return;
     // Customer: payment confirmation
     if (await handlePayNow(env, cb, cbChatId, data)) return;
+
+    // Start: Phase 24 - Menu browsing + interactive cart callback routing
+    // Fasal 7 Strategy 3 (cart buffer) + Fasal 6 (callback delegation).
+    if (data.startsWith('view_shop:')) {
+      const kedaiId = data.slice('view_shop:'.length);
+      if (await handleViewShopMenu(env, cbChatId, cb.from.id, kedaiId)) return;
+    }
+    if (data.startsWith('add_to_cart:')) {
+      const parts = data.split(':');
+      const itemId = parts[1] || '';
+      const kedaiId = parts[2] || '';
+      if (await handleAddToCart(env, cbChatId, cb.from.id, itemId, kedaiId)) return;
+    }
+    // End: Phase 24 - Menu browsing + interactive cart callback routing
+
     return; // callback lain diabaikan buat masa ini
   }
   // End: Callback query router
