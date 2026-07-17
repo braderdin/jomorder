@@ -7,6 +7,7 @@ import {
   escapeMarkdownV2,
   customerMenuKeyboard,
   merchantMenuKeyboard,
+  answerCallbackQuery,
 } from '../telegram';
 import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState, getMenuByKedaiId } from '../db';
 import { getState, setState } from '../redis';
@@ -292,6 +293,10 @@ export async function handleViewShopMenu(
     ];
   });
 
+  // Start: Phase 25 - Lihat Troli inline row (max 1 btn/row, Fasal 6 mobile density)
+  keyboard.push([{ text: '🛒 Lihat Troli', callback_data: `view_cart:${kedaiId}` }]);
+  // End: Phase 25 - Lihat Troli inline row
+
   await sendMessage(
     env,
     chatId,
@@ -310,7 +315,8 @@ export async function handleAddToCart(
   chatId: number,
   tgId: number,
   itemId: string,
-  kedaiId: string
+  kedaiId: string,
+  queryId?: string
 ): Promise<boolean> {
   const menu = await getMenuByKedaiId(env, kedaiId);
   const item = menu.find((m) => String(m.id) === itemId);
@@ -356,6 +362,12 @@ export async function handleAddToCart(
       last_active: new Date().toISOString(),
     } as never);
   }
+
+  // Start: Phase 25 - Dismiss Telegram button spinner segera selepas cache update
+  if (queryId) {
+    await answerCallbackQuery(env, queryId, `✅ Ditambah ke troli`, false);
+  }
+  // End: Phase 25 - Dismiss Telegram button spinner
 
   const added = items.find((it) => it.item_id === itemId);
   await sendMessage(

@@ -5,10 +5,12 @@ import { Env, TelegramUpdate } from './types';
 import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation } from './handlers/merchant';
 import { getState } from './redis';
 import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon, handleViewShopMenu, handleAddToCart } from './handlers/customer';
+import { handleViewCart } from './handlers/customer_cart';
 import { handleAdminMessage } from './handlers/admin';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
-import { sendMessage, escapeMarkdownV2 } from './telegram';
+import { fetchSaasMetrics } from './services/analytics';
+import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from './telegram';
 
 /** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
 function unifiedGreetingKeyboard() {
@@ -44,9 +46,15 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       const parts = data.split(':');
       const itemId = parts[1] || '';
       const kedaiId = parts[2] || '';
-      if (await handleAddToCart(env, cbChatId, cb.from.id, itemId, kedaiId)) return;
+      if (await handleAddToCart(env, cbChatId, cb.from.id, itemId, kedaiId, cb.id)) return;
     }
     // End: Phase 24 - Menu browsing + interactive cart callback routing
+
+    // Start: Phase 25 - View Cart callback routing (dismiss spinner via handleViewCart)
+    if (data.startsWith('view_cart:')) {
+      if (await handleViewCart(env, cbChatId, cb.from.id, cb.id)) return;
+    }
+    // End: Phase 25 - View Cart callback routing
 
     return; // callback lain diabaikan buat masa ini
   }
@@ -111,6 +119,40 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     return;
   }
   // End: Fasa 15 - Customer Coupon Router hook
+
+  // Start: Phase 25 - Localized Command Matrix (Bahasa Melayu)
+  // /troli -> papar cart buffer pelanggan (handleViewCart).
+  if (text === '/troli') {
+    await handleViewCart(env, chatId, tgId);
+    return;
+  }
+
+  // /laporan_jualan -> agregat metrik SaaS platform (peniaga/admin) format RM.
+  if (text === '/laporan_jualan') {
+    const metrics = await fetchSaasMetrics(env);
+    if (!metrics) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan jualan. Cuba lagi sebentar.'));
+      return;
+    }
+    const report =
+      escapeMarkdownV2('📊 LAPORAN JUALAN PLATFORM:\\n\\n') +
+      escapeMarkdownV2(`Peniaga Aktif: ${metrics.total_active_merchants}\\n`) +
+      escapeMarkdownV2(`Stor Premium: ${metrics.total_premium_stores}\\n`) +
+      escapeMarkdownV2(`Jumlah Pesanan: ${metrics.total_orders}\\n`) +
+      escapeMarkdownV2(`Hasil Kumulatif: RM${metrics.total_revenue_rm.toFixed(2)}\\n`) +
+      escapeMarkdownV2(`Unjuran MRR: RM${metrics.mrr_projection_rm.toFixed(2)}`);
+    await sendMessage(env, chatId, report);
+    return;
+  }
+
+  // /zon_operasi -> senarai 5 zon operasi kanonikal (Relational Layer matrix).
+  if (text === '/zon_operasi') {
+    const zones = ['Kuala Lumpur', 'Puncak Alam', 'Petaling Jaya', 'Shah Alam', 'Klang'];
+    const list = zones.map((z, i) => `${i + 1}\\. ${escapeMarkdownV2(z)}`).join('\\n');
+    await sendMessage(env, chatId, escapeMarkdownV2('🗺️ ZON OPERASI KAMI:\\n') + list);
+    return;
+  }
+  // End: Phase 25 - Localized Command Matrix
 
   // Start: Phase 23 - Merchant state prefix routing ('merchant:' namespace guard)
   // Jika state peniaga wujud (namespace jo:state:{id}), delegate ke merchant handler.

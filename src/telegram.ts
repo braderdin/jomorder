@@ -78,4 +78,26 @@ export function parseUpdate(body: string): TelegramUpdate | null {
   }
 }
 
+// Start: Phase 25 - Telegram Spinner Dismissal Helper (Fasal 6 inline grid UX)
+// answerCallbackQuery: tutup loading spinner segera bila user tekan inline button.
+export async function answerCallbackQuery(
+  env: Env,
+  queryId: string,
+  text?: string,
+  showAlert?: boolean
+): Promise<TelegramApiResponse> {
+  const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
+  const payload: Record<string, unknown> = { callback_query_id: queryId };
+  if (text) payload.text = text;
+  if (showAlert !== undefined) payload.show_alert = showAlert;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return (await res.json()) as TelegramApiResponse;
+}
+// End: Phase 25 - Telegram Spinner Dismissal Helper
+
 // End: JomOrder Fasa 3 - Telegram API Utility Module
