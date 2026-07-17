@@ -9,6 +9,7 @@ import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscripti
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
 import { buildDecisionCaption } from '../services/admin';
 import { notifyCustomerOrderUpdate } from '../services/notifications';
+import { createCoupon, listCoupons } from '../services/discounts';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -150,6 +151,63 @@ export async function handleMerchantMessage(
   tgId: number,
   text: string
 ): Promise<void> {
+  // Start: Fasa 14 - Premium Coupon Commands (guarded)
+  if (text.startsWith('/cipta_kupon') || text.startsWith('/senarai_kupon')) {
+    const exists = await checkMerchantExists(env, tgId);
+    if (!exists) {
+      await sendMessage(env, chatId, escapeMarkdownV2('Hai! Anda belum daftar kedai. Tekan butang di bawah untuk mula 🚀'), daftarKedaiKeyboard());
+      return;
+    }
+    const subStatus = await getSubscriptionStatus(env, tgId);
+    // Guard: hanya akaun PREMIUM atau AKTIF diluluskan sahaja (premium SaaS gate)
+    const premiumDiluluskan = (subStatus as string) === 'PREMIUM' || subStatus === 'AKTIF';
+    if (!premiumDiluluskan) {
+      await sendMessage(env, chatId, escapeMarkdownV2('🔒 Ciri kupon adalah eksklusif PREMIUM. Sila naik taraf langganan anda.'), merchantMenuKeyboard());
+      return;
+    }
+    if (text.startsWith('/senarai_kupon')) {
+      const kupon = await listCoupons(env, tgId);
+      if (kupon.length === 0) {
+        await sendMessage(env, chatId, escapeMarkdownV2('Tiada kupon diwujudkan lagi. Guna /cipta_kupon <KOD> <PERATUS>'), merchantMenuKeyboard());
+        return;
+      }
+      const senaraiKupon = kupon.map((k, i) => {
+        const val = k.jenis_diskaun === 'PERCENT' ? `${k.nilai_diskaun}%` : `RM${k.nilai_diskaun}`;
+        const stat = k.status_aktif ? '✅' : '⛔';
+        return `${i + 1}\\. ${escapeMarkdownV2(k.kod_kupon)} \\- ${val} ${stat}`;
+      }).join('\n');
+      await sendMessage(env, chatId, escapeMarkdownV2('🎟️ SENARAI KUPON:\n') + senaraiKupon, merchantMenuKeyboard());
+      return;
+    }
+    // /cipta_kupon <KOD> <NILAI> [RM]
+    const parts = text.split(/\s+/);
+    if (parts.length < 3) {
+      await sendMessage(env, chatId, escapeMarkdownV2('Format: /cipta_kupon <KOD> <PERATUS>  \\(atau tambah RM untuk jumlah tetap, contoh: /cipta_kupon POTONG5 5 RM\\)'), merchantMenuKeyboard());
+      return;
+    }
+    const kod = parts[1].toUpperCase();
+    const nilai = Number(parts[2]);
+    let jenis: 'PERCENT' | 'AMOUNT' = 'PERCENT';
+    if (parts[3] && parts[3].toUpperCase() === 'RM') jenis = 'AMOUNT';
+    if (isNaN(nilai) || nilai <= 0) {
+      await sendMessage(env, chatId, escapeMarkdownV2('Nilai diskaun mesti nombor positif.'), merchantMenuKeyboard());
+      return;
+    }
+    if (jenis === 'PERCENT' && nilai > 100) {
+      await sendMessage(env, chatId, escapeMarkdownV2('Peratus diskaun tidak boleh melebihi 100%.'), merchantMenuKeyboard());
+      return;
+    }
+    const ok = await createCoupon(env, tgId, kod, jenis, nilai);
+    if (ok) {
+      const valTxt = jenis === 'PERCENT' ? `${nilai}%` : `RM${nilai}`;
+      await sendMessage(env, chatId, escapeMarkdownV2(`🎟️ Kupon ${kod} berjaya diwujudkan! Diskaun: ${valTxt}`), merchantMenuKeyboard());
+    } else {
+      await sendMessage(env, chatId, escapeMarkdownV2('❌ Gagal cipta kupon. Kod mungkin sudah wujud atau kedai tidak dijumpai.'), merchantMenuKeyboard());
+    }
+    return;
+  }
+  // End: Fasa 14 - Premium Coupon Commands (guarded)
+
   // Langkah A: 💼 Menu Peniaga
   if (text === '💼 Menu Peniaga') {
     const subStatus = await getSubscriptionStatus(env, tgId);

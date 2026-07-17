@@ -9,11 +9,12 @@ import {
   merchantMenuKeyboard,
 } from '../telegram';
 import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState } from '../db';
-import { getState } from '../redis';
+import { getState, setState } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert } from '../subscription';
 import { isSearchRestricted } from '../orders';
 import { generateDuitNowQrText, buildPaymentReceiptLayout } from '../services/payment';
 import { notifyMerchantNewOrder } from '../services/notifications';
+import { validateCoupon, applyDiscount, CampaignDiscount } from '../services/discounts';
 
 /** Struktur cart buffer pelanggan (Strategy 3 JSONB). */
 interface CartBuffer {
@@ -22,6 +23,8 @@ interface CartBuffer {
   total: number;
   deliveryLat: number;
   deliveryLng: number;
+  appliedCoupon?: { kod: string; jenis: 'PERCENT' | 'AMOUNT'; nilai: number };
+  discountedTotal?: number;
 }
 
 /**
@@ -144,9 +147,48 @@ export async function handlePayNow(
 }
 
 /**
+ * handleApplyCoupon
+ * Benarkan pembeli apply kod kupon ke cart buffer secara dinamik.
+ * Validasi terhadap kedai_id cart (Fasal 7 Strategy 1) + status aktif + tarikh luput.
+ * Simpan appliedCoupon + discountedTotal ke cart buffer (Strategy 3).
+ */
+export async function handleApplyCoupon(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  kodKupon: string
+): Promise<void> {
+  const state = await getState(env, tgId);
+  const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
+  if (!buffer || !buffer.items || buffer.items.length === 0) {
+    await sendMessage(env, chatId, escapeMarkdownV2('🛒 Cart anda kosong. Sila pilih menu dulu.'), customerMenuKeyboard());
+    return;
+  }
+  const kupon = await validateCoupon(env, kodKupon, buffer.kedaiId);
+  if (!kupon) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kod kupon tidak sah, tidak aktif, atau sudah tamat tempoh.'), customerMenuKeyboard());
+    return;
+  }
+  const finalTotal = applyDiscount(kupon, buffer.total);
+  const nextBuffer: CartBuffer = {
+    ...buffer,
+    appliedCoupon: { kod: kupon.kod_kupon, jenis: kupon.jenis_diskaun, nilai: kupon.nilai_diskaun },
+    discountedTotal: finalTotal,
+  };
+  await setState(env, { ...state, cart_buffer: nextBuffer } as never);
+  const jimat = (buffer.total - finalTotal).toFixed(2);
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2(`🎟️ Kupon ${kupon.kod_kupon} diterima! Jimat RM${jimat}. Jumlah baharu: RM${finalTotal.toFixed(2)}. Tekan 💳 Bayar Sekarang untuk teruskan.`),
+    customerMenuKeyboard()
+  );
+}
+
+/**
  * handleCheckout
- * Papar semakan cart (Fasal 7 Strategy 3), jana teks DuitNow QR, beri butang
- * "Saya Dah Bayar" (callback pay_now) untuk sahkan pembayaran.
+ * Papar semakan cart (Fasal 7 Strategy 3), apply kupon jika ada, jana teks
+ * DuitNow QR dengan jumlah berdiskaun, beri butang "Saya Dah Bayar" (pay_now).
  */
 export async function handleCheckout(env: Env, chatId: number, tgId: number): Promise<void> {
   const state = await getState(env, tgId);
@@ -156,16 +198,25 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
     return;
   }
 
-  // 1. Papar semakan cart
+  // Start: Fasa 14 - Apply coupon (dari buffer atau validasi semula)
+  let appliedCoupon: CampaignDiscount | null = null;
+  if (buffer.appliedCoupon) {
+    appliedCoupon = await validateCoupon(env, buffer.appliedCoupon.kod, buffer.kedaiId);
+  }
+  const finalTotal = appliedCoupon ? applyDiscount(appliedCoupon, buffer.total) : buffer.total;
+  // End: Fasa 14 - Apply coupon
+
+  // 1. Papar semakan cart (refleksi jumlah_harga berdiskaun)
   const verifyLines = buffer.items
     .map((it) => `${escapeMarkdownV2(it.nama)} x${it.kuantiti} = RM${(it.kuantiti * it.harga_seunit).toFixed(2)}`)
     .join('\n');
-  await sendMessage(
-    env,
-    chatId,
-    escapeMarkdownV2('🧾 SEMAKAN PESANAN:\\n') + verifyLines + escapeMarkdownV2(`\\nJUMLAH: RM${buffer.total.toFixed(2)}`),
-    customerMenuKeyboard()
-  );
+  let verifyHeader = escapeMarkdownV2('🧾 SEMAKAN PESANAN:\\n') + verifyLines;
+  if (appliedCoupon) {
+    const diskaunTxt = appliedCoupon.jenis_diskaun === 'PERCENT' ? `${appliedCoupon.nilai_diskaun}%` : `RM${appliedCoupon.nilai_diskaun}`;
+    verifyHeader += escapeMarkdownV2(`\\nKupon ${appliedCoupon.kod_kupon} \\(-${diskaunTxt}\\)`);
+  }
+  verifyHeader += escapeMarkdownV2(`\\nJUMLAH: RM${finalTotal.toFixed(2)}`);
+  await sendMessage(env, chatId, verifyHeader, customerMenuKeyboard());
 
   // 2. Commit cart buffer ke rekod_pesanan formal (Fasal 7 Strategy 3 commit point)
   const orderId = await commitOrderPayload(env, {
@@ -178,21 +229,21 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
       kuantiti: it.kuantiti,
       harga_seunit: it.harga_seunit,
     })),
-    totalAmount: buffer.total,
+    totalAmount: finalTotal,
     deliveryLat: buffer.deliveryLat,
     deliveryLng: buffer.deliveryLng,
     orderRef: `JO-${tgId}-${Date.now()}`,
   });
   const committedId = orderId ?? 0;
 
-  // 3. Jana teks DuitNow QR & papar skrin bayaran
-  const qrText = generateDuitNowQrText(buffer.kedaiId, buffer.total, `JO-${committedId}`);
+  // 3. Jana teks DuitNow QR & papar skrin bayaran (jumlah berdiskaun)
+  const qrText = generateDuitNowQrText(buffer.kedaiId, finalTotal, `JO-${committedId}`);
   const receipt = buildPaymentReceiptLayout({
     orderId: `JO-${committedId}`,
     merchantName: buffer.kedaiId,
     customerName: String(tgId),
     items: buffer.items.map((it) => ({ name: it.nama, qty: it.kuantiti, price: it.harga_seunit })),
-    totalAmount: buffer.total,
+    totalAmount: finalTotal,
     deliveryLat: buffer.deliveryLat,
     deliveryLng: buffer.deliveryLng,
   });
