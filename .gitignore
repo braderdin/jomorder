@@ -159,3 +159,4 @@ env.local
 .env.example
 .vscode/
 PROJECT_STRUCTURE.md
+PROJECT_SYNC_MASTER.md
