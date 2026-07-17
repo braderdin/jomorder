@@ -13,6 +13,7 @@ import { getState } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert } from '../subscription';
 import { isSearchRestricted } from '../orders';
 import { generateDuitNowQrText, buildPaymentReceiptLayout } from '../services/payment';
+import { notifyMerchantNewOrder } from '../services/notifications';
 
 /** Struktur cart buffer pelanggan (Strategy 3 JSONB). */
 interface CartBuffer {
@@ -89,21 +90,51 @@ export async function handlePayNow(
 ): Promise<boolean> {
   if (!data.startsWith('pay_now:')) return false;
   const parts = data.split(':');
-  const orderId = Number(parts[1]);
+  let orderId = Number(parts[1]);
   const kedaiId = parts[2] || '';
   const customerId = Number(parts[3] || cb.from.id);
+
+  // Fasa 11: Jika order belum di-commit semasa checkout, commit sekarang (commit point).
+  if (!orderId || orderId === 0) {
+    const state = await getState(env, customerId);
+    const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
+    if (buffer && buffer.items && buffer.items.length > 0) {
+      const committed = await commitOrderPayload(env, {
+        kedaiId: buffer.kedaiId,
+        customerTelegramId: customerId,
+        customerName: String(customerId),
+        items: buffer.items.map((it) => ({
+          item_id: it.item_id,
+          nama: it.nama,
+          kuantiti: it.kuantiti,
+          harga_seunit: it.harga_seunit,
+        })),
+        totalAmount: buffer.total,
+        deliveryLat: buffer.deliveryLat,
+        deliveryLng: buffer.deliveryLng,
+        orderRef: `JO-${customerId}-${Date.now()}`,
+      });
+      orderId = committed ?? 0;
+    }
+  }
+
   const ok = await updateOrderState(env, orderId, kedaiId, { status_pembayaran: 'TELAH_BAYAR' });
   if (ok) {
-    await sendMessage(
-      env,
-      Number(kedaiId),
-      escapeMarkdownV2(`🔔 PESANAN #${orderId} TELAH DIBAYAR! Sila sediakan makanan.`),
-      merchantMenuKeyboard()
-    );
+    // Fasa 11: Dispatch live notification alert ke peniaga (Real-time Engine).
+    const state = await getState(env, customerId);
+    const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
+    await notifyMerchantNewOrder(env, {
+      orderId,
+      orderRef: `JO-${customerId}-${orderId}`,
+      customerName: String(customerId),
+      itemCount: buffer?.items?.length ?? 0,
+      totalAmount: buffer?.total ?? 0,
+      merchantTelegramId: Number(kedaiId),
+    });
     await sendMessage(
       env,
       cbChatId,
-      escapeMarkdownV2(`✅ Terima kasih! Pembayaran RM untuk pesanan #${orderId} disahkan.`),
+      escapeMarkdownV2(`✅ Terima kasih! Pembayaran untuk pesanan #${orderId} disahkan.`),
       customerMenuKeyboard()
     );
   } else {

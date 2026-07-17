@@ -8,6 +8,7 @@ import { setState, getState, invalidateSubscriptionCache } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
 import { buildDecisionCaption } from '../services/admin';
+import { notifyCustomerOrderUpdate } from '../services/notifications';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -37,8 +38,40 @@ export async function handleMerchantCallback(
     const currentStatus = (parts[3] || 'PENDING') as OrderLifecycle;
     const subStatus = await getSubscriptionStatus(env, cb.from.id);
     const next = await transitionOrderStatus(env, orderId, kedaiId, currentStatus, subStatus);
+    // Fasa 11: Fetch customer_telegram_id + rujukan untuk notifikasi masa nyata.
+    let customerTg = 0;
+    let orderRef = `JO-${orderId}`;
+    try {
+      const ordUrl = `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?id=eq.${orderId}&kedai_id=eq.${kedaiId}&select=customer_telegram_id,rujukan_pesanan`;
+      const ordRes = await fetch(ordUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+      });
+      if (ordRes.ok) {
+        const rows = (await ordRes.json()) as Array<{ customer_telegram_id?: string; rujukan_pesanan?: string }>;
+        if (Array.isArray(rows) && rows.length > 0) {
+          customerTg = Number(rows[0].customer_telegram_id || 0);
+          if (rows[0].rujukan_pesanan) orderRef = rows[0].rujukan_pesanan;
+        }
+      }
+    } catch { /* soft-fail Fasal 7 Strategy 4 */ }
     if (next) {
       await updateOrderState(env, orderId, kedaiId, { status_penghantaran: next });
+      // Fasa 11: Alert masa nyata ke pembeli (Real-time Engine).
+      if (customerTg) {
+        await notifyCustomerOrderUpdate(env, {
+          orderId,
+          orderRef,
+          customerTelegramId: customerTg,
+          previousStatus: currentStatus,
+          newStatus: next,
+          shopName: kedaiId,
+        });
+      }
       await sendMessage(
         env,
         cbChatId,

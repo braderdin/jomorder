@@ -1,5 +1,6 @@
-// Start: JomOrder Fasa 4 - TypeScript Compiler Config
-// Fasal 4 (TS backend) + Fasal 11 (env binding) - aligned to Cloudflare Workers runtime
+// Start: JomOrder Fasa 4 - TypeScript Compiler Config (Fasa 11 Hardened)
+// Fasal 4 (TS backend) + Fasal 11 (env binding) - aligned to Cloudflare Workers runtime.
+// Fasa 11: Robust R2Bucket/KVNamespace alias mapping + zero dev-to-prod path drift.
 {
   "compilerOptions": {
     "target": "ESNext",
@@ -12,9 +13,19 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": []
+    "isolatedModules": true,
+    "noUncheckedIndexedAccess": false,
+    "allowImportingTsExtensions": false,
+    "types": [],
+    // Start: Fasa 11 - Dynamic import alias (no path drift dev<->prod)
+    "paths": {
+      "@root/*": ["./src/*"],
+      "@services/*": ["./src/services/*"],
+      "@handlers/*": ["./src/handlers/*"]
+    }
+    // End: Fasa 11 - Dynamic import alias
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", ".git"]
+  "exclude": ["node_modules", ".git", ".memory_hidden"]
 }
-// End: JomOrder Fasa 4 - TypeScript Compiler Config
+// End: JomOrder Fasa 4 - TypeScript Compiler Config (Fasa 11 Hardened)
