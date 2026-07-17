@@ -3,7 +3,7 @@
 // Pindahan dari src/handlers.ts: onboarding, dashboard, order lifecycle, admin approval.
 import { Env, MerchantState } from '../types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from '../telegram';
-import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState } from '../db';
+import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium } from '../db';
 import { setState, getState, invalidateSubscriptionCache } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
@@ -151,6 +151,34 @@ export async function handleMerchantMessage(
   tgId: number,
   text: string
 ): Promise<void> {
+  // Start: Fasa 15 - Premium Upsell Command (/naiktaraf)
+  if (text === '/naiktaraf') {
+    const exists = await checkMerchantExists(env, tgId);
+    if (!exists) {
+      await sendMessage(env, chatId, escapeMarkdownV2('Hai! Anda belum daftar kedai. Tekan butang di bawah untuk mula 🚀'), daftarKedaiKeyboard());
+      return;
+    }
+    const subStatus = await getSubscriptionStatus(env, tgId);
+    if ((subStatus as string) === 'PREMIUM') {
+      await sendMessage(env, chatId, escapeMarkdownV2('⭐ Anda sudah akaun PREMIUM! Nikmati semua ciri eksklusif.'), merchantMenuKeyboard());
+      return;
+    }
+    // Simulasi payment gateway check-out success (Fasa 15 flow).
+    const upgraded = await upgradeMerchantToPremium(env, tgId);
+    if (upgraded) {
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('🎉 TAHNIAH! Langganan anda berjaya dinaik taraf ke PREMIUM ⭐\n\nAnda kini boleh cipta kupon diskaun, analitik lanjutan & keutamaan sokongan. Terima kasih kerana menyokong JomOrder!'),
+        merchantMenuKeyboard()
+      );
+    } else {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal naik taraf buat masa ini. Sila cuba sebentar lagi.'), merchantMenuKeyboard());
+    }
+    return;
+  }
+  // End: Fasa 15 - Premium Upsell Command (/naiktaraf)
+
   // Start: Fasa 14 - Premium Coupon Commands (guarded)
   if (text.startsWith('/cipta_kupon') || text.startsWith('/senarai_kupon')) {
     const exists = await checkMerchantExists(env, tgId);

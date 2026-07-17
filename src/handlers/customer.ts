@@ -112,7 +112,7 @@ export async function handlePayNow(
           kuantiti: it.kuantiti,
           harga_seunit: it.harga_seunit,
         })),
-        totalAmount: buffer.total,
+        totalAmount: buffer.discountedTotal ?? buffer.total,
         deliveryLat: buffer.deliveryLat,
         deliveryLng: buffer.deliveryLng,
         orderRef: `JO-${customerId}-${Date.now()}`,
@@ -130,9 +130,9 @@ export async function handlePayNow(
       orderId,
       orderRef: `JO-${customerId}-${orderId}`,
       customerName: String(customerId),
-      itemCount: buffer?.items?.length ?? 0,
-      totalAmount: buffer?.total ?? 0,
-      merchantTelegramId: Number(kedaiId),
+       itemCount: buffer?.items?.length ?? 0,
+       totalAmount: buffer?.discountedTotal ?? buffer?.total ?? 0,
+       merchantTelegramId: Number(kedaiId),
     });
     await sendMessage(
       env,
@@ -203,7 +203,7 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
   if (buffer.appliedCoupon) {
     appliedCoupon = await validateCoupon(env, buffer.appliedCoupon.kod, buffer.kedaiId);
   }
-  const finalTotal = appliedCoupon ? applyDiscount(appliedCoupon, buffer.total) : buffer.total;
+  const finalTotal = appliedCoupon ? applyDiscount(appliedCoupon, buffer.total) : (buffer.discountedTotal ?? buffer.total);
   // End: Fasa 14 - Apply coupon
 
   // 1. Papar semakan cart (refleksi jumlah_harga berdiskaun)

@@ -3,7 +3,7 @@
 // Distributor sahaja: terima update, delegate ke modul khusus. Orchestrate cron maintenance.
 import { Env, TelegramUpdate } from './types';
 import { handleMerchantCallback, handleMerchantMessage } from './handlers/merchant';
-import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout } from './handlers/customer';
+import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon } from './handlers/customer';
 import { handleAdminMessage } from './handlers/admin';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
@@ -53,6 +53,15 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Hanya terima jika tgId == ADMIN_TELEGRAM_ID (guard dalam modul admin).
   if (await handleAdminMessage(env, chatId, tgId, text)) return;
   // End: Fasa 13 - Super-Admin delegation
+
+  // Start: Fasa 15 - Customer Coupon Router hook (resolve Fasa 14 drift)
+  // Pembeli taip /kupon <KOD> -> halakan ke customer handler apply kupon ke cart buffer.
+  if (text.startsWith('/kupon ')) {
+    const kod = text.split(/\s+/)[1] || '';
+    await handleApplyCoupon(env, chatId, tgId, kod);
+    return;
+  }
+  // End: Fasa 15 - Customer Coupon Router hook
 
   // Default: semua teks lain → merchant handler (dashboard/daftar/fallback)
   await handleMerchantMessage(env, chatId, tgId, text);

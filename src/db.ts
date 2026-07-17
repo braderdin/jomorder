@@ -156,6 +156,31 @@ export async function updateStatusPenghantaran(
   }
 }
 
+// Start: Fasa 15 - Premium Upsell (Merchant Migration to PREMIUM tier)
+// Fasal 7 Strategy 1 (RLS via merchant_telegram_id) + Strategy 2 (instant cache refresh).
+// Naik taraf status_langganan kedai ke 'PREMIUM' dan terus segar-sembuh cache Redis
+// supaya baca seterusnya tidak perlu tembak Supabase (free-tier shield kekal).
+export async function upgradeMerchantToPremium(
+  env: Env,
+  telegramId: number
+): Promise<boolean> {
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${telegramId}`;
+  try {
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+      body: JSON.stringify({ status_langganan: 'PREMIUM' }),
+    });
+    if (!res.ok) return false;
+    // Segar-sembuh cache langganan serentak (Fasal 7 Strategy 2).
+    await setSubscriptionCache(env, telegramId, 'PREMIUM');
+    return true;
+  } catch {
+    return false; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Fasa 15 - Premium Upsell
+
 // End: Fasa 5 - Subscription Cache + Order Lifecycle Persistence
 
 // Start: Fasa 6 - Full Order State Machine Persistence
