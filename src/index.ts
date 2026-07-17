@@ -3,6 +3,7 @@
 import { Env, TelegramUpdate } from './types';
 import { parseUpdate } from './telegram';
 import { handleUpdate, runScheduledMaintenance } from './handlers';
+import { runSmokeTests, summarizeSmokeTests } from './services/testing';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -27,6 +28,26 @@ export default {
       }
     }
     // End: Fasa 7 - Cloudflare Cron Upkeep Endpoint
+
+    // Start: Fasa 10 - Live Smoke Test Engine Endpoint (GET /smoke)
+    // Panggil runSmokeTests(env) secara live dan return laporan audit resilience.
+    if (request.method === 'GET' && url.pathname.endsWith('/smoke')) {
+      try {
+        const reports = await runSmokeTests(env);
+        const summary = summarizeSmokeTests(reports);
+        return new Response(summary, {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      } catch (err) {
+        // Soft 200 (Fasal 7 Strategy 4) - jangan biarkan smoke test gagal keras
+        return new Response(
+          `SMOKE TEST ERROR: ${(err as Error).message}`,
+          { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+        );
+      }
+    }
+    // End: Fasa 10 - Live Smoke Test Engine Endpoint
 
     // Start: Webhook Guard (Fasal 10)
     if (request.method !== 'POST') {

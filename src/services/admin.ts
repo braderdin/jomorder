@@ -22,11 +22,15 @@ export function buildApprovalInlineKeyboard(shopId: string, merchantTgId: number
 }
 
 // Hantar kad permohonan baharu ke admin dengan butang kelulusan.
+// Fasa 10: consume env.ADMIN_TELEGRAM_ID secara native (buang argumen manual adminChatId).
 export async function notifyAdminNewApplication(
   env: Env,
-  adminChatId: number,
   app: PendingApplication
 ): Promise<void> {
+  const adminChatId = Number(env.ADMIN_TELEGRAM_ID);
+  if (!env.ADMIN_TELEGRAM_ID || Number.isNaN(adminChatId)) {
+    throw new Error('ADMIN_TELEGRAM_ID tiada/config rosak dalam env');
+  }
   const name = escapeMarkdownV2(app.shopName);
   const daerah = app.daerah ? escapeMarkdownV2(app.daerah) : '\\-';
   const text =

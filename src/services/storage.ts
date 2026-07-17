@@ -30,6 +30,7 @@ function isWebp(bytes: Uint8Array): boolean {
 export interface UploadResult {
   success: boolean;
   key?: string;
+  url?: string; // Fasa 10: absolute public URL (env.R2_PUBLIC_URL + key)
   error?: string;
 }
 
@@ -62,6 +63,9 @@ export async function uploadMerchantAsset(
 
   const key = customKey ?? `${merchantTgId}/${assetType}_${Date.now()}.webp`;
   await env.R2_BUCKET.put(key, data as unknown as BodyInit);
-  return { success: true, key };
+  // Fasa 10: bina URL mutlak dari prefix R2_PUBLIC_URL (buang trailing slash).
+  const base = env.R2_PUBLIC_URL.replace(/\/$/, '');
+  const url = `${base}/${key}`;
+  return { success: true, key, url };
 }
 // End: JomOrder Fasa 8
