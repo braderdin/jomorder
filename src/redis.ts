@@ -3,6 +3,7 @@
 // Fasal 4 (SOA) + Fasal 11 (env binding via wrangler.toml)
 import { Env, MerchantState } from './types';
 
+const GLOBAL_PREFIX = 'jo:'; // Fasa 17 Redis global namespace prefix (multi-tenant key isolation)
 const STATE_TTL_SECONDS = 3600; // 1-hour inactivity reset (Fasal 7 Strategy 2)
 
 /** Executor generik ke Upstash Redis REST API (command array format). */
@@ -24,7 +25,7 @@ async function redisCommand(env: Env, cmd: unknown[]): Promise<unknown> {
   }
 }
 
-const stateKey = (id: number) => `state:${id}`;
+const stateKey = (id: number) => `${GLOBAL_PREFIX}state:${id}`;
 
 /**
  * Strategy 2: Persist merchant conversation step dengan 1-hour TTL window.
@@ -56,7 +57,7 @@ export async function getState(env: Env, telegramId: number): Promise<MerchantSt
 // Fasal 7 Strategy 2: cache langganan di Redis supaya setiap mesej masuk
 // tak perlu tembak Supabase. Key namespace selari `state:{id}` engine.
 const SUB_TTL_SECONDS = 300; // 5-min cache window untuk elak spike DB
-const subKey = (id: number) => `sub:${id}`;
+const subKey = (id: number) => `${GLOBAL_PREFIX}sub:${id}`;
 
 /** Tulis status langganan ke cache Redis (fast-path). */
 export async function setSubscriptionCache(

@@ -153,8 +153,8 @@ export async function handleMerchantMessage(
 ): Promise<void> {
   // Start: Fasa 15 - Premium Upsell Command (/naiktaraf)
   if (text === '/naiktaraf') {
-    // Start: Fasa 16 Spam Protection Rate-Limiting pada /naiktaraf (sub-key limit:upsell:{id})
-    const limitKey = `limit:upsell:${tgId}`;
+    // Start: Fasa 17 Redis key prefix migration - guna 'jo:limit:upsell:{id}' (GLOBAL_PREFIX)
+    const limitKey = `jo:limit:upsell:${tgId}`;
     const allowed = await checkRateLimit(env, limitKey);
     if (!allowed) {
       await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan naik taraf. Sila cuba sebentar lagi.'), merchantMenuKeyboard());
