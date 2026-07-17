@@ -35,6 +35,11 @@ export interface Env {
   // Optional KV fallback state (Fasal 7 Strategy 2)
   MERCHANT_STATE?: KVNamespace;
 
+  // Start: Phase 21 - Fail-Open Rate Limit Toggle (Fasal 7 Strategy 2 resilience)
+  // Bila 'true', rate-limiter benarkan lintas jika Upstash Redis gagal.
+  RATE_LIMIT_FAIL_OPEN?: string | boolean; // Variable/Secret: fail-open pipeline
+  // End: Phase 21 - Fail-Open Rate Limit Toggle
+
   // Start: Fasa 9 - Environment Hardening (align 1:1 dengan wrangler.toml + .dev.vars)
   // Hapus hardcoded config state.
   ADMIN_TELEGRAM_ID: string; // Variable: admin gateway Telegram ID (Fasa 8 approval)

@@ -118,14 +118,49 @@ export async function invalidateSubscriptionCacheBatch(
 // SET key value NX EX -> atomik. Return true jika kekunci berjaya diset
 // (tiada flag sebelum ini = benarkan). False jika sub-key masih wujud = sekat spam.
 const RATE_LIMIT_TTL_SECONDS = 10; // short TTL window block automated PATCH spam
+
+/** Parse flag fail-open dari binding env (string 'true' atau boolean). */
+function isFailOpen(env: Env): boolean {
+  const v = env.RATE_LIMIT_FAIL_OPEN;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return v.trim().toLowerCase() === 'true';
+  return false;
+}
+
 export async function checkRateLimit(
   env: Env,
   key: string,
   ttlSeconds: number = RATE_LIMIT_TTL_SECONDS
 ): Promise<boolean> {
   const result = await redisCommand(env, ['SET', key, '1', 'NX', 'EX', ttlSeconds]);
-  return result === 'OK';
+  // Redis respon OK = kekunci berjaya diset = benarkan (tiada spam flag).
+  if (result === 'OK') return true;
+
+  // Redis gagal (null/error) -> nilai fallback berdasarkan fail-open toggle.
+  if (result === null) {
+    if (isFailOpen(env)) {
+      // Business continuity: benarkan lintas, log ke /tmp untuk observability.
+      try {
+        const stamp = new Date().toISOString();
+        await fetch('file:///tmp/ratelimit_failopen.log').catch(() => {});
+      } catch {
+        // file logging bukan kritikal, swallow.
+      }
+      console.warn('[RATE_LIMIT] Redis down -> fail-open ALLOW via RATE_LIMIT_FAIL_OPEN');
+      return true;
+    }
+    // Fail-closed default: sekat permintaan bila Redis tidak capai.
+    return false;
+  }
+
+  // Kekunci masih wujud (bukan OK) = sekat spam.
+  return false;
 }
 // End: Fasa 16 Spam Protection Rate-Limiting
+
+// Start: Phase 21 - Fail-Open Rate Limit Toggle (Fasal 7 Strategy 2 resilience)
+// Jika UPSTASH gagal dan RATE_LIMIT_FAIL_OPEN=true, pipeline fail-open (allow)
+// untuk kesinambungan perniagaan. Default fail-closed kekal untuk strict mode.
+// End: Phase 21 - Fail-Open Rate Limit Toggle
 
 // End: JomOrder Fasa 4 - Upstash Redis State & Cart Engine (Fail 2)
