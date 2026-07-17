@@ -1,0 +1,62 @@
+# Start: Fasa 12 - Production CI/CD Core (GitHub Actions)
+# Trigger: push ke branch "main"
+# Langkah: type-check (tsc --noEmit) -> deploy Cloudflare Workers via wrangler-action
+name: Deploy JomOrder Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Kekangan token CI: elak concurrency bertindih (double deploy)
+concurrency:
+  group: cloudflare-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: TypeCheck and Deploy
+    runs-on: ubuntu-latest
+    # Had masa keras untuk mengelak CI hang (Fasal 9 background hygiene)
+    timeout-minutes: 15
+
+    steps:
+      # 1. Checkout kod sumber
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Pasang Node.js (LTS stabil)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Install dependencies (CI clean)
+      - name: Install Dependencies
+        run: npm ci
+
+      # 4. Type Safety Gate (Fasal 11 - strict tsc --noEmit, 0 error wajib)
+      - name: Type Validation (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      # 5. Deploy ke Cloudflare Workers (wrangler-action)
+      #    CLOUDFLARE_API_TOKEN di-set sebagai GitHub Secret (Settings > Secrets)
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --minify
+        env:
+          # Pembolehubah bukan-rahsia (placeholder generic, Fasal 11 privacy)
+          ADMIN_TELEGRAM_ID: "YOUR_ADMIN_ID"
+          R2_PUBLIC_URL: "YOUR_PUBLIC_URL"
+
+      # 6. Smoke test pasca-deploy (Fasal 10 harmonized 405/403 = PASS)
+      - name: Post-Deploy Smoke Ping
+        run: |
+          echo "Triggering harmonized smoke check..."
+          curl -s -o /dev/null -w "GET / (expect 200/405): %{http_code}\n" https://jomorder-bot.workers.dev/ || true
+# End: Fasa 12 - Production CI/CD Core

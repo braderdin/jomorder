@@ -13,9 +13,9 @@ UPSTASH_REDIS_REST_URL = "https://YOUR-UPSTASH-ENDPOINT.upstash.io"
 
 # Start: Fasa 9 - Environment Hardening (align 1:1 dengan .dev.vars)
 # Hapus hardcoded config: admin gateway + R2 public CDN disuntik dynamically.
-ADMIN_TELEGRAM_ID = "YOUR_ADMIN_TELEGRAM_ID"
-R2_PUBLIC_URL = "https://YOUR-R2-PUBLIC-URL"
-# End: Fasa 9 - Environment Hardening
+ADMIN_TELEGRAM_ID = "YOUR_ADMIN_ID"
+R2_PUBLIC_URL = "YOUR_PUBLIC_URL"
+# End: Fasa 12 - Config Alignment (generic placeholder, privacy secure Fasal 11)
 
 # Secrets (rahsia - isi guna: npx wrangler secret put <NAME>)
 # TELEGRAM_BOT_TOKEN
