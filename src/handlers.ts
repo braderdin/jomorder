@@ -4,6 +4,7 @@
 import { Env, TelegramUpdate } from './types';
 import { handleMerchantCallback, handleMerchantMessage } from './handlers/merchant';
 import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout } from './handlers/customer';
+import { handleAdminMessage } from './handlers/admin';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
 
@@ -47,6 +48,11 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await handleCheckout(env, chatId, tgId);
     return;
   }
+
+  // Start: Fasa 13 - Super-Admin delegation (Chip Besar commands)
+  // Hanya terima jika tgId == ADMIN_TELEGRAM_ID (guard dalam modul admin).
+  if (await handleAdminMessage(env, chatId, tgId, text)) return;
+  // End: Fasa 13 - Super-Admin delegation
 
   // Default: semua teks lain → merchant handler (dashboard/daftar/fallback)
   await handleMerchantMessage(env, chatId, tgId, text);
