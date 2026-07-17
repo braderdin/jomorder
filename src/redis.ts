@@ -59,6 +59,12 @@ export async function getState(env: Env, telegramId: number): Promise<MerchantSt
 const SUB_TTL_SECONDS = 300; // 5-min cache window untuk elak spike DB
 const subKey = (id: number) => `${GLOBAL_PREFIX}sub:${id}`;
 
+// Start: Fasa 18 - Rate-Limit Key Centralization (Fasal 7 Strategy 2 helper)
+// Pusatkan pembinaan key rate-limit ke fungsi tunggal supaya prefix
+// 'jo:' kekal konsisten merentas caller. Gaya selari stateKey/subKey.
+export const rateLimitKey = (id: string) => `${GLOBAL_PREFIX}limit:${id}`;
+// End: Fasa 18 - Rate-Limit Key Centralization
+
 /** Tulis status langganan ke cache Redis (fast-path). */
 export async function setSubscriptionCache(
   env: Env,

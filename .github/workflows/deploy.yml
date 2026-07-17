@@ -54,7 +54,27 @@ jobs:
           ADMIN_TELEGRAM_ID: "YOUR_ADMIN_ID"
           R2_PUBLIC_URL: "YOUR_PUBLIC_URL"
 
-      # 6. Smoke test pasca-deploy (Fasal 10 harmonized 405/403 = PASS)
+      # 6. Apply pending SQL migrations (Fasa 18 Migration Automation)
+      #    Setiap fail DDL guna guard idempoten (IF NOT EXISTS / DROP IF EXISTS /
+      #    ON CONFLICT DO NOTHING) supaya re-run selamat tanpa ralat.
+      #    Langkau jika secret SUPABASE_DB_URL tiada (local/test CI tak pecah).
+      - name: Apply SQL Migrations (Idempotent)
+        if: ${{ env.SUPABASE_DB_URL != '' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -u
+          for f in \
+            src/db/migrations/001_security_hardening.sql \
+            src/db/migrations/002_campaign_discounts.sql \
+            src/db/migrations/003_premium_check_constraint.sql \
+            src/db/analytics.sql \
+            src/db/seed.sql ; do
+            echo "Applying $f ..."
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      # 7. Smoke test pasca-deploy (Fasal 10 harmonized 405/403 = PASS)
       - name: Post-Deploy Smoke Ping
         run: |
           echo "Triggering harmonized smoke check..."

@@ -4,7 +4,7 @@
 import { Env, MerchantState } from '../types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from '../telegram';
 import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium } from '../db';
-import { setState, getState, invalidateSubscriptionCache, checkRateLimit } from '../redis';
+import { setState, getState, invalidateSubscriptionCache, checkRateLimit, rateLimitKey } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
 import { buildDecisionCaption } from '../services/admin';
@@ -153,8 +153,8 @@ export async function handleMerchantMessage(
 ): Promise<void> {
   // Start: Fasa 15 - Premium Upsell Command (/naiktaraf)
   if (text === '/naiktaraf') {
-    // Start: Fasa 17 Redis key prefix migration - guna 'jo:limit:upsell:{id}' (GLOBAL_PREFIX)
-    const limitKey = `jo:limit:upsell:${tgId}`;
+    // Start: Fasa 18 Rate-Limit Key Centralization - guna helper rateLimitKey (jo:limit:{id})
+    const limitKey = rateLimitKey(String(tgId));
     const allowed = await checkRateLimit(env, limitKey);
     if (!allowed) {
       await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan naik taraf. Sila cuba sebentar lagi.'), merchantMenuKeyboard());
