@@ -26,7 +26,7 @@ R2_PUBLIC_URL = "YOUR_PUBLIC_URL"
 # R2 Bucket (Fasal 8 media optimization) - optional
 [[r2_buckets]]
 binding = "R2_BUCKET"
-bucket_name = "jomorder-media"
+bucket_name = "jomorder-assets"
 
 # KV Namespace (Fasal 7 Strategy 2 fallback state) - optional
 [[kv_namespaces]]
