@@ -1,0 +1,50 @@
+# Start: Phase 26 - GitHub Cron Scheduler Execution (Fasal 10 + Fasal 7 Strategy 4)
+# Jadual: setiap 4 jam (Fasal 2 linear). Runner ringan ubuntu-latest.
+# Ekstrak repo secrets, tembak POST /cron/maintenance dengan header rahsia.
+name: jomorder-cron-maintenance
+
+on:
+  schedule:
+    # Cron POSIX: 0 minit, setiap 4 jam, setiap hari.
+    - cron: "0 */4 * * *"
+  # Manual trigger untuk ujian (jangan padam).
+  workflow_dispatch:
+
+# Elak overlap jika run sebelum habis (Fasal 2 resilience).
+concurrency:
+  group: jomorder-cron-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintenance-ping:
+    name: Fire Worker Cron Maintenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repo (metadata only)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: POST /cron/maintenance ke Worker
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          SECRET_TOKEN: ${{ secrets.X_TELEGRAM_BOT_API_SECRET_TOKEN }}
+        run: |
+          # Plain ASCII curl POST. Fail lembut jika worker balas bukan 200.
+          RESPONSE=$(curl -s -o /tmp/cron_resp.txt -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Telegram-Bot-Api-Secret-Token: ${SECRET_TOKEN}" \
+            --max-time 25 \
+            "${WORKER_URL}/cron/maintenance" \
+            -d '{"source":"github-actions","cycle":"4h"}' || echo "000")
+          echo "HTTP_STATUS=${RESPONSE}"
+          cat /tmp/cron_resp.txt 2>/dev/null | head -c 400
+          # 2xx / 403 (guard aktif) dianggap lintas; 000 = worker mati.
+          if [ "$RESPONSE" = "000" ]; then
+            echo "CRON_TARGET_UNREACHABLE"
+            exit 1
+          fi
+          echo "CRON_DISPATCH_OK"
+# End: Phase 26 - GitHub Cron Scheduler Execution

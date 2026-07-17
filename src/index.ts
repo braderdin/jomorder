@@ -5,19 +5,31 @@ import { parseUpdate } from './telegram';
 import { handleUpdate, runScheduledMaintenance } from './handlers';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
 import { checkDatabaseHealth } from './services/sentinel';
+import { dispatchSubscriptionAlerts } from './services/scheduler';
+import { invalidateSubscriptionCacheBatch } from './redis';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    // Start: Fasa 7 - Cloudflare Cron Upkeep Endpoint (GET /cron/maintenance)
-    // Mendengar Cloudflare Cron Triggers dengan selamat; hanya GET dibenarkan.
-    // GET lain (smoke test) → 200 PASS. Endpoint ini pull scheduler engine.
-    if (request.method === 'GET' && url.pathname.endsWith('/cron/maintenance')) {
+    // Start: Phase 26 - Cron Maintenance Endpoint (POST sahaja, Fasal 10 guard)
+    // GitHub Actions / Cloudflare Cron tembak POST dengan header rahsia.
+    // GET (smoke test) akan jatuh ke Webhook Guard bawah -> 200 PASS (harmonized).
+    if (request.method === 'POST' && url.pathname.endsWith('/cron/maintenance')) {
+      // Strict secret check: tolak 403 jika token tak sepadan (Fasal 10).
+      const cronSecret = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
+      if (!cronSecret || cronSecret !== env.X_TELEGRAM_BOT_API_SECRET_TOKEN) {
+        return new Response('Forbidden', { status: 403 });
+      }
       try {
-        const scanned = await runScheduledMaintenance(env);
+        // Delegate terus ke dispatcher langganan (bypass admin node).
+        const scanned = await dispatchSubscriptionAlerts(env);
+        const ids = scanned.map((r) => r.telegramId);
+        if (ids.length > 0) {
+          await invalidateSubscriptionCacheBatch(env, ids);
+        }
         return new Response(
-          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'maintenance', merchants_notified: scanned }),
+          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'maintenance', merchants_notified: ids.length }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       } catch (err) {
@@ -28,7 +40,7 @@ export default {
         );
       }
     }
-    // End: Fasa 7 - Cloudflare Cron Upkeep Endpoint
+    // End: Phase 26 - Cron Maintenance Endpoint
 
     // Start: Fasa 10 - Live Smoke Test Engine Endpoint (GET /smoke)
     // Panggil runSmokeTests(env) secara live dan return laporan audit resilience.

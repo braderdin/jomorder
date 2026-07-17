@@ -90,11 +90,55 @@ export async function scanAndFlagSubscriptions(env: Env): Promise<ScanResult[]> 
 }
 
 /**
- * Jalankan pusingan penuh scheduler: scan + dispatch amaran Telegram
- * kepada peniaga yang HAMPIR_TAMAT / TAMAT.
+ * Dispatch amaran "7 hari lagi" terus ke node Telegram peniaga yang
+ * status_langganan == AKTIF dan baki tamat == AMARAN_HARI (7 hari).
+ * Bypas node admin sepenuhnya (chat id == merchant_telegram_id).
+ * IPv4 Direct Pooler Mandate (Fasal 11): REST API menembak pooler
+ * aws-0-ap-southeast-1.pooler.supabase.com dengan Bearer service_role.
+ */
+async function dispatchAktifSevenDayAlerts(env: Env): Promise<void> {
+  // Ambil tetingkap 8 hari akan datang supaya selamat floating-point.
+  const ambang = new Date(Date.now() + (AMARAN_HARI + 1) * 86_400_000).toISOString();
+  const url =
+    `${env.SUPABASE_URL}/rest/v1/senarai_kedai` +
+    `?status_langganan=eq.AKTIF` +
+    `&tamat_langganan_pada=lte.${encodeURIComponent(ambang)}` +
+    `&select=merchant_telegram_id,tamat_langganan_pada`;
+
+  try {
+    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!res.ok) return;
+    const rows = (await res.json()) as Array<{
+      merchant_telegram_id?: string;
+      tamat_langganan_pada?: string;
+    }>;
+    if (!Array.isArray(rows)) return;
+
+    for (const row of rows) {
+      const tgId = Number(row.merchant_telegram_id);
+      if (!row.tamat_langganan_pada || !tgId) continue;
+      const baki = kiraBakiHari(row.tamat_langganan_pada);
+      // Hanya dispatch jika TEPAT 7 hari lagi (AMARAN_HARI).
+      if (baki !== AMARAN_HARI) continue;
+      // Bypass admin: terus ke chat peniaga (private bot chat).
+      await sendExpiryAlert(env, tgId, 'AKTIF', 'Kedai Anda', baki);
+    }
+  } catch {
+    // Soft-fail: scheduler silent (Fasal 7 Strategy 4)
+  }
+}
+
+/**
+ * Jalankan pusingan penuh scheduler:
+ * 1) Dispatch amaran "7 hari lagi" ke peniaga AKTIF (bypass admin).
+ * 2) Scan + flag peniaga HAMPIR_TAMAT / TAMAT untuk cache invalidation.
  * @returns ScanResult[] supaya caller boleh invalidate cache serentak.
  */
 export async function dispatchSubscriptionAlerts(env: Env): Promise<ScanResult[]> {
+  // Step 1: amaran 7-hari ke node peniaga (tiada sentuh admin).
+  await dispatchAktifSevenDayAlerts(env);
+
+  // Step 2: flag + amaran tamat (logik sedia ada).
   const scanned = await scanAndFlagSubscriptions(env);
   for (const r of scanned) {
     if (r.status === 'AKTIF') continue;

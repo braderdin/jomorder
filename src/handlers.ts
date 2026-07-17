@@ -3,7 +3,7 @@
 // Distributor sahaja: terima update, delegate ke modul khusus. Orchestrate cron maintenance.
 import { Env, TelegramUpdate } from './types';
 import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation } from './handlers/merchant';
-import { getState } from './redis';
+import { getState, checkRateLimit, rateLimitKey } from './redis';
 import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon, handleViewShopMenu, handleAddToCart } from './handlers/customer';
 import { handleViewCart } from './handlers/customer_cart';
 import { handleAdminMessage } from './handlers/admin';
@@ -122,13 +122,25 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   // Start: Phase 25 - Localized Command Matrix (Bahasa Melayu)
   // /troli -> papar cart buffer pelanggan (handleViewCart).
+  // Phase 26: Rate-limit shield (Fasal 7 Strategy 2) elak spam troli.
+  // Nota: cart_buffer disimpan via setState() yang enforce EX 3600 (1-jam TTL)
+  // di redis.ts -> memelihara memori cluster (Fasal 7 Strategy 3).
   if (text === '/troli') {
+    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      return;
+    }
     await handleViewCart(env, chatId, tgId);
     return;
   }
 
   // /laporan_jualan -> agregat metrik SaaS platform (peniaga/admin) format RM.
+  // Phase 26: Rate-limit shield (Fasal 7 Strategy 2) elak spam laporan.
   if (text === '/laporan_jualan') {
+    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      return;
+    }
     const metrics = await fetchSaasMetrics(env);
     if (!metrics) {
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan jualan. Cuba lagi sebentar.'));
