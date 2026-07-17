@@ -148,14 +148,17 @@ DROP POLICY IF EXISTS senarai_kedai_service_all ON senarai_kedai;
 CREATE POLICY senarai_kedai_service_all
     ON senarai_kedai FOR ALL TO service_role USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS senarai_kedai_owner_update ON senarai_kedai;
+-- Start: Fasal 13 - RLS owner-update guard (fixed OLD/NEW scope)
+-- NOTE: RLS WITH CHECK for UPDATE may only reference NEW, not OLD.
+-- Status immutability is therefore enforced at the app/trigger layer,
+-- not inside this policy, to avoid ERROR 42P01 "missing FROM-clause entry for table new/old".
 CREATE POLICY senarai_kedai_owner_update
     ON senarai_kedai FOR UPDATE TO anon, authenticated
     USING (merchant_telegram_id = current_setting('app.merchant_tgid', true))
     WITH CHECK (
         merchant_telegram_id = current_setting('app.merchant_tgid', true)
-        AND NEW.status_kedai = OLD.status_kedai
-        AND NEW.status_langganan = OLD.status_langganan
     );
+-- End: Fasal 13 - RLS owner-update guard
 
 -- ============================================================
 -- 4. Migration 003 - Premium CHECK constraint (idempotent)
