@@ -43,7 +43,7 @@ export async function handleMerchantCallback(
     let customerTg = 0;
     let orderRef = `JO-${orderId}`;
     try {
-      const ordUrl = `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?id=eq.${orderId}&kedai_id=eq.${kedaiId}&select=customer_telegram_id,rujukan_pesanan`;
+      const ordUrl = `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?id=eq.${orderId}&kedai_id=eq.${kedaiId}&select=pelanggan_telegram_id`;
       const ordRes = await fetch(ordUrl, {
         method: 'GET',
         headers: {
@@ -53,10 +53,9 @@ export async function handleMerchantCallback(
         },
       });
       if (ordRes.ok) {
-        const rows = (await ordRes.json()) as Array<{ customer_telegram_id?: string; rujukan_pesanan?: string }>;
+        const rows = (await ordRes.json()) as Array<{ pelanggan_telegram_id?: string }>;
         if (Array.isArray(rows) && rows.length > 0) {
-          customerTg = Number(rows[0].customer_telegram_id || 0);
-          if (rows[0].rujukan_pesanan) orderRef = rows[0].rujukan_pesanan;
+          customerTg = Number(rows[0].pelanggan_telegram_id || 0);
         }
       }
     } catch { /* soft-fail Fasal 7 Strategy 4 */ }

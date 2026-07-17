@@ -236,16 +236,15 @@ export interface BuyerCartItem {
 }
 
 /** Payload pesanan final sebelum di-INSERT ke rekod_pesanan. */
+// Start: RC4 - Drift closed (align with schema.sql rekod_pesanan columns)
 export interface CommitOrderInput {
   kedaiId: string;
   customerTelegramId: number;
-  customerName: string;
   items: BuyerCartItem[];
   totalAmount: number;
-  deliveryLat: number;
-  deliveryLng: number;
-  orderRef: string;
+  kaedahPembayaran: string;
 }
+// End: RC4 - Drift closed
 
 /**
  * Insert rekod pesanan formal ke rekod_pesanan (commit point).
@@ -263,14 +262,13 @@ export async function commitOrderPayload(
       headers: { ...supabaseHeaders(env), Prefer: 'return=representation' },
       body: JSON.stringify({
         kedai_id: input.kedaiId,
-        customer_telegram_id: String(input.customerTelegramId),
-        customer_name: input.customerName,
-        cart_items: input.items, // JSONB buffer (Strategy 3)
-        jumlah_amaun: input.totalAmount,
+        pelanggan_telegram_id: String(input.customerTelegramId),
+        butiran_pesanan: input.items, // JSONB buffer (Strategy 3)
+        jumlah_harga: input.totalAmount,
+        kaedah_pembayaran: input.kaedahPembayaran,
         status_pembayaran: 'MENUNGGU_BAYARAN',
         status_penghantaran: 'PENDING',
-        koordinat_penghantaran: `(${input.deliveryLat},${input.deliveryLng})`,
-        rujukan_pesanan: input.orderRef,
+        bukti_resit_url: null,
         created_at: new Date().toISOString(),
       }),
     });

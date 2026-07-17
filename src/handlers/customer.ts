@@ -105,7 +105,6 @@ export async function handlePayNow(
       const committed = await commitOrderPayload(env, {
         kedaiId: buffer.kedaiId,
         customerTelegramId: customerId,
-        customerName: String(customerId),
         items: buffer.items.map((it) => ({
           item_id: it.item_id,
           nama: it.nama,
@@ -113,9 +112,7 @@ export async function handlePayNow(
           harga_seunit: it.harga_seunit,
         })),
         totalAmount: buffer.discountedTotal ?? buffer.total,
-        deliveryLat: buffer.deliveryLat,
-        deliveryLng: buffer.deliveryLng,
-        orderRef: `JO-${customerId}-${Date.now()}`,
+        kaedahPembayaran: 'DUITNOW',
       });
       orderId = committed ?? 0;
     }
@@ -222,7 +219,6 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
   const orderId = await commitOrderPayload(env, {
     kedaiId: buffer.kedaiId,
     customerTelegramId: tgId,
-    customerName: String(tgId),
     items: buffer.items.map((it) => ({
       item_id: it.item_id,
       nama: it.nama,
@@ -230,9 +226,7 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
       harga_seunit: it.harga_seunit,
     })),
     totalAmount: finalTotal,
-    deliveryLat: buffer.deliveryLat,
-    deliveryLng: buffer.deliveryLng,
-    orderRef: `JO-${tgId}-${Date.now()}`,
+    kaedahPembayaran: 'DUITNOW',
   });
   const committedId = orderId ?? 0;
 
