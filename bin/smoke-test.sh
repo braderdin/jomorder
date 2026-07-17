@@ -36,6 +36,7 @@ check_endpoint() {
 # Endpoint sasaran (Fasa 10/11 wiring)
 check_endpoint "/smoke" "GET /smoke (live report)"
 check_endpoint "/cron/maintenance" "GET /cron/maintenance (scheduler)"
+check_endpoint "/health" "GET /health (Phase 20 DB sentinel)"
 check_endpoint "/" "GET / (webhook readiness)"
 
 echo "--------------------------------------------------"

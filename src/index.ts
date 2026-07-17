@@ -4,6 +4,7 @@ import { Env, TelegramUpdate } from './types';
 import { parseUpdate } from './telegram';
 import { handleUpdate, runScheduledMaintenance } from './handlers';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
+import { checkDatabaseHealth } from './services/sentinel';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -48,6 +49,18 @@ export default {
       }
     }
     // End: Fasa 10 - Live Smoke Test Engine Endpoint
+
+    // Start: Phase 20 - Database Heartbeat Sentinel Endpoint (GET /health)
+    // Soft HTTP 200 untuk elak Telegram/webhook retry storm (Fasal 7 Strategy 4).
+    // "OK" = heartbeat hidup, "DRIFT_DETECTED" = sambungan DB jatuh.
+    if (request.method === 'GET' && url.pathname.endsWith('/health')) {
+      const alive = await checkDatabaseHealth(env);
+      return new Response(alive ? 'OK' : 'DRIFT_DETECTED', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
+    }
+    // End: Phase 20 - Database Heartbeat Sentinel Endpoint
 
     // Start: Webhook Guard (Fasal 10)
     if (request.method !== 'POST') {
