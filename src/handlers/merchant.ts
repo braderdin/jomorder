@@ -4,7 +4,7 @@
 import { Env, MerchantState } from '../types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from '../telegram';
 import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium } from '../db';
-import { setState, getState, invalidateSubscriptionCache } from '../redis';
+import { setState, getState, invalidateSubscriptionCache, checkRateLimit } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
 import { buildDecisionCaption } from '../services/admin';
@@ -153,6 +153,14 @@ export async function handleMerchantMessage(
 ): Promise<void> {
   // Start: Fasa 15 - Premium Upsell Command (/naiktaraf)
   if (text === '/naiktaraf') {
+    // Start: Fasa 16 Spam Protection Rate-Limiting pada /naiktaraf (sub-key limit:upsell:{id})
+    const limitKey = `limit:upsell:${tgId}`;
+    const allowed = await checkRateLimit(env, limitKey);
+    if (!allowed) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan naik taraf. Sila cuba sebentar lagi.'), merchantMenuKeyboard());
+      return;
+    }
+    // End: Fasa 16 Spam Protection Rate-Limiting
     const exists = await checkMerchantExists(env, tgId);
     if (!exists) {
       await sendMessage(env, chatId, escapeMarkdownV2('Hai! Anda belum daftar kedai. Tekan butang di bawah untuk mula 🚀'), daftarKedaiKeyboard());

@@ -25,7 +25,6 @@ async function redisCommand(env: Env, cmd: unknown[]): Promise<unknown> {
 }
 
 const stateKey = (id: number) => `state:${id}`;
-const cartKey = (id: number) => `cart:${id}`;
 
 /**
  * Strategy 2: Persist merchant conversation step dengan 1-hour TTL window.
@@ -52,38 +51,7 @@ export async function getState(env: Env, telegramId: number): Promise<MerchantSt
   }
 }
 
-/**
- * Strategy 3: Buffer cart aktif pelanggan dalam JSON (lightweight).
- * Hanya commit ke rekod_pesanan bila pengesahan eksplisit.
- */
-export async function setCart(
-  env: Env,
-  telegramId: number,
-  cart: Record<string, unknown>
-): Promise<void> {
-  await redisCommand(env, [
-    'SET',
-    cartKey(telegramId),
-    JSON.stringify(cart),
-    'EX',
-    STATE_TTL_SECONDS,
-  ]);
-}
-
-/** Lookup cart buffer (ping) untuk troli pelanggan. */
-export async function getCart(
-  env: Env,
-  telegramId: number
-): Promise<Record<string, unknown> | null> {
-  const raw = await redisCommand(env, ['GET', cartKey(telegramId)]);
-  if (typeof raw !== 'string') return null;
-  try {
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
+// Start: Fasa 16 Codebase Dead-Code Removal - setCart/getCart/cartKey dibuang (tiada caller, Strategy 3 cart buffer beralih ke engine state)
 // Start: Fasa 5 - Subscription Status Cache (Free-tier quota shield)
 // Fasal 7 Strategy 2: cache langganan di Redis supaya setiap mesej masuk
 // tak perlu tembak Supabase. Key namespace selari `state:{id}` engine.
@@ -138,5 +106,19 @@ export async function invalidateSubscriptionCacheBatch(
 }
 
 // End: Fasa 6 - Subscription Cache Invalidation Hook
+
+// Start: Fasa 16 Spam Protection Rate-Limiting (Fasal 7 Strategy 2 Redis shield)
+// SET key value NX EX -> atomik. Return true jika kekunci berjaya diset
+// (tiada flag sebelum ini = benarkan). False jika sub-key masih wujud = sekat spam.
+const RATE_LIMIT_TTL_SECONDS = 10; // short TTL window block automated PATCH spam
+export async function checkRateLimit(
+  env: Env,
+  key: string,
+  ttlSeconds: number = RATE_LIMIT_TTL_SECONDS
+): Promise<boolean> {
+  const result = await redisCommand(env, ['SET', key, '1', 'NX', 'EX', ttlSeconds]);
+  return result === 'OK';
+}
+// End: Fasa 16 Spam Protection Rate-Limiting
 
 // End: JomOrder Fasa 4 - Upstash Redis State & Cart Engine (Fail 2)

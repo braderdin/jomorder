@@ -7,7 +7,9 @@ import { sendMessage, escapeMarkdownV2 } from './telegram';
 import { getSubscriptionCache, setSubscriptionCache } from './redis';
 
 /** Status langganan peniaga (selaras schema senarai_kedai.status_langganan). */
-export type LanggananStatus = 'AKTIF' | 'HAMPIR_TAMAT' | 'TAMAT';
+// Start: Fasa 16 Premium Tier Core Hardening - tambah 'PREMIUM' ke union
+export type LanggananStatus = 'AKTIF' | 'HAMPIR_TAMAT' | 'TAMAT' | 'PREMIUM';
+// End: Fasa 16 Premium Tier Core Hardening
 
 /** Ambang amaran: bilangan hari sebelum tamat untuk flag HAMPIR_TAMAT. */
 export const AMARAN_HARI = 7;
@@ -16,11 +18,14 @@ export const AMARAN_HARI = 7;
  * Tukar string DB ke enum LanggananStatus selamat.
  * Jika kosong/asing, anggap 'AKTIF' (fail-open supaya tiada false-block).
  */
+// Start: Fasa 16 Premium Tier Core Hardening - handle 'PREMIUM' natively (no AKTIF fallback)
 export function normalizeLangganan(raw: string | null | undefined): LanggananStatus {
   if (raw === 'TAMAT') return 'TAMAT';
   if (raw === 'HAMPIR_TAMAT') return 'HAMPIR_TAMAT';
+  if (raw === 'PREMIUM') return 'PREMIUM';
   return 'AKTIF';
 }
+// End: Fasa 16 Premium Tier Core Hardening
 
 /**
  * Dapatkan status langganan peniaga dengan Redis cache-first pattern.

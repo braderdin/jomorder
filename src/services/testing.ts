@@ -22,10 +22,10 @@ export interface SmokeReport {
 export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787'): Promise<SmokeReport[]> {
   const reports: SmokeReport[] = [];
 
-  const probe = async (name: string, method: string, path: string, headers: Record<string, string> = {}, expected: number): Promise<void> => {
+  const probe = async (name: string, method: string, path: string, headers: Record<string, string> = {}, expected: number, body?: string): Promise<void> => {
     let actual = 0;
     try {
-      const res = await fetch(`${baseUrl}${path}`, { method, headers, body: method === 'POST' ? '{}' : undefined });
+      const res = await fetch(`${baseUrl}${path}`, { method, headers, body: body ?? (method === 'POST' ? '{}' : undefined) });
       actual = res.status;
     } catch {
       actual = 0; // rangkaian gagal (worker tak hidup) → 0, bukan crash
@@ -47,6 +47,21 @@ export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787')
 
   // 5. Webhook Guard: secret sah — expect 200 OK (terima payload)
   await probe('Webhook Guard Valid Secret', 'POST', '/', { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN }, 200);
+
+  // 6. Start: Fasa 16 Smoke Test Engine Expansion - Coupon Route Validation (/kupon)
+  // Mockup POST webhook dengan body mesej pelanggan '/kupon <KOD>' + secret sah.
+  // Audit input validation matrix route path /kupon (handler dari customer.ts). Expect 200.
+  const kuponMockBody = JSON.stringify({
+    update_id: 1,
+    message: {
+      message_id: 1,
+      from: { id: 123456789 },
+      chat: { id: 123456789 },
+      text: '/kupon TESTKOD',
+    },
+  });
+  await probe('Coupon Route Validation', 'POST', '/', { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN }, 200, kuponMockBody);
+  // End: Fasa 16 Smoke Test Engine Expansion
 
   return reports;
 }
