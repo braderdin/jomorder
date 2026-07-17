@@ -11,6 +11,7 @@ import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
 import { fetchSaasMetrics, fetchPublicStats } from './services/analytics';
 import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from './telegram';
+import { handleMerchantInvoiceText, handleInvoiceCallback } from './handlers/merchant_invoice';
 
 /** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
 function unifiedGreetingKeyboard() {
@@ -33,6 +34,11 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     const data = cb.data || '';
     // Merchant: order lifecycle + admin approval
     if (await handleMerchantCallback(env, cb, cbChatId, data)) return;
+    // Start: Phase 29 - Invoice inline callback routing
+    if (data.startsWith('view_invoice:')) {
+      if (await handleInvoiceCallback(env, cb, cbChatId, data)) return;
+    }
+    // End: Phase 29 - Invoice inline callback routing
     // Customer: payment confirmation
     if (await handlePayNow(env, cb, cbChatId, data)) return;
 
@@ -164,6 +170,19 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await sendMessage(env, chatId, escapeMarkdownV2('🗺️ ZON OPERASI KAMI:\\n') + list);
     return;
   }
+
+  // Start: Phase 29 - /invois command (Digital Invoice Engine)
+  // Peniaga jana invois digital MarkdownV2 untuk kedai mereka.
+  if (text === '/invois') {
+    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      return;
+    }
+    await handleMerchantInvoiceText(env, chatId, tgId, text);
+    return;
+  }
+  // End: Phase 29 - /invois command
+
   // End: Phase 25 - Localized Command Matrix
 
   // Start: Phase 23 - Merchant state prefix routing ('merchant:' namespace guard)

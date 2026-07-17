@@ -98,6 +98,7 @@ export interface PublicStats {
   total_orders: number;
   total_gmv_rm: number;
   status: string;
+  cached_at?: string; // ISO timestamp semasa di-cache (Phase 29 observability)
 }
 
 /**
@@ -149,6 +150,7 @@ export async function fetchPublicStats(env: Env): Promise<PublicStats> {
       total_orders: totalOrders,
       total_gmv_rm: Math.round(totalGmv * 100) / 100,
       status: 'OK',
+      cached_at: new Date().toISOString(), // Phase 29: inject ISO timestamp write
     };
     // Start: Phase 28 - Cache write path (background, fail-safe)
     try {

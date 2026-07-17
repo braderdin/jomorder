@@ -124,4 +124,17 @@ export interface TelegramApiResponse {
   description?: string;
 }
 
+// Start: Phase 29 - Invoice & Analytics Type Schemas (Fasal 4 SOA single source)
+// Re-eksport kontrak Invoice dari engine (services/invoice) supaya semua modul
+// share schema tunggal tanpa duplikasi. Type-only import elak cycle runtime.
+export type { Invoice, InvoiceLineItem, InvoiceQueryBoundary } from './services/invoice';
+
+/** Sempadan query analitik pilihan (digunakan invoice + analytics layer). */
+export interface AnalyticsQueryBoundary {
+  since?: string; // ISO timestamp bawah
+  until?: string; // ISO timestamp atas
+  had?: number; // had baris
+}
+// End: Phase 29 - Invoice & Analytics Type Schemas
+
 // End: JomOrder Fasa 3 - Core Type Definitions

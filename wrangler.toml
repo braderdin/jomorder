@@ -18,6 +18,11 @@ CHIP_BESAR_TELEGRAM_ID = "YOUR_CHIP_BESAR_ID"
 R2_PUBLIC_URL = "YOUR_PUBLIC_URL"
 # End: Fasa 12 - Config Alignment (generic placeholder, privacy secure Fasal 11)
 
+# Start: Phase 29 - Public Stats Cache TTL Alignment (Fasal 11 env alignment)
+# PUBLIC_STATS_TTL=60 selaras dengan analytics.ts PUBLIC_STATS_TTL konstant.
+PUBLIC_STATS_TTL = 60
+# End: Phase 29 - Public Stats Cache TTL Alignment
+
 # Secrets (rahsia - isi guna: npx wrangler secret put <NAME>)
 # TELEGRAM_BOT_TOKEN
 # X_TELEGRAM_BOT_API_SECRET_TOKEN
