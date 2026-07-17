@@ -49,4 +49,56 @@ export async function fetchSaasMetrics(env: Env): Promise<SaasMetrics | null> {
     return null; // Soft-fail (Fasal 7 Strategy 4)
   }
 }
+/** Struktur stats awam (selamat, tiada data sensitif). */
+export interface PublicStats {
+  total_shops: number;
+  total_orders: number;
+  total_gmv_rm: number;
+  status: string;
+}
+
+/**
+ * Fetch agregat awam SELAMAT untuk frontend hydration (ganti N/A).
+ * Hanya COUNT aggregate dari senarai_kedai & rekod_pesanan.
+ * Guna anon key (bukan service_role) -> RLS kekal aktif (Fasal 7 Strategy 1).
+ * Soft-fail: return zero payload jika DB/network gagal (Fasal 7 Strategy 4).
+ */
+export async function fetchPublicStats(env: Env): Promise<PublicStats> {
+  const base = `${env.SUPABASE_URL}/rest/v1`;
+  const headers = {
+    apikey: env.SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json',
+  };
+  try {
+    const [shopsRes, ordersRes] = await Promise.all([
+      fetch(`${base}/senarai_kedai?select=count`, { headers }),
+      fetch(`${base}/rekod_pesanan?select=total_amount`, { headers }),
+    ]);
+    let totalShops = 0;
+    if (shopsRes.ok) {
+      const sd = await shopsRes.json();
+      totalShops = Array.isArray(sd) && sd[0]?.count ? Number(sd[0].count) : 0;
+    }
+    let totalOrders = 0;
+    let totalGmv = 0;
+    if (ordersRes.ok) {
+      const od = await ordersRes.json();
+      if (Array.isArray(od)) {
+        totalOrders = od.length;
+        totalGmv = od.reduce((s, r) => s + (parseFloat(r.total_amount) || 0), 0);
+      }
+    }
+    return {
+      total_shops: totalShops,
+      total_orders: totalOrders,
+      total_gmv_rm: Math.round(totalGmv * 100) / 100,
+      status: 'OK',
+    };
+  } catch {
+    // Soft-fail (Fasal 7 Strategy 4) - return zeroed safe payload
+    return { total_shops: 0, total_orders: 0, total_gmv_rm: 0, status: 'DEGRADED' };
+  }
+}
+
 // End: JomOrder Fasa 13 - SaaS Analytics Data Layer (File 2)

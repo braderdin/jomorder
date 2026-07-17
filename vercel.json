@@ -13,6 +13,10 @@
     {
       "source": "/api/health",
       "destination": "/api/health.json"
+    },
+    {
+      "source": "/api/public-stats",
+      "destination": "https://jomorder-worker.jomorder.workers.dev/api/public-stats"
     }
   ],
   "redirects": [

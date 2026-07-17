@@ -1,11 +1,8 @@
-// Start: JomOrder Portal Live Metrics Fetch
-// Lightweight vanilla JS to fetch live merchant/order counts from Supabase
-// using NEXT_PUBLIC_SUPABASE_ANON_KEY and NEXT_PUBLIC_SUPABASE_URL.
+// Start: JomOrder Portal Live Metrics Fetch (Phase 27 - Public Stats Hydration)
+// Rewrite: buang hardcoded env vars. Panggil relative endpoint /api/public-stats
+// (di-proxy Vercel ke Cloudflare Worker) untuk elak CORS + pendedahan key awam.
 
-const SUPABASE_URL = "__SUPABASE_URL__";
-const SUPABASE_ANON_KEY = "__SUPABASE_ANON_KEY__";
-
-// Animated counter helper
+// Animated numerical counter helper (ganti N/A grid)
 function animateCounter(elementId, targetValue, prefix = "", suffix = "") {
   const el = document.getElementById(elementId);
   if (!el) return;
@@ -21,84 +18,43 @@ function animateCounter(elementId, targetValue, prefix = "", suffix = "") {
   }, 25);
 }
 
-// Fetch shop count from merchants table
-async function fetchShopCount() {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/merchants?select=count`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    const count = Array.isArray(data) && data[0] && data[0].count ? data[0].count : 0;
-    document.getElementById("metric-shops").textContent = count;
-    animateCounter("counter-merchants", count);
-    return count;
-  } catch (err) {
-    console.warn("Shop count fetch failed:", err);
-    document.getElementById("metric-shops").textContent = "N/A";
-    return 0;
-  }
+// Fallback statik jika fetch gagal (elak N/A kekal)
+function setFallback() {
+  const shopEl = document.getElementById("counter-merchants");
+  const orderEl = document.getElementById("counter-orders");
+  const gmvEl = document.getElementById("metric-gmv");
+  if (shopEl && shopEl.textContent === "N/A") shopEl.textContent = "0";
+  if (orderEl && orderEl.textContent === "N/A") orderEl.textContent = "0";
+  if (gmvEl && gmvEl.textContent === "RM N/A") gmvEl.textContent = "RM 0.00";
 }
 
-// Fetch order count from rekod_pesanan table
-async function fetchOrderCount() {
+// Fetch public stats dari relative endpoint (/api/public-stats)
+async function fetchPublicStats() {
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/rekod_pesanan?select=count`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch("/api/public-stats", { signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    const count = Array.isArray(data) && data[0] && data[0].count ? data[0].count : 0;
-    document.getElementById("metric-orders").textContent = count;
-    animateCounter("counter-orders", count);
-    return count;
-  } catch (err) {
-    console.warn("Order count fetch failed:", err);
-    document.getElementById("metric-orders").textContent = "N/A";
-    return 0;
-  }
-}
+    const shops = Number(data.total_shops ?? 0);
+    const orders = Number(data.total_orders ?? 0);
+    const gmv = Number(data.total_gmv_rm ?? 0);
 
-// Fetch GMV sum from rekod_pesanan total_amount column
-async function fetchGMV() {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/rekod_pesanan?select=total_amount`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const rows = await res.json();
-    let total = 0;
-    if (Array.isArray(rows)) {
-      total = rows.reduce((sum, r) => sum + (parseFloat(r.total_amount) || 0), 0);
-    }
-    document.getElementById("metric-gmv").textContent =
-      "RM " + total.toLocaleString("ms-MY", { maximumFractionDigits: 2 });
-    return total;
+    const shopEl = document.getElementById("metric-shops");
+    const orderEl = document.getElementById("metric-orders");
+    const gmvEl = document.getElementById("metric-gmv");
+    if (shopEl) shopEl.textContent = shops.toLocaleString("ms-MY");
+    if (orderEl) orderEl.textContent = orders.toLocaleString("ms-MY");
+    if (gmvEl) gmvEl.textContent = "RM " + gmv.toLocaleString("ms-MY", { maximumFractionDigits: 2 });
+
+    animateCounter("counter-merchants", shops);
+    animateCounter("counter-orders", orders);
+    return { shops, orders, gmv };
   } catch (err) {
-    console.warn("GMV fetch failed:", err);
-    document.getElementById("metric-gmv").textContent = "RM N/A";
-    return 0;
+    console.warn("Public stats fetch failed:", err);
+    setFallback();
+    return { shops: 0, orders: 0, gmv: 0 };
   }
 }
 
@@ -106,20 +62,20 @@ async function fetchGMV() {
 function initAnalyticsStatus() {
   const pixelId = document.getElementById("meta-pixel")?.dataset.pixelId;
   const gaId = new URLSearchParams(window.location.search).get("ga");
-  document.getElementById("pixel-status").textContent =
-    pixelId && pixelId !== "NEXT_PUBLIC_META_PIXEL_ID" ? "aktif" : "tidak dikonfigurasi";
-  document.getElementById("ga-status").textContent =
-    typeof gtag === "function" ? "aktif" : "tidak dikonfigurasi";
+  const pixelEl = document.getElementById("pixel-status");
+  const gaEl = document.getElementById("ga-status");
+  if (pixelEl) pixelEl.textContent = pixelId && pixelId !== "NEXT_PUBLIC_META_PIXEL_ID" ? "aktif" : "tidak dikonfigurasi";
+  if (gaEl) gaEl.textContent = typeof gtag === "function" ? "aktif" : "tidak dikonfigurasi";
 }
 
 // Boot
 async function init() {
   initAnalyticsStatus();
-  await Promise.all([fetchShopCount(), fetchOrderCount(), fetchGMV()]);
+  await fetchPublicStats();
   const now = new Date();
-  document.getElementById("last-updated").textContent =
-    "Kemas kini terakhir: " + now.toLocaleString("ms-MY");
+  const lu = document.getElementById("last-updated");
+  if (lu) lu.textContent = "Kemas kini terakhir: " + now.toLocaleString("ms-MY");
 }
 
 document.addEventListener("DOMContentLoaded", init);
-// End: JomOrder Portal Live Metrics Fetch
+// End: JomOrder Portal Live Metrics Fetch (Phase 27)

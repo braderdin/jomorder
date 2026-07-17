@@ -9,7 +9,7 @@ import { handleViewCart } from './handlers/customer_cart';
 import { handleAdminMessage } from './handlers/admin';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
-import { fetchSaasMetrics } from './services/analytics';
+import { fetchSaasMetrics, fetchPublicStats } from './services/analytics';
 import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from './telegram';
 
 /** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
@@ -191,5 +191,13 @@ export async function runScheduledMaintenance(env: Env): Promise<number> {
   return ids.length;
 }
 // End: Fasa 6 - Scheduled Maintenance Wiring
+
+// Start: Phase 27 - Public Stats Controller Linkage
+// Expose unauthenticated aggregate stats untuk frontend hydration (ganti N/A).
+// Dipanggil dari index.ts GET /api/public-stats (bypass webhook secret).
+export async function handlePublicStats(env: Env) {
+  return await fetchPublicStats(env);
+}
+// End: Phase 27 - Public Stats Controller Linkage
 
 // End: JomOrder Fasa 9 - Core Distributor Router (File 4)

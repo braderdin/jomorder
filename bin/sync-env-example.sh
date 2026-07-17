@@ -45,5 +45,31 @@ if [[ "$APPENDED" -eq 0 ]]; then
 else
   echo "[DRIFT] SIAP: ${APPENDED} kunci diselaraskan."
 fi
+
+# Start: Phase 27 - Vercel Config ID Drift Guard
+# Sahkan Vercel ID konfigurasi (VERCEL_PROJECT_ID, VERCEL_ORG_ID) wujud
+# dan konsisten case-nya dalam .env.example untuk elak mixed-case typographical drift.
+VERCEL_IDS=("VERCEL_PROJECT_ID" "VERCEL_ORG_ID")
+for vid in "${VERCEL_IDS[@]}"; do
+  if ! grep -qE "^[[:space:]]*#?[[:space:]]*${vid}=" "$ENV_EXAMPLE"; then
+    echo "${vid}=\"__SET_VERCEL_${vid}_HERE__\"" >> "$ENV_EXAMPLE"
+    echo "[DRIFT] Tambah Vercel ID hilang ke .env.example: ${vid}"
+    APPENDED=$((APPENDED + 1))
+  fi
+done
+
+# Amaran case-sensitivity: Vercel ID peka case. Flag jika sebarang varian
+# case lain wujud (cth VERCEL_project_id) yang boleh sebabkan drift senyap.
+while IFS= read -r line; do
+  lk="$(echo "$line" | cut -d= -f1 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  [[ "$lk" == \#* || -z "$lk" ]] && continue
+  for vid in "${VERCEL_IDS[@]}"; do
+    if [[ "$lk" != "$vid" && "${lk^^}" == "${vid^^}" ]]; then
+      echo "[DRIFT][WARNING] Varian case salah dikesan: ${lk} (sepatutnya ${vid})"
+    fi
+  done
+done < "$ENV_EXAMPLE"
+# End: Phase 27 - Vercel Config ID Drift Guard
+
 exit 0
 # End: Phase 26 - Environment Drift Guard Utility

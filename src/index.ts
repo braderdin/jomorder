@@ -2,7 +2,7 @@
 // Fasal 10 (Webhook Guard) + Fasal 4 (SOA) + Fasal 11 (env binding consistency)
 import { Env, TelegramUpdate } from './types';
 import { parseUpdate } from './telegram';
-import { handleUpdate, runScheduledMaintenance } from './handlers';
+import { handleUpdate, runScheduledMaintenance, handlePublicStats } from './handlers';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
 import { checkDatabaseHealth } from './services/sentinel';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
@@ -73,6 +73,29 @@ export default {
       });
     }
     // End: Phase 20 - Database Heartbeat Sentinel Endpoint
+
+    // Start: Phase 27 - Public Stats Aggregate Route (bypass webhook secret)
+    // Route ini DEDAHKAN data analitik SELAMAT sahaja (COUNT aggregates).
+    // Tidak perlu X-Telegram-Bot-Api-Secret-Token -> elak CORS/401 public consumption.
+    if (request.method === 'GET' && url.pathname.endsWith('/api/public-stats')) {
+      try {
+        const payload = await handlePublicStats(env);
+        return new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=60, s-maxage=60',
+          },
+        });
+      } catch (err) {
+        // Soft 200 (Fasal 7 Strategy 4) - jangan biarkan public route gagal keras
+        return new Response(
+          JSON.stringify({ status: 'DEGRADED', service: 'JomOrder', error: (err as Error).message }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    // End: Phase 27 - Public Stats Aggregate Route
 
     // Start: Webhook Guard (Fasal 10)
     if (request.method !== 'POST') {
