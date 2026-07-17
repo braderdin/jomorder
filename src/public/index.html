@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ms" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JomOrder - Platform Mikro-SaaS Multi-Tenant RM0 Kos Operasi</title>
+  <meta name="description" content="JomOrder: Platform mikro-SaaS multi-tenant untuk peniaga F&B Malaysia. Kos operasi RM0 dengan bot Telegram dan sistem pesanan automatik." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              bg: '#0a0e1a',
+              panel: '#111827',
+              neon: '#00f0ff',
+              accent: '#7c3aed',
+              gold: '#fbbf24'
+            }
+          },
+          fontFamily: {
+            mono: ['Courier New', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Meta Pixel -->
+  <script id="meta-pixel" data-pixel-id="NEXT_PUBLIC_META_PIXEL_ID"></script>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=NEXT_PUBLIC_GA_ID"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'NEXT_PUBLIC_GA_ID');
+  </script>
+</head>
+<body class="bg-cyber-bg text-gray-100 font-sans antialiased">
+
+  <!-- SECTION A: HERO BANNER -->
+  <header class="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-cyber-accent/20 via-cyber-bg to-cyber-neon/10"></div>
+    <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, #00f0ff 1px, transparent 0); background-size: 40px 40px;"></div>
+
+    <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
+      <div class="inline-block mb-6 px-4 py-2 rounded-full border border-cyber-neon/40 bg-cyber-neon/10 text-cyber-neon text-sm font-mono tracking-widest">
+        MDEC GLOW PROJECT PORTFOLIO
+      </div>
+
+      <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
+        JomOrder<span class="text-cyber-neon">.</span><br/>
+        <span class="bg-gradient-to-r from-cyber-neon to-cyber-accent bg-clip-text text-transparent">
+          Micro-SaaS Multi-Tenant
+        </span>
+      </h1>
+
+      <p class="text-xl md:text-2xl text-gray-300 mb-4 font-semibold">
+        Platform Mikro-SaaS Multi-Tenant <span class="text-cyber-gold">RM0 Kos Operasi</span>
+      </p>
+      <p class="text-base md:text-lg text-gray-400 mb-10 max-w-2xl mx-auto">
+        Sistem pesanan F&B automatik berkuasa bot Telegram. Peniaga boleh terima pesanan, urus menu, dan terima bayaran DuitNow tanpa kos langganan bulanan.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <a href="https://t.me/JomOrderBot" target="_blank" rel="noopener"
+           class="px-8 py-4 rounded-xl bg-cyber-neon text-cyber-bg font-bold text-lg hover:bg-cyan-300 transition-all shadow-lg shadow-cyber-neon/30 w-full sm:w-auto">
+          🚀 Cuba Bot Telegram
+        </a>
+        <a href="#metrics" class="px-8 py-4 rounded-xl border border-gray-600 hover:border-cyber-neon text-gray-200 font-semibold transition-all w-full sm:w-auto">
+          Lihat Statistik Langsung
+        </a>
+      </div>
+
+      <div class="mt-16 grid grid-cols-3 gap-4 max-w-lg mx-auto">
+        <div class="text-center">
+          <div class="text-2xl md:text-3xl font-bold text-cyber-neon" id="counter-merchants">0</div>
+          <div class="text-xs text-gray-400 mt-1">Peniaga Aktif</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl md:text-3xl font-bold text-cyber-gold" id="counter-orders">0</div>
+          <div class="text-xs text-gray-400 mt-1">Pesanan Diproses</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl md:text-3xl font-bold text-cyber-accent" id="counter-uptime">99%</div>
+          <div class="text-xs text-gray-400 mt-1">Uptime</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SECTION B: DYNAMIC METRICS -->
+  <section id="metrics" class="py-20 px-6 bg-cyber-panel/50">
+    <div class="max-w-5xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">
+        Statistik <span class="text-cyber-neon">Langsung</span> dari Supabase
+      </h2>
+      <p class="text-gray-400 mb-12">Data dikemas kini secara real-time melalui <code class="text-cyber-neon">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></p>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg">
+          <div class="text-4xl mb-3">🏪</div>
+          <div class="text-3xl font-bold text-cyber-neon" id="metric-shops">--</div>
+          <div class="text-sm text-gray-400 mt-2">Kedai Berdaftar</div>
+        </div>
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg">
+          <div class="text-4xl mb-3">📦</div>
+          <div class="text-3xl font-bold text-cyber-gold" id="metric-orders">--</div>
+          <div class="text-sm text-gray-400 mt-2">Jumlah Pesanan</div>
+        </div>
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg">
+          <div class="text-4xl mb-3">💰</div>
+          <div class="text-3xl font-bold text-cyber-accent" id="metric-gmv">RM --</div>
+          <div class="text-sm text-gray-400 mt-2">Jumlah Nilai Jualan</div>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-6" id="last-updated">Sediakan data...</p>
+    </div>
+  </section>
+
+  <!-- SECTION C: ANALYTICS PIXEL HOOKS -->
+  <section class="py-16 px-6 text-center border-t border-gray-800">
+    <p class="text-sm text-gray-500 font-mono">
+      Analytics: Meta Pixel (<span id="pixel-status">menunggu</span>) | Google Analytics (<span id="ga-status">menunggu</span>)
+    </p>
+  </section>
+
+  <footer class="py-8 px-6 text-center text-gray-600 text-sm border-t border-gray-800">
+    © 2026 JomOrder | MDEC GLOW Project | Dibina dengan ❤️ di Malaysia
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>
