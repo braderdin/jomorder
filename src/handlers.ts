@@ -126,6 +126,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Start: Callback query router (delegate ke modul khusus)
   const cb = update.callback_query;
   if (cb?.from) {
+   try {
     const cbChatId = cb.message?.chat.id ?? cb.from.id;
     const data = cb.data || '';
     // Merchant: order lifecycle + admin approval
@@ -196,7 +197,15 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     }
     // End: Phase 34 - Coupon inline deletion callback wiring
 
-    return; // callback lain diabaikan buat masa ini
+    // Start: Phase 35 - Callback Spinner Hardening (Fasal 7 Strategy 4)
+    // Dismiss spinner untuk callback tak dikenali supaya Tiada Telegram retry hang.
+    await answerCallbackQuery(env, cb.id, '✅');
+    return;
+    // End: Phase 35 - Callback Spinner Hardening
+   } catch {
+    // Phase 35: soft-fail - jawab spinner jika handler throw (elak hang).
+    await answerCallbackQuery(env, cb.id, 'Sila cuba sebentar lagi');
+   }
   }
   // End: Callback query router
 

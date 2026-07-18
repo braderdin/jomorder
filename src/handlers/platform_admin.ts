@@ -3,7 +3,7 @@
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2 } from '../telegram';
 import { fetchSaasMetrics } from '../services/analytics';
-import { getSubscriptionStatus } from '../subscription';
+import { getSubscriptionStatus, verifyPremiumRealtime } from '../subscription';
 
 const SUPABASE_REST = (env: Env) => `${env.SUPABASE_URL}/rest/v1`;
 
@@ -83,12 +83,25 @@ export async function handleSenaraiPendaftaran(env: Env, chatId: number, tgId: n
   }
 }
 
+// Start: Phase 35 - Commercial Adjustment Production Guard (Fasal 7 Strategy 1 isolation)
+// Kunci semua penyesuaian komersial (tukar tier premium) di bawah production guard.
+// Hanya pentadbir (isAdmin) dibenarkan laksanakan tulisan tier; paparan info bebas.
+const COMMERCIAL_ADJUST_LOCKED = true;
+
+/** Sahkan laluan penyesuaian komersial dibenarkan (production guard). */
+function canAdjustCommercial(env: Env, tgId: number): boolean {
+  if (!COMMERCIAL_ADJUST_LOCKED) return true; // guard mati -> benarkan (dev only)
+  return isAdmin(env, tgId); // produksi -> mesti pentadbir
+}
+// End: Phase 35 - Commercial Adjustment Production Guard
+
 /** /naiktaraf - bantu peniaga naik taraf pelan premium (verify hook + trigger pautan). */
 export async function handleNaikTaraf(env: Env, chatId: number, tgId: number): Promise<void> {
   try {
-    // Wire terus ke premium subscription verification hook (Fasal 7 S1 isolate).
-    const status = await getSubscriptionStatus(env, tgId);
-    if (status === 'PREMIUM') {
+    // Wire ke premium subscription verification hook masa nyata (Fasal 7 S1 isolate).
+    // verifyPremiumRealtime ada fallback berlapis supaya tiada transaksi terbantut.
+    const isPremium = await verifyPremiumRealtime(env, tgId);
+    if (isPremium) {
       await sendMessage(
         env,
         chatId,
@@ -96,6 +109,16 @@ export async function handleNaikTaraf(env: Env, chatId: number, tgId: number): P
       );
       return;
     }
+    // Phase 35: kunci penyesuaian komersial di bawah production guard.
+    if (!canAdjustCommercial(env, tgId)) {
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('🔒 Naik taraf premium dikunci di bawah production guard. Sila hubungi pentadbir.')
+      );
+      return;
+    }
+    const status = await getSubscriptionStatus(env, tgId);
     const msg =
       escapeMarkdownV2('⭐ NAIKTARAF PREMIUM\\n\\n') +
       escapeMarkdownV2(`Status semasa: ${status}\\n\\n`) +

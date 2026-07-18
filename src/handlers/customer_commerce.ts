@@ -34,6 +34,24 @@ async function kedaiWujud(env: Env, kedaiId: string): Promise<boolean> {
   }
 }
 
+// Start: Phase 35 - Safe startapp Deep-Link Capture (absolute safety boundaries)
+/**
+ * Parse parameter deep-link Telegram startapp dengan sempadan keselamatan mutlak.
+ * Menerima bentuk: 'kedai_id=<uuid>', 'startapp=<uuid>', atau '<uuid>' mentah.
+ * Tolak input kosong, terlalu panjang (>64), atau bukan UUID.
+ */
+export function parseStartAppPayload(raw?: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || trimmed.length > 64) return null;
+  let id = trimmed;
+  if (id.startsWith('startapp=')) id = id.slice('startapp='.length).trim();
+  else if (id.startsWith('kedai_id=')) id = id.slice('kedai_id='.length).trim();
+  if (id.length === 0 || id.length > 64) return null;
+  return UUID_RE.test(id) ? id : null;
+}
+// End: Phase 35 - Safe startapp Deep-Link Capture
+
 export async function handleStartDeepLink(
   env: Env,
   chatId: number,
@@ -41,13 +59,14 @@ export async function handleStartDeepLink(
   payload?: string
 ): Promise<void> {
   try {
-    if (payload && payload.startsWith('kedai_id=')) {
-      const kedaiId = payload.slice('kedai_id='.length).trim();
-      // Phase 34: Reject non-UUID / malformed deep-link tokens.
-      if (!kedaiId || !UUID_RE.test(kedaiId)) {
-        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Pautan kedai tidak sah.'));
-        return;
-      }
+    // Phase 35: Safe startapp deep-link capture (absolute safety boundaries).
+    const kedaiId = parseStartAppPayload(payload);
+    if (payload && !kedaiId) {
+      // Payload ada tapi gagal validasi -> tolak dengan selamat (anti-injection).
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Pautan kedai tidak sah.'));
+      return;
+    }
+    if (kedaiId) {
       // Phase 34: Sahkan kedai wujud sebelum redirect (anti-orphan redirect).
       if (!(await kedaiWujud(env, kedaiId))) {
         await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai tidak dijumpai atau belum aktif.'));

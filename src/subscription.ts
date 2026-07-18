@@ -121,17 +121,19 @@ export async function sendExpiryAlert(
   await sendMessage(env, chatId, formatExpiryAlert(status, shopName, bakiHari));
 }
 
-/**
- * verifyPremiumRealtime - semakan premium masa nyata TANPA cache Redis.
- * Digunakan oleh hook naiktaraf & aliran SaaS kritikal untuk elak stale cache
- * (Fasal 7 Strategy 1: query diikat ke merchant_telegram_id). Soft-fail -> false.
- */
-export async function verifyPremiumRealtime(
-  env: Env,
-  telegramId: number
-): Promise<boolean> {
-  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${telegramId}&select=status_langganan&limit=1`;
+// Start: Phase 35 - verifyPremiumRealtime Local Fallback Layers (Fasal 7 S2/S4)
+// Fallback berlapis supaya lifecycle transaksi terjaga walaupun cache network (Redis)
+// mengalami transmission delay: (1) memory map, (2) Redis cache, (3) Supabase direct
+// dgn AbortController timeout, (4) fallback memory terakhir jika total gagal.
+const premiumFallbackCache = new Map<number, boolean>();
+const PREMIUM_PROBE_TIMEOUT_MS = 4000;
+
+/** Probe Supabase direct dengan AbortController supaya tiada hang perpetually. */
+async function fetchPremiumDirect(env: Env, telegramId: number): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PREMIUM_PROBE_TIMEOUT_MS);
   try {
+    const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${telegramId}&select=status_langganan&limit=1`;
     const res = await fetch(url, {
       method: 'GET',
       headers: {
@@ -139,14 +141,52 @@ export async function verifyPremiumRealtime(
         apikey: env.SUPABASE_SERVICE_ROLE_KEY,
         Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
       },
+      signal: controller.signal,
     });
     if (!res.ok) return false;
     const rows = (await res.json()) as Array<{ status_langganan?: string }>;
-    if (!Array.isArray(rows) || rows.length === 0) return false;
-    return rows[0].status_langganan === 'PREMIUM';
-  } catch {
-    return false;
+    return Array.isArray(rows) && rows.length > 0 && rows[0].status_langganan === 'PREMIUM';
+  } finally {
+    clearTimeout(timer);
   }
 }
+
+/**
+ * verifyPremiumRealtime - semakan premium masa nyata dengan fallback berlapis.
+ * Digunakan oleh hook naiktaraf & aliran SaaS kritikal (Fasal 7 Strategy 1 RLS).
+ * Jika cache network delay, guna fallback memory untuk preserve lifecycle (tiada block).
+ */
+export async function verifyPremiumRealtime(
+  env: Env,
+  telegramId: number
+): Promise<boolean> {
+  // Layer 1: in-memory fallback (paling pantas, preserve lifecycle).
+  const memHit = premiumFallbackCache.get(telegramId);
+
+  // Layer 2: Redis cache-first (guarded; jangan block jika transmission delay).
+  try {
+    const cached = await getSubscriptionCache(env, telegramId);
+    if (cached) {
+      const isPrem = normalizeLangganan(cached) === 'PREMIUM';
+      premiumFallbackCache.set(telegramId, isPrem);
+      return isPrem;
+    }
+  } catch {
+    // Redis delay/down -> jatuh ke layer seterusnya tanpa block.
+  }
+
+  // Layer 3: Supabase direct dengan AbortController timeout.
+  try {
+    const isPrem = await fetchPremiumDirect(env, telegramId);
+    premiumFallbackCache.set(telegramId, isPrem);
+    await setSubscriptionCache(env, telegramId, isPrem ? 'PREMIUM' : 'AKTIF').catch(() => {});
+    return isPrem;
+  } catch {
+    // Layer 4: total transmission delay -> preserve lifecycle guna fallback memory.
+    if (memHit !== undefined) return memHit;
+    return false; // fail-safe: tiada rekod -> bukan premium.
+  }
+}
+// End: Phase 35 - verifyPremiumRealtime Local Fallback Layers
 
 // End: JomOrder Fasa 5 - SaaS Subscription Control Module (Fail 1)

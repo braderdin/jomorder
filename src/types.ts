@@ -271,4 +271,26 @@ export interface CouponDeleteCallback {
 }
 // End: Phase 33 - Coupon Inline Callback Type Specs
 
+// Start: Phase 35 - Network Telemetry Stats Schema (Fasal 7 Strategy 4 resilience)
+/** Statistiks kesihatan rangkaian untuk endpoint pemantauan (sentinel.ts). */
+export interface NetworkTelemetryStats {
+  ts: string; // ISO timestamp bila sampel diambil
+  worker_region?: string; // Rantau Cloudflare (contoh: "ap-southeast-1")
+  upstream_latency_ms: number; // Kelewatan ke Supabase/Upstash (ms)
+  db_status: 'OK' | 'DEGRADED' | 'DOWN';
+  redis_status: 'OK' | 'DEGRADED' | 'DOWN';
+  telegram_status: 'OK' | 'DEGRADED' | 'DOWN';
+  drift_sustained: boolean; // True jika connection drift berterusan > ambang
+  error_rate_pct: number; // Peratusan kegagalan permintaan (0-100)
+  active_connections: number; // Bilangan sambungan aktif semasa
+}
+
+/** Payload amaran yang dihantar ke ADMIN_TELEGRAM_ID bila drift berterusan. */
+export interface TelemetryAlertPayload {
+  level: 'WARN' | 'CRIT';
+  stats: NetworkTelemetryStats;
+  message: string; // Teks BM selamat (esc MongoDB/Telegram special chars)
+}
+// End: Phase 35 - Network Telemetry Stats Schema
+
 // End: JomOrder Fasa 3 - Core Type Definitions

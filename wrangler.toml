@@ -29,6 +29,13 @@ PUBLIC_STATS_TTL = 60
 # SUPABASE_SERVICE_ROLE_KEY
 # UPSTASH_REDIS_REST_TOKEN
 
+# Start: Phase 35 - Production Secrets Provisioning Sync (Fasal 10 + Fasal 11)
+# Semua secret di atas MESTI di-provision ke Cloudflare sebelum 'wrangler deploy'.
+# R2 binding 'R2_BUCKET' = 'jomorder-assets' sepadan 1:1 dengan .dev.vars R2_BUCKET_NAME.
+# Upstash REST variable 'UPSTASH_REDIS_REST_URL' sepadan types.ts Env.UPSTASH_REDIS_REST_URL.
+# Gunakan bin/deploy-worker.sh untuk auto-provision X_TELEGRAM_BOT_API_SECRET_TOKEN.
+# End: Phase 35 - Production Secrets Provisioning Sync
+
 # R2 Bucket (Fasal 8 media optimization) - optional
 [[r2_buckets]]
 binding = "R2_BUCKET"

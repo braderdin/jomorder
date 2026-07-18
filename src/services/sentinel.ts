@@ -1,7 +1,8 @@
 // Start: Phase 20 - Database Heartbeat Sentinel (Fasal 7 Strategy 4 soft-fail)
 // Lightweight PostgREST/RPC health probe. Returns soft boolean instead of
 // throwing, allowing graceful degradation without crashing the worker runtime.
-import { Env } from '../types';
+import { Env, NetworkTelemetryStats, TelemetryAlertPayload } from '../types';
+import { sendMessage, escapeMarkdownV2 } from '../telegram';
 
 /** Hard ceiling untuk heartbeat round-trip sebelum kita isytihar DRIFT. */
 const HEARTBEAT_TIMEOUT_MS = 5000;
@@ -59,6 +60,102 @@ export async function checkDatabaseHealth(env: Env): Promise<boolean> {
   // 2xx atau 401 (auth config) masih dikira capaian rangkaian wujud.
   return rpcStatus < 500;
 }
+// Start: Phase 35 - Drift Alert Dispatcher (Fasal 7 Strategy 4 + types NetworkTelemetryStats)
+/** Ambang bilangan probe berturut-turut gagal sebelum amaran dihantar. */
+const DRIFT_ALERT_THRESHOLD = 3;
+let sustainedDriftStreak = 0;
+
+/**
+ * Bina sampel NetworkTelemetryStats dari hasil probe komponen.
+ */
+export function buildTelemetryStats(args: {
+  upstream_latency_ms: number;
+  db_status: NetworkTelemetryStats['db_status'];
+  redis_status: NetworkTelemetryStats['redis_status'];
+  telegram_status: NetworkTelemetryStats['telegram_status'];
+  error_rate_pct?: number;
+  active_connections?: number;
+  worker_region?: string;
+}): NetworkTelemetryStats {
+  const anyDown =
+    args.db_status === 'DOWN' || args.redis_status === 'DOWN' || args.telegram_status === 'DOWN';
+  const anyDegraded =
+    args.db_status === 'DEGRADED' || args.redis_status === 'DEGRADED' || args.telegram_status === 'DEGRADED';
+  return {
+    ts: new Date().toISOString(),
+    worker_region: args.worker_region,
+    upstream_latency_ms: args.upstream_latency_ms,
+    db_status: args.db_status,
+    redis_status: args.redis_status,
+    telegram_status: args.telegram_status,
+    drift_sustained: anyDown || (anyDegraded && sustainedDriftStreak >= DRIFT_ALERT_THRESHOLD),
+    error_rate_pct: args.error_rate_pct ?? (anyDown ? 100 : anyDegraded ? 50 : 0),
+    active_connections: args.active_connections ?? 0,
+  };
+}
+
+/**
+ * Hantar payload amaran selamat ke ADMIN_TELEGRAM_ID bila connection drift berterusan.
+ * Menggunakan escapeMarkdownV2 untuk elak Telegram parse crash (Fasal 6).
+ */
+export async function dispatchDriftAlert(env: Env, stats: NetworkTelemetryStats): Promise<void> {
+  const adminId = env.ADMIN_TELEGRAM_ID;
+  if (!adminId) return; // Tiada admin -> jangan crash.
+
+  const payload: TelemetryAlertPayload = {
+    level: stats.db_status === 'DOWN' || stats.redis_status === 'DOWN' ? 'CRIT' : 'WARN',
+    stats,
+    message: `Drift berterusan dikesan. DB=${stats.db_status} Redis=${stats.redis_status} TG=${stats.telegram_status} lat=${stats.upstream_latency_ms}ms`,
+  };
+
+  const text =
+    escapeMarkdownV2('🚨 AMARAN KESIHATAN JOMORDER\\n\\n') +
+    escapeMarkdownV2(`Tahap: ${payload.level}\\n`) +
+    escapeMarkdownV2(`DB: ${stats.db_status}\\n`) +
+    escapeMarkdownV2(`Redis: ${stats.redis_status}\\n`) +
+    escapeMarkdownV2(`Telegram: ${stats.telegram_status}\\n`) +
+    escapeMarkdownV2(`Kelewatan: ${stats.upstream_latency_ms}ms\\n`) +
+    escapeMarkdownV2(`Drift berterusan: ${stats.drift_sustained ? 'YA' : 'TIDAK'}`);
+
+  await sendMessage(env, Number(adminId), text);
+}
+
+/**
+ * Evaluasi drift & auto-dispatch alert jika streak melepasi ambang.
+ * Panggil dari sentinel cron (index.ts) secara berkala.
+ */
+export async function evaluateConnectionDrift(env: Env, probe: {
+  dbOk: boolean;
+  redisOk: boolean;
+  tgOk: boolean;
+  latencyMs: number;
+}): Promise<NetworkTelemetryStats> {
+  const db_status = probe.dbOk ? 'OK' : 'DOWN';
+  const redis_status = probe.redisOk ? 'OK' : 'DOWN';
+  const telegram_status = probe.tgOk ? 'OK' : 'DOWN';
+
+  const healthy = probe.dbOk && probe.redisOk && probe.tgOk;
+  if (healthy) {
+    sustainedDriftStreak = 0;
+  } else {
+    sustainedDriftStreak += 1;
+  }
+
+  const stats = buildTelemetryStats({
+    upstream_latency_ms: probe.latencyMs,
+    db_status,
+    redis_status,
+    telegram_status,
+  });
+
+  if (sustainedDriftStreak >= DRIFT_ALERT_THRESHOLD) {
+    stats.drift_sustained = true;
+    await dispatchDriftAlert(env, stats);
+  }
+  return stats;
+}
+// End: Phase 35 - Drift Alert Dispatcher
+
 // End: Phase 20 - Database Heartbeat Sentinel
 
 // Start: Phase 21 - Sentinel Fallback Hardening (Fasal 7 Strategy 4 soft-fail)

@@ -173,5 +173,72 @@ export function summarizeLoadResults(results: LoadResult[]): string {
   );
   return `🔥 CONCURRENCY LOAD (16 CMD):\n` + lines.join('\n');
 }
+// Start: Phase 35 - High-Concurrency Spike Burst (16 commands + callbacks)
+/**
+ * runSpikeBurstTest
+ * Lembing letupan trafik tinggi (spike) merentasi ke-16 arahan kanonikal + callback
+ * penting. Menggunakan concurrency tinggi (default 50) untuk simulasi burst produksi.
+ * Kira kadar kejayaan agregat. Fasal 10: 200/403/405 = OK (bukan crash).
+ */
+export async function runSpikeBurstTest(
+  env: Env,
+  concurrency = 50,
+  baseUrl = 'http://localhost:8787'
+): Promise<LoadResult[]> {
+  const commands = [
+    '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
+    '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
+    '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+  ];
+  const callbacks = ['del_coupon:JOM10', 'toggle_status:abc', 'view_cart:abc', 'add_to_cart:item:shop'];
+  const secret = { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN };
+  const results: LoadResult[] = [];
+
+  const hitCmd = async (text: string): Promise<boolean> => {
+    try {
+      const body = JSON.stringify({
+        update_id: 1,
+        message: { message_id: 1, from: { id: 123456789 }, chat: { id: 123456789 }, text },
+      });
+      const res = await fetch(`${baseUrl}/`, { method: 'POST', headers: secret, body });
+      return res.status === 200 || res.status === 403 || res.status === 405;
+    } catch {
+      return false;
+    }
+  };
+  const hitCb = async (data: string): Promise<boolean> => {
+    try {
+      const body = JSON.stringify({
+        update_id: 2,
+        callback_query: { id: 'cb1', from: { id: 123456789 }, message: { message_id: 1, chat: { id: 123456789 } }, data },
+      });
+      const res = await fetch(`${baseUrl}/`, { method: 'POST', headers: secret, body });
+      return res.status === 200 || res.status === 403 || res.status === 405;
+    } catch {
+      return false;
+    }
+  };
+
+  const all: Array<{ label: string; fire: () => Promise<boolean> }> = [
+    ...commands.map((c) => ({ label: c.split(' ')[0], fire: () => hitCmd(c) })),
+    ...callbacks.map((d) => ({ label: `cb:${d.split(':')[0]}`, fire: () => hitCb(d) })),
+  ];
+
+  for (const item of all) {
+    const batch = Array.from({ length: concurrency }, () => item.fire());
+    const outcomes = await Promise.all(batch);
+    const ok = outcomes.filter(Boolean).length;
+    results.push({
+      command: item.label,
+      total: concurrency,
+      ok,
+      fail: concurrency - ok,
+      successRate: Math.round((ok / concurrency) * 1000) / 10,
+    });
+  }
+  return results;
+}
+// End: Phase 35 - High-Concurrency Spike Burst
+
 // End: Phase 34 - High-Concurrency Load Loop
 // End: JomOrder Fasa 9 - Automated Smoke Test Suite (File 5)
