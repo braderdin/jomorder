@@ -35,6 +35,7 @@ const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: '/admin_stats', description: 'Statistik pentadbir' },
   { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
   { command: '/pengumuman', description: 'Pengumuman pentadbir' },
+  { command: '/status', description: 'Semak status bot & akaun' },
 ];
 
 /**

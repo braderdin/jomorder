@@ -36,8 +36,14 @@ export async function recordCommandTelemetry(
       },
       body: JSON.stringify(payload),
     });
-  } catch {
+    } catch {
     // Soft-fail (Fasal 7 Strategy 4) - telemetry tak boleh block command.
   }
 }
 // End: Phase 42 - Command Telemetry Service
+
+// Start: Phase 44 - /status Telemetry Support
+// recordCommandTelemetry(label='/status') disokong sepenuhnya tanpa
+// perubahan logik. withCommandGuard di handlers.ts sudah panggil service
+// ini untuk setiap command termasuk /status (fail-open insert).
+// End: Phase 44 - /status Telemetry Support

@@ -73,5 +73,51 @@ else
   echo "HASIL: DEPLOY_FAIL (kod ${DEPLOY_STATUS})"
 fi
 
+# Start: Phase 44 - Post-Deploy Command Re-Sync (setMyCommands)
+# Selepas deploy berjaya, sync semula 22 command natif (termasuk /status baharu)
+# supaya menu Telegram selari dengan router terkini. Baca token READ-ONLY dari .dev.vars.
+if [[ ${DEPLOY_STATUS} -eq 0 ]]; then
+  BOT_TOKEN="$(extract_var 'TELEGRAM_BOT_TOKEN')"
+  if [[ -n "${BOT_TOKEN}" ]]; then
+    echo "[INFO] Phase44: Re-sync 22 native commands (setMyCommands)..."
+    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "commands": [
+          {"command":"/start","description":"Mula & pilih peranan"},
+          {"command":"/bantuan","description":"Panduan interaktif bot"},
+          {"command":"/menu","description":"Senarai kedai aktif"},
+          {"command":"/urus","description":"Papan pemerintah peniaga"},
+          {"command":"/urus_kedai","description":"Urus kedai saya"},
+          {"command":"/daftar","description":"Daftar kedai baharu"},
+          {"command":"/tambah_menu","description":"Tambah item menu"},
+          {"command":"/senarai_menu","description":"Senarai menu kedai"},
+          {"command":"/cari_makan","description":"Cari kedai berdekatan"},
+          {"command":"/troli","description":"Lihat troli pesanan"},
+          {"command":"/pesanan_saya","description":"Senarai pesanan aktif"},
+          {"command":"/senarai_pesanan","description":"Senarai pesanan saya"},
+          {"command":"/cipta_kupon","description":"Cipta kupon diskaun"},
+          {"command":"/senarai_kupon","description":"Senarai kupon aktif"},
+          {"command":"/padam_kupon","description":"Padam kupon diskaun"},
+          {"command":"/invois","description":"Jana invois digital"},
+          {"command":"/laporan_jualan","description":"Laporan jualan kedai"},
+          {"command":"/set_lokasi","description":"Tetapkan koordinat kedai"},
+          {"command":"/sejarah_pesanan","description":"Sejarah pesanan saya"},
+          {"command":"/batalkan_pesanan","description":"Batal pesanan tertunda"},
+          {"command":"/profil","description":"Profil & langganan saya"},
+          {"command":"/naiktaraf","description":"Naik taraf pelan premium"},
+          {"command":"/zon_operasi","description":"Zon operasi perkhidmatan"},
+          {"command":"/admin_stats","description":"Statistik pentadbir"},
+          {"command":"/senarai_pendaftaran","description":"Senarai peniaga berdaftar"},
+          {"command":"/pengumuman","description":"Pengumuman pentadbir"},
+          {"command":"/status","description":"Semak status bot & akaun"}
+        ]
+      }'
+    echo ""
+    echo "[PASS] Phase44: setMyCommands synced."
+  fi
+fi
+# End: Phase 44 - Post-Deploy Command Re-Sync
+
 exit ${DEPLOY_STATUS}
 # End: Phase 42 - Automated Worker Deployment & 4-Secret Provisioning

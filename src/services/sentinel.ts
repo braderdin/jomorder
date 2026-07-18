@@ -202,3 +202,41 @@ export async function evaluateTelemetryThresholds(env: Env, metrics: {
 // Multi-stage fallback: RPC analytical drift tidak lagi trigger false-alarm
 // selagi base PostgREST metadata endpoint masih respon < 500.
 // End: Phase 21 - Sentinel Fallback Hardening
+
+// Start: Phase 44 - Status Snapshot Exporter (untuk /status command)
+/** Hasil probe kesihatan komponen untuk kad status. */
+export interface StatusSnapshot {
+  db: boolean;
+  redis: boolean;
+  ts: string;
+}
+
+/**
+ * Ambil snapshot kesihatan DB + Redis untuk paparan /status.
+ * Soft-fail: jika probe gagal, flag dikembalikan false tanpa throw.
+ */
+export async function getStatusSnapshot(env: Env): Promise<StatusSnapshot> {
+  const db = await checkDatabaseHealth(env);
+  let redis = false;
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), HEARTBEAT_TIMEOUT_MS);
+      const res = await fetch(`${env.UPSTASH_REDIS_REST_URL}/ping`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}` },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      redis = res.ok;
+    } catch {
+      redis = false;
+    }
+  }
+  return {
+    db,
+    redis,
+    ts: new Date().toISOString(),
+  };
+}
+// End: Phase 44 - Status Snapshot Exporter

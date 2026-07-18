@@ -170,3 +170,30 @@ CREATE INDEX IF NOT EXISTS idx_command_telemetry_cmd
 CREATE INDEX IF NOT EXISTS idx_command_telemetry_merchant
     ON command_telemetry (merchant_telegram_id, created_at DESC);
 -- End: Phase 42 - command_telemetry DDL
+
+-- ============================================================
+-- Jadual 16: status_command_log (Phase 44 - /status Audit Log)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS status_command_log (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    tg_id BIGINT,
+    chat_id BIGINT,
+    role TEXT,
+    db_status TEXT DEFAULT 'OK',
+    redis_status TEXT DEFAULT 'OK',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE status_command_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS status_command_log_service_all ON status_command_log;
+CREATE POLICY status_command_log_service_all
+    ON status_command_log
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_status_log_tg
+    ON status_command_log (tg_id, created_at DESC);
+-- End: Phase 44 - status_command_log DDL

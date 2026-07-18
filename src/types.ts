@@ -262,8 +262,9 @@ export const NATIVE_COMMAND_LIST: TelegramBotCommand[] = [
   { command: '/admin_stats', description: 'Statistik pentadbir' },
   { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
   { command: '/pengumuman', description: 'Pengumuman pentadbir' },
+  { command: '/status', description: 'Semak status bot & akaun' },
 ];
-// End: Phase 41 - 22 Command BM Activation (BotFather sync)
+// End: Phase 44 - 22 Command BM Activation (BotFather sync + /status)
 
 // Start: Phase 33 - Coupon Inline Callback Type Specs (Fasal 6 interactive grid)
 /** Prefix callback natif untuk tindakan interaktif (router handlers.ts). */

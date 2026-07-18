@@ -25,6 +25,7 @@ import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './h
 import { handleSenaraiMenu, handleSetLokasi } from './handlers/merchant';
 import { handleSejarahPesanan, handleBatalkanPesanan, handleProfil } from './handlers/customer';
 import { handlePengumumanBroadcast } from './handlers/admin';
+import { handleStatus } from './handlers/status';
 import { fetchMerchantSalesSummary } from './services/analytics';
 import { withCommandGuard } from './services/command_error_interceptor';
 // Start: Phase 41 - 22 Command BM Activation imports (alias + profil handler)
@@ -52,35 +53,38 @@ async function handleMerchantSalesSummary(env: Env, chatId: number, tgId: number
 // Start: Phase 36 - Sealed 16-Command Distributor Routing Matrix (zero dead-code)
 // Satu sumber benar memetakan kesemua 16 arahan natif ke handler aktif.
 // Digunakan sebagai kontrak pengesahan supaya tiada arahan terbiar (dead-code).
+// Start: Phase 44 - 22-Command BM Distributor Matrix (1:1 Chip Besar list)
 export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
   command: string;
   handler: string;
   active: true;
 }> = [
   { command: '/start', handler: 'handleStartDeepLink', active: true },
-  { command: '/help', handler: 'handleHelp', active: true },
-  { command: '/menu', handler: 'handleShopMenu', active: true },
+  { command: '/bantuan', handler: 'handleHelp', active: true },
   { command: '/urus', handler: 'handleMerchantDashboard', active: true },
+  { command: '/urus_kedai', handler: 'handleMerchantDashboard', active: true },
+  { command: '/daftar', handler: 'handleMerchantMessage', active: true },
+  { command: '/tambah_menu', handler: 'handleTambahMenu', active: true },
+  { command: '/senarai_menu', handler: 'handleSenaraiMenu', active: true },
   { command: '/cari_makan', handler: 'handleCariMakan', active: true },
   { command: '/troli', handler: 'handleViewCart', active: true },
   { command: '/pesanan_saya', handler: 'handlePesananSaya', active: true },
+  { command: '/senarai_pesanan', handler: 'handlePesananSaya', active: true },
   { command: '/cipta_kupon', handler: 'handleCreateCoupon', active: true },
   { command: '/senarai_kupon', handler: 'handleListCoupons', active: true },
   { command: '/padam_kupon', handler: 'handleDeleteCoupon', active: true },
-  { command: '/invois', handler: 'handleMerchantInvoiceText', active: true },
-  { command: '/laporan_kedai', handler: 'fetchSaasMetrics', active: true },
-  { command: '/zon_operasi', handler: 'inline_zones', active: true },
-  { command: '/admin_stats', handler: 'handleAdminStats', active: true },
-  { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true },
-  { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true },
-  { command: '/senarai_menu', handler: 'handleSenaraiMenu', active: true },
   { command: '/laporan_jualan', handler: 'handleMerchantSalesSummary', active: true },
   { command: '/set_lokasi', handler: 'handleSetLokasi', active: true },
   { command: '/sejarah_pesanan', handler: 'handleSejarahPesanan', active: true },
   { command: '/batalkan_pesanan', handler: 'handleBatalkanPesanan', active: true },
+  { command: '/profil', handler: 'handleProfil', active: true },
+  { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true },
+  { command: '/admin_stats', handler: 'handleAdminStats', active: true },
+  { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true },
   { command: '/pengumuman', handler: 'handlePengumumanBroadcast', active: true },
+  { command: '/status', handler: 'handleStatus', active: true },
 ];
-// End: Phase 37 - Expanded 22-Command Distributor Routing Matrix (zero dead-code)
+// End: Phase 44 - 22-Command BM Distributor Matrix (1:1 Chip Besar list)
 // Note: /laporan_jualan diubah dari fetchSaasMetrics (platform) ke handleMerchantSalesSummary (merchant-scoped)
 // di atas; baris asal di bawah dijadikan alias platform (tidak aktif double-count).
 
@@ -416,6 +420,11 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // /profil -> handler profil & langganan baharu.
   if (cmd === '/profil') {
     await withCommandGuard(env, chatId, '/profil', () => handleProfil(env, chatId, tgId));
+    return;
+  }
+  // /status -> kad status bot & akaun (Phase 44).
+  if (cmd === '/status') {
+    await withCommandGuard(env, chatId, '/status', () => handleStatus(env, chatId, tgId));
     return;
   }
   // End: Phase 41 - 22 Command BM Activation Matrix

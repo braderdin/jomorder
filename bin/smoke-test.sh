@@ -150,6 +150,13 @@ for cmd in "/daftar" "/tambah_menu" "/urus_kedai" "/senarai_pesanan" "/bantuan" 
 done
 # End: Phase 41 - 22 Command BM Activation Matrix Assertion
 
+# Start: Phase 44 - /status Command Activation Assertion
+# Suntik HTTP POST frame untuk /status dan sahkan endpoint hidup (200/403/405 = PASS).
+echo ""
+echo "--- Phase 44: /status Command Activation ---"
+check_post "PH44:/status" "/status"
+# End: Phase 44 - /status Command Activation Assertion
+
 # Start: Phase 40 - Catch-All Error Interceptor Assertion (HTTP 200 under errors)
 # Suntik payload rosak (JSON tidak sah) dengan secret sah; interceptor global (Phase 40)
 # mesti tangkap exception dan return HTTP 200 (bukan 500) supaya Telegram tidak retry.
