@@ -156,6 +156,46 @@ export async function evaluateConnectionDrift(env: Env, probe: {
 }
 // End: Phase 35 - Drift Alert Dispatcher
 
+// Start: Phase 36 Sentinel Drift Alert
+/** Ambang metrik untuk auto-dispatch alert ke ADMIN_TELEGRAM_ID. */
+const ALERT_LATENCY_MS = 1500;
+const ALERT_ERROR_RATE_PCT = 30;
+
+/**
+ * Evaluasi metrik telemetry mentah terhadap ambang.
+ * Jika latency / error-rate / drift streak melepasi ambang, bina
+ * NetworkTelemetryStats dan trigger dispatchDriftAlert ke admin.
+ */
+export async function evaluateTelemetryThresholds(env: Env, metrics: {
+  latencyMs: number;
+  errorRatePct: number;
+  driftCount: number;
+}): Promise<NetworkTelemetryStats> {
+  const latencyBreach = metrics.latencyMs >= ALERT_LATENCY_MS;
+  const errorBreach = metrics.errorRatePct >= ALERT_ERROR_RATE_PCT;
+  const driftBreach = metrics.driftCount >= DRIFT_ALERT_THRESHOLD;
+
+  const db_status = latencyBreach ? 'DEGRADED' : 'OK';
+  const redis_status = errorBreach ? 'DEGRADED' : 'OK';
+  const telegram_status = 'OK';
+
+  const stats = buildTelemetryStats({
+    upstream_latency_ms: metrics.latencyMs,
+    db_status,
+    redis_status,
+    telegram_status,
+    error_rate_pct: metrics.errorRatePct,
+    active_connections: metrics.driftCount,
+  });
+
+  if (latencyBreach || errorBreach || driftBreach) {
+    stats.drift_sustained = true;
+    await dispatchDriftAlert(env, stats);
+  }
+  return stats;
+}
+// End: Phase 36 Sentinel Drift Alert
+
 // End: Phase 20 - Database Heartbeat Sentinel
 
 // Start: Phase 21 - Sentinel Fallback Hardening (Fasal 7 Strategy 4 soft-fail)

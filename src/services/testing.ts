@@ -28,7 +28,7 @@ export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787')
       const res = await fetch(`${baseUrl}${path}`, { method, headers, body: body ?? (method === 'POST' ? '{}' : undefined) });
       actual = res.status;
     } catch {
-      actual = 0; // rangkaian gagal (worker tak hidup) → 0, bukan crash
+      actual = 0; // rangkaian gagal (worker tak hidup) -> 0, bukan crash
     }
     reports.push({ name, method, path, expected, actual, pass: actual === expected });
   };
@@ -239,6 +239,60 @@ export async function runSpikeBurstTest(
   return results;
 }
 // End: Phase 35 - High-Concurrency Spike Burst
+
+// Start: Phase 36 Spike Burst
+/**
+ * SpikeBurstMetrics
+ * Ringkasan metrik operasi dari runSpikeBurstTest untuk dimasukkan ke buffer
+ * response live '/smoke'. Mengaggregatkan jumlah permintaan, kelewatan purata
+ * (ms), dan kadar kejayaan (%) merentasi semua laluan burst.
+ */
+export interface SpikeBurstMetrics {
+  requestCount: number;   // Jumlah permintaan dibakar (semua laluan x concurrency)
+  latencyMs: number;      // Kelewatan purata satu pusingan burst (ms)
+  successRate: number;    // Kadar kejayaan agregat (%)
+  pathsTested: number;    // Bilangan laluan unik (arahan + callback)
+}
+
+/**
+ * getSmokePayload
+ * Bina payload lengkap untuk endpoint live '/smoke' yang menggabungkan laporan
+ * smoke pasif (runSmokeTests) dan metrik operasi spike burst (runSpikeBurstTest).
+ * Fasal 10: 200/403/405 dianggap kejayaan, tidak dikira sebagai kegagalan.
+ */
+export async function getSmokePayload(env: Env, baseUrl = 'http://localhost:8787'): Promise<string> {
+  const reports = await runSmokeTests(env, baseUrl);
+  const smokeSummary = summarizeSmokeTests(reports);
+
+  // Ukur kelewatan burst dengan timestamp sebelum/lepas
+  const start = Date.now();
+  const burst = await runSpikeBurstTest(env, 50, baseUrl);
+  const latencyMs = Date.now() - start;
+
+  const totalReq = burst.reduce((acc, r) => acc + r.total, 0);
+  const totalOk = burst.reduce((acc, r) => acc + r.ok, 0);
+  const aggSuccess = totalReq > 0 ? Math.round((totalOk / totalReq) * 1000) / 10 : 0;
+
+  const metrics: SpikeBurstMetrics = {
+    requestCount: totalReq,
+    latencyMs,
+    successRate: aggSuccess,
+    pathsTested: burst.length,
+  };
+
+  const lines = burst.map(
+    (r) => `${r.fail === 0 ? 'OK' : 'WARN'} ${r.command}: ${r.ok}/${r.total} (${r.successRate}%)`
+  );
+
+  return (
+    `${smokeSummary}\n` +
+    `=== PHASE 36 SPIKE BURST ===\n` +
+    `requestCount=${metrics.requestCount} latencyMs=${metrics.latencyMs} ` +
+    `successRate=${metrics.successRate}% pathsTested=${metrics.pathsTested}\n` +
+    lines.join('\n')
+  );
+}
+// End: Phase 36 Spike Burst
 
 // End: Phase 34 - High-Concurrency Load Loop
 // End: JomOrder Fasa 9 - Automated Smoke Test Suite (File 5)

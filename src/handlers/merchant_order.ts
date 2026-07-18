@@ -88,6 +88,12 @@ export async function handleMerchantOrderCallback(
     return true;
   }
 
+  // Start: Phase 36 - Instant Spinner Release (release UI loading button segera)
+  // Lepaskan answerCallbackQuery SEBELUM async notify supaya butang client tidak
+  // terkunci spinner. Ini selaras Fasal 6 interactive UX shield.
+  await answerCallbackQuery(env, cb.id, '✅ Status dikemaskini.', false);
+  // End: Phase 36 - Instant Spinner Release
+
   // Notify pelanggan secara real-time (Fasal 6 push alert).
   const customerId = await fetchOrderCustomer(env, orderId, merchantTgId);
   let alertText = '';
@@ -99,7 +105,6 @@ export async function handleMerchantOrderCallback(
     await sendCustomerStatusAlert(env, customerId, alertText);
   }
 
-  await answerCallbackQuery(env, cb.id, '✅ Status dikemaskini.', false);
   await sendMessage(
     env,
     cbChatId,

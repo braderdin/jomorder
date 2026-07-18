@@ -86,6 +86,7 @@ export async function handleCustomerNearby(
  * Pelanggan sahkan bayaran DuitNow QR (callback pay_now:). Trigger alert ke peniaga.
  * Return true jika diuruskan.
  */
+// Start: Phase 36 - 4-Layer Premium Subscription Fallback (AKTIF/HAMPIR_TAMAT/PREMIUM/TAMAT)
 export async function handlePayNow(
   env: Env,
   cb: { from: { id: number }; id: string },
@@ -97,6 +98,20 @@ export async function handlePayNow(
   let orderId = Number(parts[1]);
   const kedaiId = parts[2] || '';
   const customerId = Number(parts[3] || cb.from.id);
+
+  // 4-layer fallback: TAMAT disekat (graceful), 3 layer lain dibenarkan terus.
+  const subStatus = await getSubscriptionStatus(env, customerId);
+  if (subStatus === 'TAMAT') {
+    await answerCallbackQuery(env, cb.id, 'Langganan tamat. Sila perbaharui.', true);
+    await sendMessage(
+      env,
+      cbChatId,
+      escapeMarkdownV2('🚫 Pembayaran disekat \\(langganan tamat\\)\\. Sila perbaharui langganan PREMIUM untuk teruskan.'),
+      customerMenuKeyboard()
+    );
+    return true;
+  }
+// End: Phase 36 - 4-Layer Premium Subscription Fallback
 
   // Fasa 11: Jika order belum di-commit semasa checkout, commit sekarang (commit point).
   if (!orderId || orderId === 0) {

@@ -23,6 +23,33 @@ import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handl
 import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './handlers/platform_admin';
 // End: Phase 32 - Commerce/Marketing/Admin sub-handler imports
 
+// Start: Phase 36 - Sealed 16-Command Distributor Routing Matrix (zero dead-code)
+// Satu sumber benar memetakan kesemua 16 arahan natif ke handler aktif.
+// Digunakan sebagai kontrak pengesahan supaya tiada arahan terbiar (dead-code).
+export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
+  command: string;
+  handler: string;
+  active: true;
+}> = [
+  { command: '/start', handler: 'handleStartDeepLink', active: true },
+  { command: '/help', handler: 'handleHelp', active: true },
+  { command: '/menu', handler: 'handleShopMenu', active: true },
+  { command: '/urus', handler: 'handleMerchantDashboard', active: true },
+  { command: '/cari_makan', handler: 'handleCariMakan', active: true },
+  { command: '/troli', handler: 'handleViewCart', active: true },
+  { command: '/pesanan_saya', handler: 'handlePesananSaya', active: true },
+  { command: '/cipta_kupon', handler: 'handleCreateCoupon', active: true },
+  { command: '/senarai_kupon', handler: 'handleListCoupons', active: true },
+  { command: '/padam_kupon', handler: 'handleDeleteCoupon', active: true },
+  { command: '/invois', handler: 'handleMerchantInvoiceText', active: true },
+  { command: '/laporan_jualan', handler: 'fetchSaasMetrics', active: true },
+  { command: '/zon_operasi', handler: 'inline_zones', active: true },
+  { command: '/admin_stats', handler: 'handleAdminStats', active: true },
+  { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true },
+  { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true },
+];
+// End: Phase 36 - Sealed 16-Command Distributor Routing Matrix
+
 /** Toggle status operasi kedai (BUKA <-> TUTUP) ikut RLS merchant_telegram_id. */
 async function handleDashboardToggle(
   env: Env,

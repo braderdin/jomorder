@@ -82,13 +82,19 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
   const isBuka = kedai.status_kedai === 'BUKA' || kedai.status_kedai === 'AKTIF';
   const pesananHariIni = await countPesananHariIni(env, kedai.id);
 
-  // Persist dashboard view state ke cache (TTL 1-jam) + sentuh semula TTL sedia ada.
-  await setCommandSession(env, {
-    telegram_id: tgId,
-    step: 'dashboard_view',
-    last_active: new Date().toISOString(),
-  });
-  if (sess) await touchCommandSession(env, tgId);
+  // Start: Phase 36 - Anti Circular Re-Render Guard (Fasal 7 S2 cache)
+  // Elak setCommandSession berulang setiap buka dashboard (punca glitch
+  // re-render bulat). Hanya tulis session jika tiada, dan sentuh TTL.
+  if (!sess) {
+    await setCommandSession(env, {
+      telegram_id: tgId,
+      step: 'dashboard_view',
+      last_active: new Date().toISOString(),
+    });
+  } else {
+    await touchCommandSession(env, tgId);
+  }
+  // End: Phase 36 - Anti Circular Re-Render Guard
 
   const statusLabel = isBuka ? '🟢 BUKA' : '🔴 TUTUP';
   const toggleLabel = isBuka ? '🔴 Tutup Kedai' : '🟢 Buka Kedai';

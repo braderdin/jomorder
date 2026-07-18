@@ -25,6 +25,79 @@ export interface KedaiBerhampiran {
   jarak_km: number;
 }
 
+// Start: Phase 36 - Telemetry Audit Wiring (secure DB transactional fetch wrapper)
+/**
+ * Rekod kesihatan telemetry ke jadual audit_telemetry_health (migration 010).
+ * Fail-open: sebarang ralat tulis audit ditelan supaya tidak crash runtime.
+ */
+export interface TelemetryAuditRecord {
+  component: string;
+  status?: string;
+  latency_ms?: number;
+  error_rate_pct?: number;
+  drift_sustained?: boolean;
+  merchant_telegram_id?: string;
+  detail_json?: Record<string, unknown>;
+}
+
+export async function auditTelemetryHealth(env: Env, rec: TelemetryAuditRecord): Promise<void> {
+  const url = `${env.SUPABASE_URL}/rest/v1/audit_telemetry_health`;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: supabaseHeaders(env),
+      body: JSON.stringify({
+        component: rec.component,
+        status: rec.status ?? 'OK',
+        latency_ms: rec.latency_ms ?? 0,
+        error_rate_pct: rec.error_rate_pct ?? 0,
+        drift_sustained: rec.drift_sustained ?? false,
+        merchant_telegram_id: rec.merchant_telegram_id ?? null,
+        detail_json: rec.detail_json ?? {},
+      }),
+    });
+  } catch {
+    // swallow - telemetry audit bukan kritikal
+  }
+}
+
+/**
+ * Wrapper fetch transaksi DB berpusat: ukur latency, tangkap kegagalan,
+ * dan tulis audit telemetry secara asinkron (fail-open).
+ */
+export async function dbFetch(
+  env: Env,
+  url: string,
+  init: RequestInit,
+  component: string,
+  merchantId?: string
+): Promise<Response | null> {
+  const t0 = Date.now();
+  try {
+    const res = await fetch(url, { ...init, headers: { ...supabaseHeaders(env), ...(init.headers || {}) } });
+    const latency = Date.now() - t0;
+    await auditTelemetryHealth(env, {
+      component,
+      status: res.ok ? 'OK' : 'FAIL',
+      latency_ms: latency,
+      merchant_telegram_id: merchantId,
+      detail_json: { status: res.status },
+    });
+    return res;
+  } catch (e) {
+    const latency = Date.now() - t0;
+    await auditTelemetryHealth(env, {
+      component,
+      status: 'ERROR',
+      latency_ms: latency,
+      merchant_telegram_id: merchantId,
+      detail_json: { error: String(e) },
+    });
+    return null;
+  }
+}
+// End: Phase 36 - Telemetry Audit Wiring
+
 /**
  * Trigger Fasa 2 RPC: ambil_kedai_berhampiran (Haversine geo-query).
  * Selamat: dibalut try/catch, return [] jika gagal (Fasal 7 Strategy 4 soft-fail).

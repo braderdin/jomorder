@@ -286,11 +286,22 @@ export interface NetworkTelemetryStats {
 }
 
 /** Payload amaran yang dihantar ke ADMIN_TELEGRAM_ID bila drift berterusan. */
+// Start: Phase 36 - Telemetry <-> Analytics Schema Synchronization
+// Selaraskan dengan sistem analytics (services/analytics SaasMetrics/PublicStats)
+// supaya sentinel boleh lampirkan snapshot metrik platform ke dalam alert.
 export interface TelemetryAlertPayload {
   level: 'WARN' | 'CRIT';
   stats: NetworkTelemetryStats;
   message: string; // Teks BM selamat (esc MongoDB/Telegram special chars)
+  component?: string; // Sumber telemetry (contoh: 'sentinel', 'dbFetch')
+  analytics_snapshot?: {
+    active_merchants?: number; // selari SaasMetrics.total_active_merchants
+    premium_stores?: number; // selari SaasMetrics.total_premium_stores
+    mrr_rm?: number; // selari SaasMetrics.mrr_projection_rm
+    total_orders?: number; // selari PublicStats.total_orders
+  };
 }
+// End: Phase 36 - Telemetry <-> Analytics Schema Synchronization
 // End: Phase 35 - Network Telemetry Stats Schema
 
 // End: JomOrder Fasa 3 - Core Type Definitions

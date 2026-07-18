@@ -7,9 +7,11 @@ import { Env } from '../types';
 
 // Start: Phase 28 - Public Redis Caching Grid (Upstash 60s TTL)
 // Cache agregat awam di Upstash Redis untuk elak database hammering.
-// Key global: jo:public:stats. Fail-safe: fallback ke live DB fetch jika Redis timeout.
-const PUBLIC_STATS_KEY = 'jo:public:stats';
-const PUBLIC_STATS_TTL = 60; // saat (PUBLIC_STATS_TTL=60)
+// Start: Phase 36 Analytics 60s Cache
+// Key global: analytics:public:stats (prefix selaras grid). Fail-safe: fallback ke live DB fetch jika Redis timeout.
+const PUBLIC_STATS_KEY = 'analytics:public:stats';
+const PUBLIC_STATS_TTL = 60; // saat (strictly 60s Upstash grid - Phase 36 hardening)
+// End: Phase 36 Analytics 60s Cache
 
 /** Executor REST ke Upstash Redis (selari pattern redis.ts). */
 async function redisCacheGet(env: Env, key: string): Promise<string | null> {
