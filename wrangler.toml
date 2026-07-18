@@ -42,9 +42,12 @@ binding = "R2_BUCKET"
 bucket_name = "jomorder-assets"
 
 # KV Namespace (Fasal 7 Strategy 2 fallback state) - optional
-[[kv_namespaces]]
-binding = "MERCHANT_STATE"
-id = "REPLACE-WITH-KV-ID"
+# Start: Phase 41 Deploy Blocker Fix - KV ID belum di-provision, comment out sementara
+# Untuk re-aktifkan: ganti ID di bawah dengan KV namespace ID sebenar dari Cloudflare dashboard.
+# [[kv_namespaces]]
+# binding = "MERCHANT_STATE"
+# id = "REPLACE-WITH-KV-ID"
+# End: Phase 41 Deploy Blocker Fix
 
 # Observability
 [observability]
