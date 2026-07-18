@@ -18,8 +18,8 @@ import { handleHelp } from './handlers/help';
 import { handleShopMenu } from './handlers/shop_menu';
 import { handleMerchantDashboard } from './handlers/merchant_dashboard';
 // Start: Phase 32 - Commerce/Marketing/Admin sub-handler imports
-import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon } from './handlers/marketing_coupon';
-import { handleCariMakan, handleTroliAlias, handlePesananSaya, handleStartDeepLink } from './handlers/customer_commerce';
+import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon, handleDeleteCouponInline } from './handlers/marketing_coupon';
+import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handlers/customer_commerce';
 import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './handlers/platform_admin';
 // End: Phase 32 - Commerce/Marketing/Admin sub-handler imports
 
@@ -184,6 +184,14 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       if (await handleViewCart(env, cbChatId, cb.from.id, cb.id)) return;
     }
     // End: Phase 25 - View Cart callback routing
+
+    // Start: Phase 33 - Coupon inline deletion callback routing (del_coupon:<KOD>)
+    if (data.startsWith('del_coupon:')) {
+      const kod = data.slice('del_coupon:'.length);
+      await handleDeleteCouponInline(env, cbChatId, cb.from.id, kod);
+      return;
+    }
+    // End: Phase 33 - Coupon inline deletion callback routing
 
     return; // callback lain diabaikan buat masa ini
   }

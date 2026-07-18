@@ -121,4 +121,32 @@ export async function sendExpiryAlert(
   await sendMessage(env, chatId, formatExpiryAlert(status, shopName, bakiHari));
 }
 
+/**
+ * verifyPremiumRealtime - semakan premium masa nyata TANPA cache Redis.
+ * Digunakan oleh hook naiktaraf & aliran SaaS kritikal untuk elak stale cache
+ * (Fasal 7 Strategy 1: query diikat ke merchant_telegram_id). Soft-fail -> false.
+ */
+export async function verifyPremiumRealtime(
+  env: Env,
+  telegramId: number
+): Promise<boolean> {
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${telegramId}&select=status_langganan&limit=1`;
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!res.ok) return false;
+    const rows = (await res.json()) as Array<{ status_langganan?: string }>;
+    if (!Array.isArray(rows) || rows.length === 0) return false;
+    return rows[0].status_langganan === 'PREMIUM';
+  } catch {
+    return false;
+  }
+}
+
 // End: JomOrder Fasa 5 - SaaS Subscription Control Module (Fail 1)

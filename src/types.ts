@@ -246,4 +246,29 @@ export const NATIVE_COMMAND_LIST: TelegramBotCommand[] = [
 ];
 // End: Phase 32 - Native Menu & Session Cache Type Specs
 
+// Start: Phase 33 - Coupon Inline Callback Type Specs (Fasal 6 interactive grid)
+/** Prefix callback natif untuk tindakan interaktif (router handlers.ts). */
+export type CallbackActionPrefix =
+  | 'del_coupon'
+  | 'toggle_status'
+  | 'view_invoice'
+  | 'accept_order'
+  | 'ready_order'
+  | 'reject_order'
+  | 'view_shop'
+  | 'add_to_cart'
+  | 'view_cart'
+  | 'merchant_report'
+  | 'merchant_orders'
+  | 'merchant_settings'
+  | 'open_nearby'
+  | 'open_cart';
+
+/** Payload callback pemadaman kupon (del_coupon:<KOD>). */
+export interface CouponDeleteCallback {
+  action: 'del_coupon';
+  kod: string;
+}
+// End: Phase 33 - Coupon Inline Callback Type Specs
+
 // End: JomOrder Fasa 3 - Core Type Definitions

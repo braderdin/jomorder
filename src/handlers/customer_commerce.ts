@@ -3,15 +3,15 @@
 import { Env, TelegramUser } from '../types';
 import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
 import { handleCustomerNearby, handleAddToCart, handleViewShopMenu } from './customer';
-import { handleViewCart } from './customer_cart';
 
 const SUPABASE_REST = (env: Env) => `${env.SUPABASE_URL}/rest/v1`;
 
-function anonHeaders(env: Env): Record<string, string> {
+/** Header service-role untuk sinkron schema tracking pelanggan (Fasal 7 S1). */
+function svcHeaders(env: Env): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    apikey: env.SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
   };
 }
 
@@ -53,20 +53,11 @@ export async function handleCariMakan(env: Env, chatId: number, tgId: number): P
   }
 }
 
-/** /troli - papar cart buffer pelanggan (delegate ke customer_cart). */
-export async function handleTroliAlias(env: Env, chatId: number, tgId: number): Promise<void> {
-  try {
-    await handleViewCart(env, chatId, tgId);
-  } catch {
-    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem. Cuba sebentar lagi.'));
-  }
-}
-
 /** /pesanan_saya - senarai pesanan aktif pelanggan (RLS bind tgId). */
 export async function handlePesananSaya(env: Env, chatId: number, tgId: number): Promise<void> {
   try {
-    const url = `${SUPABASE_REST(env)}/rekod_pesanan?pelanggan_telegram_id=eq.${tgId}&select=id,status_pesanan,total_rm,kedai_id&order=created_at.desc&limit=10`;
-    const res = await fetch(url, { method: 'GET', headers: anonHeaders(env) });
+    const url = `${SUPABASE_REST(env)}/rekod_pesanan?pelanggan_telegram_id=eq.${tgId}&select=id,status_pesanan,total_rm,kedai_id,created_at&order=created_at.desc&limit=10`;
+    const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });
     if (!res.ok) {
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil pesanan.'));
       return;

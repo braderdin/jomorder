@@ -101,19 +101,9 @@ export async function handleListCoupons(env: Env, chatId: number, tgId: number):
   }
 }
 
-/** /padam_kupon <KOD> - padam kupon terikat ke merchant (RLS isolation manual). */
-export async function handleDeleteCoupon(
-  env: Env,
-  chatId: number,
-  tgId: number,
-  text: string
-): Promise<void> {
+/** Teras padam kupon (RLS isolation manual) - dikongsi command & inline callback. */
+async function deleteCouponCore(env: Env, chatId: number, tgId: number, kod: string): Promise<void> {
   try {
-    const kod = (text.trim().split(/\s+/)[1] || '').toUpperCase();
-    if (!kod) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Format: /padam_kupon <KOD>'));
-      return;
-    }
     const url = `${SUPABASE_REST(env)}/kupon_kedai?kod=eq.${encodeURIComponent(kod)}&merchant_telegram_id=eq.${tgId}`;
     const res = await fetch(url, { method: 'DELETE', headers: svcHeaders(env) });
     if (!res.ok) {
@@ -124,5 +114,40 @@ export async function handleDeleteCoupon(
   } catch {
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem. Cuba sebentar lagi.'));
   }
+}
+
+/** /padam_kupon <KOD> - padam kupon terikat ke merchant (RLS isolation manual). */
+export async function handleDeleteCoupon(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  text: string
+): Promise<void> {
+  const kod = (text.trim().split(/\s+/)[1] || '').toUpperCase();
+  if (!kod) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Format: /padam_kupon <KOD>'));
+    return;
+  }
+  await deleteCouponCore(env, chatId, tgId, kod);
+}
+
+/**
+ * handleDeleteCouponInline - terima callback 'del_coupon:<KOD>' terus dari inline button.
+ * Process inline text request dan prepare backend cleanup bersih tanpa orphan reference
+ * (Fasal 7 Strategy 1: isolate merchant_telegram_id).
+ */
+export async function handleDeleteCouponInline(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  kod: string
+): Promise<void> {
+  const clean = (kod || '').trim().toUpperCase();
+  if (!clean) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kod kupon tidak sah.'));
+    return;
+  }
+  // Backend cleanup: tiada cache JSONB kupon setempat; DELETE terus terikat merchant.
+  await deleteCouponCore(env, chatId, tgId, clean);
 }
 // End: Phase 32 - Marketing Coupon Handlers

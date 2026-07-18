@@ -63,6 +63,36 @@ export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787')
   await probe('Coupon Route Validation', 'POST', '/', { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN }, 200, kuponMockBody);
   // End: Fasa 16 Smoke Test Engine Expansion
 
+  // Start: Phase 33 - 16-Command Pathway Audit Matrix (Fasal 4 SOA coverage)
+  // Audit penuh kesemua 16 arahan natif + callback del_coupon melalui mockup
+  // webhook POST (secret sah). Setiap route dijangka return 200 (Fasal 10).
+  const cmdProbe = async (label: string, text: string): Promise<void> => {
+    const body = JSON.stringify({
+      update_id: 1,
+      message: { message_id: 1, from: { id: 123456789 }, chat: { id: 123456789 }, text },
+    });
+    await probe(label, 'POST', '/', { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN }, 200, body);
+  };
+  const cbProbe = async (label: string, data: string): Promise<void> => {
+    const body = JSON.stringify({
+      update_id: 2,
+      callback_query: { id: 'cb1', from: { id: 123456789 }, message: { message_id: 1, chat: { id: 123456789 } }, data },
+    });
+    await probe(label, 'POST', '/', { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN }, 200, body);
+  };
+
+  const commands = [
+    '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
+    '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
+    '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+  ];
+  for (const c of commands) {
+    await cmdProbe(`Cmd: ${c.split(' ')[0]}`, c);
+  }
+  // Callback inline pemadaman kupon (Phase 33 routing baru).
+  await cbProbe('Callback: del_coupon', 'del_coupon:JOM10');
+  // End: Phase 33 - 16-Command Pathway Audit Matrix
+
   return reports;
 }
 

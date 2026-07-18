@@ -1,7 +1,7 @@
 // Start: Phase 32 - Bot Menu Registration (Native Telegram Command Grid)
 // Fasal 6 (Bahasa Malaysia UI) + Fasal 4 (SOA) + Fasal 11 (env binding).
 // Mendaftar 16 arahan natif ke attachment menu Telegram guna setMyCommands API.
-import { Env } from '../types';
+import { Env, NATIVE_COMMAND_LIST } from '../types';
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 
@@ -44,5 +44,19 @@ export async function registerBotCommands(env: Env): Promise<boolean> {
     // Soft-fail (Fasal 7 Strategy 4) - jangan crash worker bootstrap.
     return false;
   }
+}
+/**
+ * validateCommandSync - sahkan konfigurasi deployment menu selari 1:1 dengan
+ * NATIVE_COMMAND_LIST (sumber benar tunggal di types.ts). Elak drift arahan
+ * antara setMyCommands API dan registry 16-command (Fasal 4 SOA).
+ * Return true jika kedua-dua set padan sempurna (command + kiraan).
+ */
+export function validateCommandSync(): boolean {
+  if (BOT_COMMANDS.length !== NATIVE_COMMAND_LIST.length) return false;
+  const nativeMap = new Map(NATIVE_COMMAND_LIST.map((c) => [c.command, c.description]));
+  for (const c of BOT_COMMANDS) {
+    if (nativeMap.get(c.command) !== c.description) return false;
+  }
+  return true;
 }
 // End: Phase 32 - Bot Menu Registration

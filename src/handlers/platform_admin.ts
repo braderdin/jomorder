@@ -3,6 +3,7 @@
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2 } from '../telegram';
 import { fetchSaasMetrics } from '../services/analytics';
+import { getSubscriptionStatus } from '../subscription';
 
 const SUPABASE_REST = (env: Env) => `${env.SUPABASE_URL}/rest/v1`;
 
@@ -77,11 +78,22 @@ export async function handleSenaraiPendaftaran(env: Env, chatId: number, tgId: n
   }
 }
 
-/** /naiktaraf - bantu peniaga naik taraf pelan premium (trigger pautan langganan). */
+/** /naiktaraf - bantu peniaga naik taraf pelan premium (verify hook + trigger pautan). */
 export async function handleNaikTaraf(env: Env, chatId: number, tgId: number): Promise<void> {
   try {
-    // Buka pautan langganan premium (delegasi ke services/subscription jika ada).
-    const msg = escapeMarkdownV2('⭐ NAIKTARAF PREMIUM\\n\\n') +
+    // Wire terus ke premium subscription verification hook (Fasal 7 S1 isolate).
+    const status = await getSubscriptionStatus(env, tgId);
+    if (status === 'PREMIUM') {
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('⭐ Anda sudah PREMIUM! Nikmati semua ciri tanpa had 🚀')
+      );
+      return;
+    }
+    const msg =
+      escapeMarkdownV2('⭐ NAIKTARAF PREMIUM\\n\\n') +
+      escapeMarkdownV2(`Status semasa: ${status}\\n\\n`) +
       escapeMarkdownV2('Dapatkan stor tanpa had, analitik lanjutan & sokongan prioritas.\\n') +
       escapeMarkdownV2('Sila lawati portal JomOrder untuk pilih pelan.');
     await sendMessage(env, chatId, msg);

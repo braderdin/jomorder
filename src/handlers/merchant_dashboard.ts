@@ -3,6 +3,7 @@
 // Arahan: papan pemerintah peniaga - toggle status operasi, semak jualan, query.
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
+import { getCommandSession, setCommandSession, touchCommandSession } from '../services/session_cache';
 
 /** Baris status kedai minimum. */
 interface KedaiStatus {
@@ -64,6 +65,10 @@ async function countPesananHariIni(env: Env, kedaiId: string): Promise<number> {
  * Papar pilihan: toggle status operasi, semak ringkasan jualan, query param.
  */
 export async function handleMerchantDashboard(env: Env, chatId: number, tgId: number): Promise<void> {
+  // Phase 33: ambil command session state dari cache dulu (Fasal 7 Strategy 2)
+  // elak derive semula state & kurangkan query berulang ke Supabase.
+  const sess = await getCommandSession(env, tgId);
+
   const kedai = await fetchKedaiPeniaga(env, tgId);
   if (!kedai) {
     await sendMessage(
@@ -76,6 +81,14 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
 
   const isBuka = kedai.status_kedai === 'BUKA' || kedai.status_kedai === 'AKTIF';
   const pesananHariIni = await countPesananHariIni(env, kedai.id);
+
+  // Persist dashboard view state ke cache (TTL 1-jam) + sentuh semula TTL sedia ada.
+  await setCommandSession(env, {
+    telegram_id: tgId,
+    step: 'dashboard_view',
+    last_active: new Date().toISOString(),
+  });
+  if (sess) await touchCommandSession(env, tgId);
 
   const statusLabel = isBuka ? '🟢 BUKA' : '🔴 TUTUP';
   const toggleLabel = isBuka ? '🔴 Tutup Kedai' : '🟢 Buka Kedai';
