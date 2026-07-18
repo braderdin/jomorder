@@ -231,4 +231,37 @@ export async function fetchMerchantSalesSummary(
 }
 // End: Phase 37 - Merchant-Scoped Sales Summary
 
+// Start: Phase 47 - Merchant Scoped Safe Wrapper (null-shield + isolation guarantee)
+/**
+ * getMerchantScopedSummarySafe
+ * Wrapper defensive untuk fetchMerchantSalesSummary: pastikan TIADA data
+ * cross-tenant bocor (RLS bind ketat), return zero payload jika null.
+ * Digunakan oleh merchant dashboard supaya peniaga tak nampak data kedai lain.
+ */
+export async function getMerchantScopedSummarySafe(
+  env: Env,
+  tgId: number
+): Promise<MerchantSalesSummary> {
+  const summary = await fetchMerchantSalesSummary(env, tgId);
+  if (!summary) {
+    return {
+      kedai_id: '',
+      total_orders: 0,
+      paid_orders: 0,
+      total_earnings_rm: 0,
+    };
+  }
+  // Isolation guarantee: kedai_id mesti string bukan-kosong (RLS bound).
+  if (!summary.kedai_id || typeof summary.kedai_id !== 'string') {
+    return {
+      kedai_id: '',
+      total_orders: 0,
+      paid_orders: 0,
+      total_earnings_rm: 0,
+    };
+  }
+  return summary;
+}
+// End: Phase 47 - Merchant Scoped Safe Wrapper
+
 // End: JomOrder Fasa 13 - SaaS Analytics Data Layer (File 2)

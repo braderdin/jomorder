@@ -7,7 +7,7 @@ import { sendMessage, escapeMarkdownV2 } from '../telegram';
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 
 // Start: Phase 46 - Worker Version + Uptime Export (status card elevation)
-export const WORKER_VERSION = 'v1.46.0-phase46';
+export const WORKER_VERSION = 'v1.47.0-phase47';
 const WORKER_START_EPOCH = Date.now();
 /** Masa jalan worker sejak boot (saat). */
 export function getWorkerUptime(): number {

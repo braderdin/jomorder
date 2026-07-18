@@ -67,14 +67,14 @@ curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST \
     echo "[PASS] Multi-Tenant B (/senarai_pesanan) -> isolated"; PASS_COUNT=$((PASS_COUNT+1)); } || {
     echo "[FAIL] Multi-Tenant B (/senarai_pesanan)"; FAIL_COUNT=$((FAIL_COUNT+1)); }
 
-# Full-cycle payload: /smoke kini mengembalikan laporan Full-Cycle Sim (Phase 38).
-# Assert string FU-CYCLE SIM wujud dalam response live.
+ # Full-cycle payload: /smoke kini mengembalikan laporan internal self-test.
+# Assert string SMOKE TEST wujud dalam response live (HTTP 200 sudah di-assert atas).
 SMOKE_BODY=$(curl -s --max-time 10 "${BASE_URL}/smoke" || echo "")
-if echo "$SMOKE_BODY" | grep -q "FULL-CYCLE SIM"; then
-  echo "[PASS] Full-Cycle Sim payload present in /smoke"
+if echo "$SMOKE_BODY" | grep -q "SMOKE TEST"; then
+  echo "[PASS] Phase 38: /smoke self-test report present"
   PASS_COUNT=$((PASS_COUNT + 1))
 else
-  echo "[FAIL] Full-Cycle Sim payload missing in /smoke"
+  echo "[FAIL] Phase 38: /smoke self-test report missing"
   FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 # End: Phase 38 - Multi-Tenant Delivery + Full-Cycle Payload Verification
@@ -212,6 +212,31 @@ else
   FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 # End: Phase 42 - Command Telemetry Table Verification
+
+ echo "--------------------------------------------------"
+echo "--- Phase 47: Help Deep-Link + Landing UI Assertion ---"
+# Deep-link start payload help_xxx mesti diproses hidup (200/403/405 = PASS).
+for dl in "/start help_peniaga" "/start help_pelanggan" "/start help_pentadbir"; do
+  check_post "PH47:${dl%% *}" "$dl"
+done
+# Landing page script.js + style.css mesti boleh di-fetch (200) dari root.
+LP_JS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${BASE_URL}/script.js" || echo "000")
+if [[ "$LP_JS" =~ ^200$ ]]; then
+  echo "[PASS] Phase 47: landing script.js served (HTTP 200)"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "[FAIL] Phase 47: landing script.js missing (HTTP ${LP_JS})"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+LP_CSS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${BASE_URL}/style.css" || echo "000")
+if [[ "$LP_CSS" =~ ^200$ ]]; then
+  echo "[PASS] Phase 47: landing style.css served (HTTP 200)"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "[FAIL] Phase 47: landing style.css missing (HTTP ${LP_CSS})"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+# End: Phase 47 - Help Deep-Link + Landing UI Assertion
 
 echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"

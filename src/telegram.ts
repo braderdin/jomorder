@@ -155,4 +155,18 @@ export async function answerCallbackQuery(
 }
 // End: Phase 25 - Telegram Spinner Dismissal Helper
 
+// Start: Phase 47 - Help Deep-Link Builder (onboarding accelerator)
+/**
+ * buildHelpDeepLink
+ * Hasilkan URL t.me deep-link yang terus buka kategori bantuan tertentu
+ * bila ditekan. Contoh: buildHelpDeepLink('peniaga') ->
+ * https://t.me/JomOrderBot?start=help_peniaga
+ * Kategori: 'peniaga' | 'pelanggan' | 'pentadbir'
+ */
+export function buildHelpDeepLink(category: 'peniaga' | 'pelanggan' | 'pentadbir'): string {
+  const bot = 'JomOrderBot';
+  return `https://t.me/${bot}?start=help_${category}`;
+}
+// End: Phase 47 - Help Deep-Link Builder
+
 // End: JomOrder Fasa 3 - Telegram API Utility Module

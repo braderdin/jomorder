@@ -38,7 +38,14 @@
     gtag('config', 'NEXT_PUBLIC_GA_ID');
   </script>
 </head>
-<body class="bg-cyber-bg text-gray-100 font-sans antialiased">
+  <body class="bg-cyber-bg text-gray-100 font-sans antialiased">
+
+  <!-- LANGUAGE TOGGLE (Phase 47) -->
+  <div class="fixed top-4 right-4 z-50">
+    <button id="lang-toggle" class="px-4 py-2 rounded-full border border-cyber-neon/40 bg-cyber-neon/10 text-cyber-neon text-sm font-mono hover:bg-cyber-neon/20 transition-all">
+      🌐 BM / EN
+    </button>
+  </div>
 
   <!-- SECTION A: HERO BANNER -->
   <header class="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -222,11 +229,11 @@
     <div class="max-w-4xl mx-auto text-center">
       <h2 class="text-3xl md:text-4xl font-bold mb-12">Kata <span class="text-cyber-neon">Peniaga</span></h2>
       <div class="grid md:grid-cols-2 gap-6">
-        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+        <div class="card-glow p-6 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
           <p class="text-gray-300 italic">"Sejak guna JomOrder, order makin lancar. Pelanggan bayar terus via DuitNow."</p>
           <p class="text-cyber-gold mt-3 font-semibold">— Kak Nor, Gerai Nasi Ayam</p>
         </div>
-        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+        <div class="card-glow p-6 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
           <p class="text-gray-300 italic">"RM0 sebulan, tapi dapat sistem pesanan automatik. Berbaloi!"</p>
           <p class="text-cyber-gold mt-3 font-semibold">— Abang Joe, Kedai Kopi</p>
         </div>

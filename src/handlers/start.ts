@@ -6,6 +6,7 @@ import { Env, TelegramUser } from '../types';
 import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboard } from '../telegram';
 import { checkMerchantExists } from '../db';
 import { setState } from '../redis';
+import { handleHelpCategory } from './help';
 
 // Start: Phase 45 - Rich Start Inline Keyboard (Fasal 6 mobile 2-3 btn/row)
 function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
@@ -52,6 +53,25 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
     }
   }
   // End: Phase 38 - Deep-link payload slicing isolation
+
+  // Start: Phase 47 - Help Deep-Link Router (start?help_xxx)
+  // Jika payload mengandungi help_peniaga/help_pelanggan/help_pentadbir,
+  // route terus ke panduan kategori tanpa semak peranan.
+  if (rawText && rawText.includes('help_')) {
+    if (rawText.includes('help_peniaga')) {
+      await handleHelpCategory(env, chatId, 'peniaga');
+      return;
+    }
+    if (rawText.includes('help_pelanggan')) {
+      await handleHelpCategory(env, chatId, 'pelanggan');
+      return;
+    }
+    if (rawText.includes('help_pentadbir')) {
+      await handleHelpCategory(env, chatId, 'pentadbir');
+      return;
+    }
+  }
+  // End: Phase 47 - Help Deep-Link Router
 
   let isMerchant = false;
   if (typeof tgId === 'number') {

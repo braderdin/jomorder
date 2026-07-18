@@ -61,4 +61,55 @@ export async function handleHelp(env: Env, chatId: number, _user: TelegramUser |
   await sendHtmlMessage(env, chatId, html, inline);
 }
 
+// Start: Phase 47 - Category-Specific Help Deep-Link Router
+/**
+ * handleHelpCategory
+ * Papar panduan mendalam mengikut kategori (peniaga/pelanggan/pentadbir).
+ * Dipanggil dari deep-link start payload (help_xxx) atau callback help_xxx.
+ */
+export async function handleHelpCategory(
+  env: Env,
+  chatId: number,
+  category: 'peniaga' | 'pelanggan' | 'pentadbir'
+): Promise<void> {
+  let html = '<b>📖 PANDUAN JomOrder</b>\n\n';
+  if (category === 'peniaga') {
+    html +=
+      '👨‍🍳 <b>PANDUAN PENIAGA</b>\n\n' +
+      '• <b>/daftar</b> — Daftar kedai baharu\n' +
+      '• <b>/tambah_menu</b> — Tambah item menu\n' +
+      '• <b>/senarai_menu</b> — Lihat & togol menu\n' +
+      '• <b>/urus_kedai</b> — Papan pemerintah\n' +
+      '• <b>/laporan_jualan</b> — Analitik jualan\n' +
+      '• <b>/cipta_kupon</b> — Cipta diskaun (PREMIUM)\n' +
+      '• <b>/naiktaraf</b> — Naik taraf PREMIUM\n\n' +
+      'Guna butang 📍 Kongsi Lokasi untuk set lokasi kedai.';
+  } else if (category === 'pelanggan') {
+    html +=
+      '🛒 <b>PANDUAN PELANGGAN</b>\n\n' +
+      '• <b>/start</b> — Mula & pilih peranan\n' +
+      '• <b>/cari_makan</b> — Cari kedai berdekatan\n' +
+      '• <b>/troli</b> — Lihat troli pesanan\n' +
+      '• <b>/pesanan_saya</b> — Pesanan aktif\n' +
+      '• <b>/sejarah_pesanan</b> — Sejarah lengkap\n' +
+      '• <b>/profil</b> — Profil & langganan\n\n' +
+      'Buat pesanan: 📍 Kedai Berdekatan → pilih → troli → 💳 Bayar.';
+  } else {
+    html +=
+      '⚙️ <b>PANDUAN PENTADBIR</b>\n\n' +
+      '• <b>/admin_stats</b> — Metrik SaaS\n' +
+      '• <b>/senarai_pendaftaran</b> — Senarai peniaga\n' +
+      '• <b>/pengumuman</b> — Broadcast platform\n' +
+      '• <b>/status</b> — Status bot & akaun\n\n' +
+      'Akses terhad kepada Chip Besar sahaja.';
+  }
+  const inline = {
+    inline_keyboard: [
+      [{ text: '🔙 Kembali', callback_data: 'help_menu' }],
+    ],
+  };
+  await sendHtmlMessage(env, chatId, html, inline);
+}
+// End: Phase 47 - Category-Specific Help Deep-Link Router
+
 // End: Phase 31 - /help & /bantuan Command Controller

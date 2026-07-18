@@ -106,6 +106,33 @@ function initScrollReveal() {
   items.forEach((el) => obs.observe(el));
 }
 
+// Start: Phase 47 - BM/EN Language Toggle
+const LANG_STRINGS = {
+  ms: { hero_sub: 'Platform Mikro-SaaS Multi-Tenant RM0 Kos Operasi' },
+  en: { hero_sub: 'Multi-Tenant Micro-SaaS Platform RM0 Operating Cost' },
+};
+function applyLang(lang) {
+  const s = LANG_STRINGS[lang] || LANG_STRINGS.ms;
+  const sub = document.querySelector('p.text-xl');
+  if (sub) sub.innerHTML = s.hero_sub;
+  const toggle = document.getElementById('lang-toggle');
+  if (toggle) toggle.textContent = lang === 'en' ? '🌐 EN / BM' : '🌐 BM / EN';
+  document.documentElement.lang = lang;
+  try { localStorage.setItem('jo_lang', lang); } catch (e) {}
+}
+const langBtn = document.getElementById('lang-toggle');
+if (langBtn) {
+  langBtn.addEventListener('click', () => {
+    const cur = document.documentElement.lang === 'en' ? 'en' : 'ms';
+    applyLang(cur === 'en' ? 'ms' : 'en');
+  });
+}
+try {
+  const saved = localStorage.getItem('jo_lang');
+  if (saved) applyLang(saved);
+} catch (e) {}
+// End: Phase 47 - BM/EN Language Toggle
+
 // Boot
 async function init() {
   initAnalyticsStatus();

@@ -303,7 +303,7 @@ export async function handleMerchantMessage(
     const ok = await createCoupon(env, tgId, kod, jenis, nilai);
     if (ok) {
       const valTxt = jenis === 'PERCENT' ? `${nilai}%` : `RM${nilai}`;
-      await sendMessage(env, chatId, escapeMarkdownV2(`🎟️ Kupon ${kod} berjaya diwujudkan! Diskaun: ${valTxt}`), merchantMenuKeyboard());
+      await sendMessage(env, chatId, escapeMarkdownV2(`🎟️ Kupon ${escapeMarkdownV2(kod)} berjaya diwujudkan! Diskaun: ${valTxt}`), merchantMenuKeyboard());
     } else {
       await sendMessage(env, chatId, escapeMarkdownV2('❌ Gagal cipta kupon. Kod mungkin sudah wujud atau kedai tidak dijumpai.'), merchantMenuKeyboard());
     }
