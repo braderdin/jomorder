@@ -120,8 +120,17 @@ export default {
     // End: Webhook Guard
 
     // Start: Update Router (Fasa 4 - delegate ke handlers.ts)
-    const body = await request.text();
-    const update: TelegramUpdate | null = parseUpdate(body);
+    // Phase 31: Hardened raw command stream ingestion.
+    // Guard saiz payload mentah supaya stream arahan panjang tidak mematikan
+    // edge gateway (Fasal 7 Strategy 4 resilience + Fasal 10 timeout block).
+    const rawBody = await request.text();
+    // Had 1MB: tolak senyap payload abnormal tanpa crash worker.
+    if (rawBody.length > 1_000_000) {
+      return new Response('OK', { status: 200 });
+    }
+    // parseUpdate() dah dibalut try/catch (soft-fail null). Tambahan:
+    // trim whitespace stream supaya arahan teks mentah ("/start ") parse bersih.
+    const update: TelegramUpdate | null = parseUpdate(rawBody.trim());
     if (!update) {
       // Soft 200 untuk elak Telegram retry storm (Fasal 7 Strategy 4)
       return new Response('OK', { status: 200 });

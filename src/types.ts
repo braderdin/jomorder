@@ -153,4 +153,52 @@ export interface OrderStatusPayload {
   status: OrderStatus;
 }
 
+// Start: Phase 31 - Bot Command Registry (Fasal 4 SOA command tree matrix)
+/** Nama arahan kanonikal yang diaktifkan penuh dalam Phase 31. */
+export type BotCommandName =
+  | '/start'
+  | '/mula'
+  | '/help'
+  | '/bantuan'
+  | '/menu'
+  | '/urus'
+  | '/dashboard';
+
+/** Peranan sasaran setiap arahan (pengasingan multi-tenant Fasal 7 S1). */
+export type BotCommandRole = 'customer' | 'merchant' | 'both';
+
+/** Registry statik memetakan arahan ke sub-handler khusus (LOOP 1-2 modules). */
+export interface BotCommandRegistry {
+  command: BotCommandName;
+  description: string;
+  role: BotCommandRole;
+  handler: 'handleStart' | 'handleHelp' | 'handleShopMenu' | 'handleMerchantDashboard';
+}
+
+/** Senarai registry arahan bot (rujukan tunggal router handlers.ts). */
+export const BOT_COMMAND_MATRIX: BotCommandRegistry[] = [
+  { command: '/start', description: 'Mula & pilih peranan', role: 'both', handler: 'handleStart' },
+  { command: '/mula', description: 'Mula (BM) & pilih peranan', role: 'both', handler: 'handleStart' },
+  { command: '/help', description: 'Papar panduan interaktif', role: 'both', handler: 'handleHelp' },
+  { command: '/bantuan', description: 'Papar panduan (BM)', role: 'both', handler: 'handleHelp' },
+  { command: '/menu', description: 'Senarai kedai aktif', role: 'customer', handler: 'handleShopMenu' },
+  { command: '/urus', description: 'Papan pemerintah peniaga', role: 'merchant', handler: 'handleMerchantDashboard' },
+  { command: '/dashboard', description: 'Papan pemerintah (alias)', role: 'merchant', handler: 'handleMerchantDashboard' },
+];
+
+/** Lanjutan state transition untuk pokok arahan interaktif (Fasal 7 Strategy 2). */
+export type InteractiveCommandStep =
+  | 'idle'
+  | 'dashboard_view'
+  | 'dashboard_toggle_pending'
+  | 'help_view';
+
+/** State mesin arahan interaktif disimpan bersama MerchantState. */
+export interface CommandSessionState {
+  telegram_id: number;
+  step: InteractiveCommandStep;
+  last_active: string; // ISO timestamp untuk 1-hour timeout reset
+}
+// End: Phase 31 - Bot Command Registry
+
 // End: JomOrder Fasa 3 - Core Type Definitions

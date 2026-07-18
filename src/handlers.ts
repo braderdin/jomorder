@@ -13,6 +13,96 @@ import { fetchSaasMetrics, fetchPublicStats } from './services/analytics';
 import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from './telegram';
 import { handleMerchantInvoiceText, handleInvoiceCallback } from './handlers/merchant_invoice';
 import { handleMerchantOrderCallback } from './handlers/merchant_order';
+import { handleStart } from './handlers/start';
+import { handleHelp } from './handlers/help';
+import { handleShopMenu } from './handlers/shop_menu';
+import { handleMerchantDashboard } from './handlers/merchant_dashboard';
+
+/** Toggle status operasi kedai (BUKA <-> TUTUP) ikut RLS merchant_telegram_id. */
+async function handleDashboardToggle(
+  env: Env,
+  cb: import('./types').TelegramCallbackQuery,
+  chatId: number,
+  kedaiId: string
+): Promise<boolean> {
+  try {
+    const getUrl = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}&select=status_kedai&limit=1`;
+    const getRes = await fetch(getUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!getRes.ok) return false;
+    const rows = (await getRes.json()) as Array<{ status_kedai?: string }>;
+    if (!Array.isArray(rows) || rows.length === 0) return false;
+    const current = rows[0].status_kedai || 'TUTUP';
+    const next = current === 'BUKA' || current === 'AKTIF' ? 'TUTUP' : 'BUKA';
+    const patchUrl = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}`;
+    const patchRes = await fetch(patchUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ status_kedai: next }),
+    });
+    if (!patchRes.ok) return false;
+    await answerCallbackQuery(env, cb.id, next === 'BUKA' ? 'Kedai dibuka' : 'Kedai ditutup');
+    // Re-render dashboard terkini
+    await handleMerchantDashboard(env, chatId, cb.from.id);
+    return true;
+  } catch {
+    return false; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+
+/** Quick actions dari papan pemerintah (laporan / pesanan / tetapan / carian). */
+async function handleDashboardQuickAction(
+  env: Env,
+  cb: import('./types').TelegramCallbackQuery,
+  chatId: number,
+  action: string,
+  tgId: number
+): Promise<boolean> {
+  await answerCallbackQuery(env, cb.id);
+  switch (action) {
+    case 'merchant_report': {
+      const m = await fetchSaasMetrics(env);
+      if (!m) {
+        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan.'));
+        return true;
+      }
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('📊 LAPORAN KEDAI\\n\\n') +
+          escapeMarkdownV2(`Peniaga Aktif: ${m.total_active_merchants}\\n`) +
+          escapeMarkdownV2(`Jumlah Pesanan: ${m.total_orders}\\n`) +
+          escapeMarkdownV2(`Hasil: RM${m.total_revenue_rm.toFixed(2)}`)
+      );
+      return true;
+    }
+    case 'merchant_orders':
+      await sendMessage(env, chatId, escapeMarkdownV2('📦 Semak pesanan: taip /invois atau lihat butang pesanan.'));
+      return true;
+    case 'merchant_settings':
+      await sendMessage(env, chatId, escapeMarkdownV2('⚙️ Tetapan: taip /urus untuk buka semula papan pemerintah.'));
+      return true;
+    case 'open_nearby':
+      await handleCustomerNearby(env, chatId, tgId);
+      return true;
+    case 'open_cart':
+      await handleViewCart(env, chatId, tgId);
+      return true;
+    default:
+      return false;
+  }
+}
 
 /** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
 function unifiedGreetingKeyboard() {
@@ -53,6 +143,23 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     // Customer: payment confirmation
     if (await handlePayNow(env, cb, cbChatId, data)) return;
 
+    // Start: Phase 31 - Dashboard inline callback routing (Fasal 6 interactive grid)
+    // Toggle status operasi kedai + quick actions dari papan pemerintah.
+    if (data.startsWith('toggle_status:')) {
+      const kedaiId = data.slice('toggle_status:'.length);
+      if (await handleDashboardToggle(env, cb, cbChatId, kedaiId)) return;
+    }
+    if (
+      data === 'merchant_report' ||
+      data === 'merchant_orders' ||
+      data === 'merchant_settings' ||
+      data === 'open_nearby' ||
+      data === 'open_cart'
+    ) {
+      if (await handleDashboardQuickAction(env, cb, cbChatId, data, cb.from.id)) return;
+    }
+    // End: Phase 31 - Dashboard inline callback routing
+
     // Start: Phase 24 - Menu browsing + interactive cart callback routing
     // Fasal 7 Strategy 3 (cart buffer) + Fasal 6 (callback delegation).
     if (data.startsWith('view_shop:')) {
@@ -83,17 +190,26 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   const chatId = msg.chat.id;
   const tgId = msg.from.id;
 
-  // Start: Phase 23 - /start unified greeting menu (Fasal 6 responsive keyboard)
-  if ((msg.text || '').trim() === '/start') {
-    await sendMessage(
-      env,
-      chatId,
-      escapeMarkdownV2('🤖 Selamat datang ke JomOrder! Saya pembantu pesanan makanan anda.\n\nPeniaga: daftar kedai & terima pesanan.\nPelanggan: cari kedai berdekatan & buat pesanan.'),
-      unifiedGreetingKeyboard()
-    );
+  // Start: Phase 31 - Core Bot Command Activation Matrix (Fasal 4 SOA delegation)
+  // Arahan teks di-delegate ke sub-handler khusus (LOOP 1-2 modules).
+  const cmd = (msg.text || '').trim();
+  if (cmd === '/start' || cmd === '/mula') {
+    await handleStart(env, chatId, msg.from);
     return;
   }
-  // End: Phase 23 - /start unified greeting menu
+  if (cmd === '/help' || cmd === '/bantuan') {
+    await handleHelp(env, chatId, msg.from);
+    return;
+  }
+  if (cmd === '/menu') {
+    await handleShopMenu(env, chatId);
+    return;
+  }
+  if (cmd === '/urus' || cmd === '/dashboard') {
+    await handleMerchantDashboard(env, chatId, tgId);
+    return;
+  }
+  // End: Phase 31 - Core Bot Command Activation Matrix
 
   // Start: Phase 23 - Geolocation routing (merchant intercept vs customer pipeline)
   // Jika peniaga sedang dalam awaiting_shop_location, lokasi ke merchant handler.
