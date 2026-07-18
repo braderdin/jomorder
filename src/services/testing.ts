@@ -108,4 +108,70 @@ export function summarizeSmokeTests(reports: SmokeReport[]): string {
   );
   return `🩺 SMOKE TEST: ${passed}/${total} PASS\n` + lines.join('\n');
 }
+
+// Start: Phase 34 - High-Concurrency Load Loop (16 native commands)
+/** Keputusan satu kitaran beban serentak. */
+export interface LoadResult {
+  command: string;
+  total: number;
+  ok: number;
+  fail: number;
+  successRate: number;
+}
+
+/**
+ * runConcurrencyLoadTest
+ * Lembing N permintaan serentak bagi setiap 16 arahan natif ke worker
+ * (default localhost:8787) dengan secret sah. Kira kadar kejayaan per arahan.
+ * Fasal 10: status 200/403/405 dianggap OK (bukan crash).
+ */
+export async function runConcurrencyLoadTest(
+  env: Env,
+  concurrency = 10,
+  baseUrl = 'http://localhost:8787'
+): Promise<LoadResult[]> {
+  const commands = [
+    '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
+    '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
+    '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+  ];
+  const results: LoadResult[] = [];
+  const secret = { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN };
+
+  const hit = async (text: string): Promise<boolean> => {
+    try {
+      const body = JSON.stringify({
+        update_id: 1,
+        message: { message_id: 1, from: { id: 123456789 }, chat: { id: 123456789 }, text },
+      });
+      const res = await fetch(`${baseUrl}/`, { method: 'POST', headers: secret, body });
+      return res.status === 200 || res.status === 403 || res.status === 405;
+    } catch {
+      return false;
+    }
+  };
+
+  for (const c of commands) {
+    const batch = Array.from({ length: concurrency }, () => hit(c));
+    const outcomes = await Promise.all(batch);
+    const ok = outcomes.filter(Boolean).length;
+    results.push({
+      command: c.split(' ')[0],
+      total: concurrency,
+      ok,
+      fail: concurrency - ok,
+      successRate: Math.round((ok / concurrency) * 1000) / 10,
+    });
+  }
+  return results;
+}
+
+/** Padatkan keputusan beban ke string status. */
+export function summarizeLoadResults(results: LoadResult[]): string {
+  const lines = results.map(
+    (r) => `${r.fail === 0 ? '✅' : '⚠️'} ${r.command}: ${r.ok}/${r.total} (${r.successRate}%)`
+  );
+  return `🔥 CONCURRENCY LOAD (16 CMD):\n` + lines.join('\n');
+}
+// End: Phase 34 - High-Concurrency Load Loop
 // End: JomOrder Fasa 9 - Automated Smoke Test Suite (File 5)

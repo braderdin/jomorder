@@ -2,7 +2,7 @@
 // Fasal 6 (MarkdownV2 escape + inline grid) + Fasal 7 Strategy 1 (tenant isolation).
 // Fasal 4 (SOA) - modul khusus kendali command '/invois' dan inline 'view_invoice:'.
 import { Env, TelegramCallbackQuery } from '../types';
-import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from '../telegram';
+import { sendMessage, escapeMarkdownV2, answerCallbackQuery, inlineKeyboard } from '../telegram';
 import { buildMerchantInvoice, renderInvoiceMarkdownV2, InvoiceQueryBoundary } from '../services/invoice';
 
 /** Parse suffix 'view_invoice:{since}' kepada sempadan query. */
@@ -42,7 +42,13 @@ export async function handleMerchantInvoiceText(
     return;
   }
   const md = renderInvoiceMarkdownV2(inv);
-  await sendMessage(env, chatId, md);
+  // Phase 34: Time-boundary grid (7d / 30d / semua) untuk asingkan ringkasan jualan.
+  const grid = [
+    { text: '📅 7 Hari', callback_data: 'view_invoice:7d' },
+    { text: '📆 30 Hari', callback_data: 'view_invoice:30d' },
+    { text: '🗂️ Semua', callback_data: 'view_invoice:all' },
+  ];
+  await sendMessage(env, chatId, md, inlineKeyboard([grid]));
 }
 
 /**

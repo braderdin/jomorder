@@ -48,6 +48,11 @@ function svcHeaders(env: Env): Record<string, string> {
   };
 }
 
+/** Phase 34: AbortSignal timeout shield (8s) elak sequence timeout dropout. */
+function withTimeout(ms = 8000): { signal: AbortSignal } {
+  return { signal: AbortSignal.timeout(ms) };
+}
+
 /**
  * Selesaikan kedai_id daripada merchant_telegram_id (tenant isolation).
  * Soft-fail: return null jika tiada kedai berdaftar.
@@ -55,7 +60,7 @@ function svcHeaders(env: Env): Record<string, string> {
 async function resolveKedaiId(env: Env, merchantTgId: string): Promise<{ id: string; nama: string } | null> {
   const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?select=id,nama_kedai&merchant_telegram_id=eq.${encodeURIComponent(merchantTgId)}&limit=1`;
   try {
-    const res = await fetch(url, { headers: svcHeaders(env) });
+    const res = await fetch(url, { ...svcHeaders(env), ...withTimeout() });
     if (!res.ok) return null;
     const rows = (await res.json()) as Array<{ id: string; nama_kedai: string }>;
     if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -79,7 +84,7 @@ async function fetchOrders(
   if (boundary.since) q += `&created_at=gte.${encodeURIComponent(boundary.since)}`;
   if (boundary.until) q += `&created_at=lte.${encodeURIComponent(boundary.until)}`;
   try {
-    const res = await fetch(q, { headers: svcHeaders(env) });
+    const res = await fetch(q, { ...svcHeaders(env), ...withTimeout() });
     if (!res.ok) return null;
     return (await res.json()) as Array<Record<string, unknown>>;
   } catch {

@@ -16,7 +16,8 @@ interface KedaiAktif {
  * Soft-fail: return [] jika fetch gagal.
  */
 async function fetchKedaiAktif(env: Env): Promise<KedaiAktif[]> {
-  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?status_kedai=neq.MENUNGGU_PENGESAHAN&select=id,nama_kedai&order=nama_kedai.asc&limit=20`;
+  // Phase 34: Hanya kedai AKTIF (drop TUTUP), dan buang node tamat langganan.
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?status_kedai=eq.AKTIF&select=id,nama_kedai,tamat_langganan_pada&order=nama_kedai.asc&limit=20`;
   try {
     const res = await fetch(url, {
       method: 'GET',
@@ -27,9 +28,19 @@ async function fetchKedaiAktif(env: Env): Promise<KedaiAktif[]> {
       },
     });
     if (!res.ok) return [];
-    const rows = (await res.json()) as Array<{ id: string; nama_kedai: string }>;
+    const rows = (await res.json()) as Array<{ id: string; nama_kedai: string; tamat_langganan_pada: string | null }>;
     if (!Array.isArray(rows)) return [];
-    return rows.map((r) => ({ id: r.id, nama_kedai: r.nama_kedai }));
+    const now = Date.now();
+    return rows
+      .filter((r) => {
+        // Phase 34: Drop node tamat langganan (expired storefront).
+        if (r.tamat_langganan_pada) {
+          const exp = new Date(r.tamat_langganan_pada).getTime();
+          if (!isNaN(exp) && now > exp) return false;
+        }
+        return true;
+      })
+      .map((r) => ({ id: r.id, nama_kedai: r.nama_kedai }));
   } catch {
     return []; // Soft-fail (Fasal 7 Strategy 4)
   }

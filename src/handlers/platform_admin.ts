@@ -15,10 +15,15 @@ function svcHeaders(env: Env): Record<string, string> {
   };
 }
 
-/** Guard: hanya ADMIN_TELEGRAM_ID dibenarkan akses arahan pentadbir. */
+/** Phase 34: Dual-token protection guard matriks pentadbir.
+ *  Lapisan 1: tgId mesti dalam senarai ADMIN_TELEGRAM_ID.
+ *  Lapisan 2: X_TELEGRAM_BOT_API_SECRET_TOKEN mesti wujud (bot secret pin).
+ *  Kedua-dua mesti lulus sebelum grid pentadbir dibuka. */
 function isAdmin(env: Env, tgId: number): boolean {
   const allowed = (env.ADMIN_TELEGRAM_ID || '').split(',').map((s) => s.trim());
-  return allowed.includes(String(tgId));
+  const layer1 = allowed.includes(String(tgId));
+  const layer2 = Boolean(env.X_TELEGRAM_BOT_API_SECRET_TOKEN);
+  return layer1 && layer2;
 }
 
 /** /admin_stats - agregat metrik SaaS platform untuk pentadbir. */

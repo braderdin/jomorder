@@ -26,6 +26,11 @@ function supabaseHeaders(env: Env): Record<string, string> {
   };
 }
 
+/** Phase 34: Generate transactional tracking reference untuk audit trail. */
+function genTxRef(prefix: string, merchantTgId: number): string {
+  return `${prefix}_${Date.now()}_${merchantTgId}_${Math.floor(Math.random() * 1e6)}`;
+}
+
 /**
  * Dapatkan kedai_id (UUID) daripada merchant_telegram_id.
  * Diikat untuk pengasingan multi-tenant (Fasal 7 Strategy 1).

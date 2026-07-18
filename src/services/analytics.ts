@@ -81,12 +81,18 @@ export async function fetchSaasMetrics(env: Env): Promise<SaasMetrics | null> {
     });
     if (!res.ok) return null;
     const data = (await res.json()) as Partial<SaasMetrics>;
+    const premium = Number(data.total_premium_stores ?? 0);
+    let mrr = Number(data.mrr_projection_rm ?? 0);
+    // Phase 34: Active MRR recalculation fallback (RM49.90/sebulan per stor premium).
+    if (!mrr || mrr <= 0) {
+      mrr = Math.round(premium * 49.9 * 100) / 100;
+    }
     return {
       total_active_merchants: Number(data.total_active_merchants ?? 0),
-      total_premium_stores: Number(data.total_premium_stores ?? 0),
+      total_premium_stores: premium,
       total_revenue_rm: Number(data.total_revenue_rm ?? 0),
       total_orders: Number(data.total_orders ?? 0),
-      mrr_projection_rm: Number(data.mrr_projection_rm ?? 0),
+      mrr_projection_rm: mrr,
     };
   } catch {
     return null; // Soft-fail (Fasal 7 Strategy 4)

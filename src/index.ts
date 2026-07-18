@@ -26,7 +26,7 @@ async function bootstrapCommandMenu(env: Env): Promise<void> {
 // End: Phase 32 - Bot Command Menu Bootstrap
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Phase 32: trigger bootstrap menu secara async (tidak sekat route).
@@ -157,15 +157,14 @@ export default {
       return new Response('OK', { status: 200 });
     }
 
-    // Phase 30: Async fire-and-forget untuk elak serverless gateway timeout.
-    // Tangkap callback/customer push chain secara non-blocking; webhook terus
-    // balas 200 supaya Telegram tidak retry. Sebarang error di-log soft-fail.
+    // Phase 34: Bound processing ke execution context via ctx.waitUntil()
+    // supaya runtime Cloudflare kekalkan worker hidup sehingga loop latar
+    // belakang (callback/customer push chain) selesai — elak gateway dropout.
+    // Webhook tetap balas 200 segera (Fasal 7 Strategy 4 resilience).
     const processing = handleUpdate(env, update).catch((err) => {
-      console.error('[Phase30] update processing soft-fail:', (err as Error).message);
+      console.error('[Phase34] update processing soft-fail:', (err as Error).message);
     });
-    // Jangan tunggu promise tamat — balas segera (Fasal 7 Strategy 4 resilience).
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    void processing;
+    ctx.waitUntil(processing);
 
     // End: Update Router
 

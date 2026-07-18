@@ -101,9 +101,36 @@ export async function handleListCoupons(env: Env, chatId: number, tgId: number):
   }
 }
 
+/** Snapshot kupon sebelum padam (rollback buffer) -> audit_kupon_padam. */
+async function snapshotCouponForAudit(env: Env, tgId: number, kod: string): Promise<void> {
+  try {
+    const getUrl = `${SUPABASE_REST(env)}/kupon_kedai?kod=eq.${encodeURIComponent(kod)}&merchant_telegram_id=eq.${tgId}&select=*`;
+    const snap = await fetch(getUrl, { method: 'GET', headers: svcHeaders(env) });
+    if (!snap.ok) return; // Soft-fail: audit bukan blocker.
+    const rows = (await snap.json()) as Array<Record<string, unknown>>;
+    const payload = Array.isArray(rows) && rows.length > 0 ? rows[0] : { kod, merchant_telegram_id: tgId };
+    const txRef = `del_${Date.now()}_${tgId}`;
+    await fetch(`${SUPABASE_REST(env)}/audit_kupon_padam`, {
+      method: 'POST',
+      headers: { ...svcHeaders(env), Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        kod,
+        merchant_telegram_id: String(tgId),
+        snapshot_json: payload,
+        transaction_ref: txRef,
+        dipadam_pada: new Date().toISOString(),
+      }),
+    });
+  } catch {
+    // Soft-fail (Fasal 7 Strategy 4): audit gagal tidak blok pemadaman.
+  }
+}
+
 /** Teras padam kupon (RLS isolation manual) - dikongsi command & inline callback. */
 async function deleteCouponCore(env: Env, chatId: number, tgId: number, kod: string): Promise<void> {
   try {
+    // Phase 34: Rollback buffer - snapshot dulu sebelum DELETE.
+    await snapshotCouponForAudit(env, tgId, kod);
     const url = `${SUPABASE_REST(env)}/kupon_kedai?kod=eq.${encodeURIComponent(kod)}&merchant_telegram_id=eq.${tgId}`;
     const res = await fetch(url, { method: 'DELETE', headers: svcHeaders(env) });
     if (!res.ok) {

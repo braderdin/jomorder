@@ -185,13 +185,16 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     }
     // End: Phase 25 - View Cart callback routing
 
-    // Start: Phase 33 - Coupon inline deletion callback routing (del_coupon:<KOD>)
+    // Start: Phase 34 - Coupon inline deletion callback wiring (del_coupon:<KOD>)
+    // Bridge terus ke logic pemadaman terharden (rollback buffer + audit snapshot).
+    // Dismiss spinner dulu (Fasal 6 UX) sebelum delegate ke handler.
     if (data.startsWith('del_coupon:')) {
       const kod = data.slice('del_coupon:'.length);
+      await answerCallbackQuery(env, cb.id, 'Memadam kupon...');
       await handleDeleteCouponInline(env, cbChatId, cb.from.id, kod);
       return;
     }
-    // End: Phase 33 - Coupon inline deletion callback routing
+    // End: Phase 34 - Coupon inline deletion callback wiring
 
     return; // callback lain diabaikan buat masa ini
   }

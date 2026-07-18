@@ -19,6 +19,21 @@ function svcHeaders(env: Env): Record<string, string> {
  * Naiktaraf /start untuk parse deep-link token (?startapp=kedai_id).
  * Jika payload ada kedai_id, terus buka web-app menu kedai tersebut.
  */
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+/** Phase 34: Sahkan kedai wujud & aktif sebelum redirect deep-link. */
+async function kedaiWujud(env: Env, kedaiId: string): Promise<boolean> {
+  try {
+    const url = `${SUPABASE_REST(env)}/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}&status_kedai=neq.MENUNGGU_PENGESAHAN&select=id&limit=1`;
+    const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });
+    if (!res.ok) return false;
+    const rows = (await res.json()) as Array<{ id: string }>;
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function handleStartDeepLink(
   env: Env,
   chatId: number,
@@ -28,10 +43,18 @@ export async function handleStartDeepLink(
   try {
     if (payload && payload.startsWith('kedai_id=')) {
       const kedaiId = payload.slice('kedai_id='.length).trim();
-      if (kedaiId) {
-        await handleViewShopMenu(env, chatId, user.id, kedaiId);
+      // Phase 34: Reject non-UUID / malformed deep-link tokens.
+      if (!kedaiId || !UUID_RE.test(kedaiId)) {
+        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Pautan kedai tidak sah.'));
         return;
       }
+      // Phase 34: Sahkan kedai wujud sebelum redirect (anti-orphan redirect).
+      if (!(await kedaiWujud(env, kedaiId))) {
+        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai tidak dijumpai atau belum aktif.'));
+        return;
+      }
+      await handleViewShopMenu(env, chatId, user.id, kedaiId);
+      return;
     }
     // Fallback: greeting default dengan keyboard nav pelanggan.
     await sendMessage(
