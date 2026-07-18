@@ -9,7 +9,7 @@ import {
   merchantMenuKeyboard,
   answerCallbackQuery,
 } from '../telegram';
-import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState, getMenuByKedaiId } from '../db';
+import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState, getMenuByKedaiId, getMerchantProfileSafe } from '../db';
 import { getState, setState } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert } from '../subscription';
 import { isSearchRestricted, canCancelOrder } from '../orders';
@@ -511,5 +511,34 @@ function supabaseHeaders(env: Env): Record<string, string> {
 // End: Phase 37 - Customer Archive & Order Cancellation
 
 // End: Phase 24 - Dynamic Menu Browsing & Interactive Cart Populatio
+
+// Start: Phase 41 - 22 Command BM Activation (handleProfil export)
+/**
+ * handleProfil
+ * Papar profil pelanggan: status langganan + kedai berdaftar (jika peniaga).
+ * Gabung db getMerchantProfileSafe + subscription status (Fasal 4 SOA).
+ * Null-shield: kalau tiada kedai, papar status pelanggan biasa.
+ */
+export async function handleProfil(
+  env: Env,
+  chatId: number,
+  tgId: number
+): Promise<void> {
+  const subStatus = await getSubscriptionStatus(env, tgId);
+  const profile = await getMerchantProfileSafe(env, tgId);
+  const isMerchant = Boolean(profile);
+  const plan = (subStatus as string) || 'PERCUMA';
+  let text = escapeMarkdownV2('👤 PROFIL JOMORDER\\n\\n');
+  text += escapeMarkdownV2(`ID Telegram: ${tgId}\\n`);
+  text += escapeMarkdownV2(`Peranan: ${isMerchant ? 'Peniaga' : 'Pelanggan'}\\n`);
+  text += escapeMarkdownV2(`Pelan: ${plan}\\n`);
+  if (isMerchant && profile) {
+    text += escapeMarkdownV2(`Kedai: ${profile.nama_kedai}\\n`);
+    text += escapeMarkdownV2(`Status Kedai: ${profile.status_kedai}\\n`);
+  }
+  text += escapeMarkdownV2('\\nGuna /naiktaraf untuk tingkatkan pelan anda ⭐');
+  await sendMessage(env, chatId, text);
+}
+// End: Phase 41 - 22 Command BM Activation (handleProfil export)
 
 // End: JomOrder Fasa 9 - Modular Customer Handler (File 3)

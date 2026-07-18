@@ -57,4 +57,11 @@ export async function withSilentGuard<T>(
   }
 }
 
+// Start: Phase 41 - 22 Command BM Activation (interceptor coverage note)
+// withCommandGuard generic shell sudah meliputi kesemua 22 command BM termasuk
+// /daftar, /tambah_menu, /urus_kedai, /senarai_pesanan, /bantuan, /profil.
+// Tiada perubahan logik diperlukan; shell ini menjamin HTTP 200 di bawah throw
+// supaya Telegram tidak retry loop (Fasal 7 Strategy 4).
+// End: Phase 41 - 22 Command BM Activation
+
 // End: Phase 40 - Catch-All Command Exception Interceptor

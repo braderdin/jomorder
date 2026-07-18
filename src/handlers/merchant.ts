@@ -564,6 +564,39 @@ async function getKedaiIdByMerchant(env: Env, tgId: number): Promise<string | nu
     return null;
   }
 }
+
+// Start: Phase 41 - 22 Command BM Activation (handleTambahMenu export)
+/**
+ * handleTambahMenu
+ * Alias /tambah_menu -> set state awaiting_menu_item supaya peniaga boleh
+ * taip nama + harga hidangan secara interaktif (Fasal 7 Strategy 2 state).
+ * Jika kedai belum wujud, arahkan ke /daftar.
+ */
+export async function handleTambahMenu(
+  env: Env,
+  chatId: number,
+  tgId: number
+): Promise<void> {
+  const exists = await checkMerchantExists(env, tgId);
+  if (!exists) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum daftar kedai. Taip /daftar untuk mula.'), daftarKedaiKeyboard());
+    return;
+  }
+  const next: MerchantState = {
+    merchant_telegram_id: tgId,
+    step: 'awaiting_menu_item',
+    last_active: new Date().toISOString(),
+  };
+  await setState(env, next);
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2('➕ TAMBAH ITEM MENU\\n\\nTaip dalam format:\\n<Nama Hidangan> | <Harga RM>\\n\\nContoh: Nasi Lemak | 8.50'),
+    merchantMenuKeyboard()
+  );
+}
+// End: Phase 41 - 22 Command BM Activation (handleTambahMenu export)
+
 // End: Phase 37 - Merchant Catalog & Location Hooks
 
 // End: Phase 23 - Merchant Geolocation Intercept

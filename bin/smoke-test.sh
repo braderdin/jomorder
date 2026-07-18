@@ -140,6 +140,16 @@ for cb in "del_coupon:JOM10" "toggle_status:abc" "add_to_cart:item:shop" "view_s
 done
 # End: Phase 39 - Full 22-Command Live Webhook Frame Injection
 
+# Start: Phase 41 - 22 Command BM Activation Matrix Assertion
+# Suntik HTTP POST frames untuk 6 command BM baharu (alias + profil) dan sahkan
+# endpoint hidup (200/403/405 = PASS). Guna secret dummy (403 = guard aktif).
+echo ""
+echo "--- Phase 41: 22 Command BM Activation (alias + profil) ---"
+for cmd in "/daftar" "/tambah_menu" "/urus_kedai" "/senarai_pesanan" "/bantuan" "/profil"; do
+  check_post "PH41:${cmd%% *}" "$cmd"
+done
+# End: Phase 41 - 22 Command BM Activation Matrix Assertion
+
 # Start: Phase 40 - Catch-All Error Interceptor Assertion (HTTP 200 under errors)
 # Suntik payload rosak (JSON tidak sah) dengan secret sah; interceptor global (Phase 40)
 # mesti tangkap exception dan return HTTP 200 (bukan 500) supaya Telegram tidak retry.

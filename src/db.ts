@@ -76,6 +76,21 @@ export async function getShopByMerchantSafe(
   }
 }
 
+// Start: Phase 41 - 22 Command BM Activation (getMerchantProfileSafe export)
+/**
+ * getMerchantProfileSafe
+ * Alias null-shield untuk profil peniaga (Fasal 7 Strategy 4 resilience).
+ * Digunakan oleh handleProfil (customer.ts) untuk papar status kedai + langganan.
+ * Return null jika peniaga belum daftar kedai (tiada crash).
+ */
+export async function getMerchantProfileSafe(
+  env: Env,
+  telegramId: number
+): Promise<{ id: string; nama_kedai: string; status_kedai: string; status_langganan?: string } | null> {
+  return getShopByMerchantSafe(env, telegramId);
+}
+// End: Phase 41 - 22 Command BM Activation (getMerchantProfileSafe export)
+
 /**
  * getShopByIdSafe fortekan: pastikan result di-normalize dan tak pernah throw.
  * (Wrapper sedia ada dipertingkat dengan safeRows guard tambahan.)

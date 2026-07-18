@@ -23,10 +23,15 @@ import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handl
 import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './handlers/platform_admin';
 // Start: Phase 37 - New 22-Command handler imports (merchant/customer/admin modules)
 import { handleSenaraiMenu, handleSetLokasi } from './handlers/merchant';
-import { handleSejarahPesanan, handleBatalkanPesanan } from './handlers/customer';
+import { handleSejarahPesanan, handleBatalkanPesanan, handleProfil } from './handlers/customer';
 import { handlePengumumanBroadcast } from './handlers/admin';
 import { fetchMerchantSalesSummary } from './services/analytics';
 import { withCommandGuard } from './services/command_error_interceptor';
+// Start: Phase 41 - 22 Command BM Activation imports (alias + profil handler)
+// daftarKedaiPermulaan datang dari db.ts (commit onboarding), handleTambahMenu dari merchant.ts.
+import { daftarKedaiPermulaan } from './db';
+import { handleTambahMenu } from './handlers/merchant';
+// End: Phase 41 - 22 Command BM Activation imports
 
 /** Handler /laporan_jualan - agregat jualan kedai sendiri (merchant-scoped). */
 async function handleMerchantSalesSummary(env: Env, chatId: number, tgId: number): Promise<void> {
@@ -382,6 +387,38 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await withCommandGuard(env, chatId, '/laporan_jualan', () => handleMerchantSalesSummary(env, chatId, tgId));
     return;
   }
+  // Start: Phase 41 - 22 Command BM Activation Matrix (alias + profil)
+  // /daftar -> onboarding kedai baharu (alias daftarKedaiPermulaan).
+  if (cmd === '/daftar') {
+    await withCommandGuard(env, chatId, '/daftar', () => handleMerchantMessage(env, chatId, tgId, '/daftar'));
+    return;
+  }
+  // /tambah_menu -> flow tambah item menu (alias handleTambahMenu).
+  if (cmd.startsWith('/tambah_menu')) {
+    await withCommandGuard(env, chatId, '/tambah_menu', () => handleTambahMenu(env, chatId, tgId));
+    return;
+  }
+  // /urus_kedai -> alias papan pemerintah peniaga.
+  if (cmd === '/urus_kedai') {
+    await withCommandGuard(env, chatId, '/urus_kedai', () => handleMerchantDashboard(env, chatId, tgId));
+    return;
+  }
+  // /senarai_pesanan -> alias senarai pesanan aktif.
+  if (cmd === '/senarai_pesanan') {
+    await withCommandGuard(env, chatId, '/senarai_pesanan', () => handlePesananSaya(env, chatId, tgId));
+    return;
+  }
+  // /bantuan -> panduan interaktif (alias handleHelp).
+  if (cmd === '/bantuan') {
+    await withCommandGuard(env, chatId, '/bantuan', () => handleHelp(env, chatId, msg.from));
+    return;
+  }
+  // /profil -> handler profil & langganan baharu.
+  if (cmd === '/profil') {
+    await withCommandGuard(env, chatId, '/profil', () => handleProfil(env, chatId, tgId));
+    return;
+  }
+  // End: Phase 41 - 22 Command BM Activation Matrix
   // End: Phase 37 - New 6-Command Activation Matrix
   // End: Phase 32 - 16-Command Activation Matrix
   // End: Phase 31 - Core Bot Command Activation Matrix
