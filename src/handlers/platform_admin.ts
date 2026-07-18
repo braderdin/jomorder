@@ -64,18 +64,22 @@ export async function handleSenaraiPendaftaran(env: Env, chatId: number, tgId: n
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai.'));
       return;
     }
-    const rows = (await res.json()) as Array<{
-      id: string;
-      nama_kedai: string;
-      merchant_telegram_id: number;
-      status_kedai: string;
-    }>;
-    if (!Array.isArray(rows) || rows.length === 0) {
+    // Phase 40: null-config tolerance - guard JSON aneh dan field kosong.
+    const rows = (await res.json()) as unknown;
+    const list = Array.isArray(rows)
+      ? (rows as Array<{ id?: string; nama_kedai?: string; merchant_telegram_id?: number; status_kedai?: string }>)
+      : [];
+    if (list.length === 0) {
       await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada pendaftaran lagi.'));
       return;
     }
-    const lines = rows
-      .map((r) => `🏪 ${escapeMarkdownV2(r.nama_kedai)} \\- ${escapeMarkdownV2(r.status_kedai)} \\(ID:${r.merchant_telegram_id}\\)`)
+    const lines = list
+      .map((r) => {
+        const name = escapeMarkdownV2(r.nama_kedai || 'TANANama');
+        const status = escapeMarkdownV2(r.status_kedai || 'TIDAK_DIKETAHUI');
+        const id = r.merchant_telegram_id ?? 0;
+        return `🏪 ${name} \\- ${status} \\(ID:${id}\\)`;
+      })
       .join('\\n');
     await sendMessage(env, chatId, escapeMarkdownV2('📋 PENDAFTARAN:\\n') + lines);
   } catch {

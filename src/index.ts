@@ -9,6 +9,7 @@ import { checkDatabaseHealth } from './services/sentinel';
 import { dispatchSubscriptionAlerts, triggerSaasPulseReport } from './services/scheduler';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { captureRawWebhookFrame } from './services/telegram_webhook_diagnostics';
+import { captureRetryFailure } from './services/webhook_retry_manager';
 
 // Start: Phase 32 - Bot Command Menu Bootstrap (lifecycle onboarding)
 // Daftarkan 16 arahan natif ke menu Telegram sekali sahaja per cold-start worker.
@@ -206,8 +207,17 @@ export default {
     // supaya runtime Cloudflare kekalkan worker hidup sehingga loop latar
     // belakang (callback/customer push chain) selesai — elak gateway dropout.
     // Webhook tetap balas 200 segera (Fasal 7 Strategy 4 resilience).
-    const processing = handleUpdate(env, update).catch((err) => {
-      console.error('[Phase34] update processing soft-fail:', (err as Error).message);
+    // Phase 40: Retry middleware intercept - balut processing dengan diagnostic
+    // soft-fail supaya frame putus akibat Telegram drop link tidak biarkan
+    // worker senyap. Log ke retry manager (fail-open) lalu terus 200 ke Telegram.
+    const processing = handleUpdate(env, update).catch(async (err) => {
+      const msg = (err as Error).message;
+      console.error('[Phase40] update processing soft-fail:', msg);
+      try {
+        await captureRetryFailure(env, 'handleUpdate', msg.slice(0, 200));
+      } catch {
+        // swallow diagnostic failure - jangan block webhook response
+      }
     });
     ctx.waitUntil(processing);
 

@@ -41,8 +41,17 @@ export async function handleAdminMessage(
 async function sendAdminStats(env: Env, chatId: number): Promise<void> {
   const m = await fetchSaasMetrics(env);
   if (!m) {
-    const err = escapeMarkdownV2('Sila cuba sebentar lagi');
-    await sendMessage(env, chatId, `⚠️ *JomOrder SaaS Dashboard*\n\n${err}\\.`);
+    // Phase 40: null-tolerance - output data kosong tanpa crash (Fasal 7 S4).
+    const text =
+      `📊 *JomOrder SaaS Dashboard*\n\n` +
+      `👑 *Chip Besar Analytics*\n\n` +
+      `🏪 *Merchant Aktif:* 0\n` +
+      `⭐ *Kedai Premium:* 0\n` +
+      `💰 *Jumlah Hasil:* RM0\\.00\n` +
+      `🧾 *Jumlah Pesanan:* 0\n` +
+      `📈 *Unjuran MRR:* RM0\\.00\n\n` +
+      `_Tiada data metrik \\(sistem baru tamat atau DB kosong\)\\._`;
+    await sendMessage(env, chatId, text);
     return;
   }
   const text =
@@ -53,7 +62,7 @@ async function sendAdminStats(env: Env, chatId: number): Promise<void> {
     `💰 *Jumlah Hasil:* RM${fmtRm(m.total_revenue_rm)}\n` +
     `🧾 *Jumlah Pesanan:* ${m.total_orders}\n` +
     `📈 *Unjuran MRR:* RM${fmtRm(m.mrr_projection_rm)}\n\n` +
-    `🔒 _Diasing via service\\_role \\(Fasal 7\\)_`;
+    `🔒 _Diasing via service\\_role \\(Fasal 7\)_`;
   await sendMessage(env, chatId, text);
 }
 // Start: Phase 37 - Administrative Broadcast (pengumuman platform)

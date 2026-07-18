@@ -110,4 +110,35 @@ export async function handleViewCart(
   await sendMessage(env, chatId, header, keyboard);
   return true;
 }
+// Start: Phase 40 - Cart Flush on Order Termination (reliable clear)
+/**
+ * flushCustomerCart
+ * Kosongkan cart buffer pelanggan dengan SELAMAT semasa isyarat terminasi pesanan
+ * (batal/pembayaran gagal/tamat sesi). Ganti cart_buffer dengan array kosong
+ *而不是 padam state penuh supaya state lain (lat/lng/onboarding) kekal utuh.
+ * Fail-open: jika Redis gagal, biarkan (Fasal 7 S4).
+ * @returns true jika flush berjaya disahkan.
+ */
+export async function flushCustomerCart(env: Env, tgId: number): Promise<boolean> {
+  try {
+    const state = await getState(env, tgId);
+    if (!state) return true; // tiada state = tiada cart untuk flush
+    const cleared = { ...state, cart_buffer: { kedaiId: '', items: [], total: 0 } } as never;
+    await setState(env, cleared);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * flushCustomerCartQuiet
+ * Variasi senyap untuk hook terminasi serentak (contoh: /batalkan_pesanan) di
+ * mana kita tidak mahu spam mesej. Return void.
+ */
+export async function flushCustomerCartQuiet(env: Env, tgId: number): Promise<void> {
+  await flushCustomerCart(env, tgId);
+}
+// End: Phase 40 - Cart Flush on Order Termination
+
 // End: Phase 25 - Modular Cart Inspection Engine (File 5)

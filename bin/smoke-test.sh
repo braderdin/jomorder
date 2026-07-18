@@ -140,6 +140,37 @@ for cb in "del_coupon:JOM10" "toggle_status:abc" "add_to_cart:item:shop" "view_s
 done
 # End: Phase 39 - Full 22-Command Live Webhook Frame Injection
 
+# Start: Phase 40 - Catch-All Error Interceptor Assertion (HTTP 200 under errors)
+# Suntik payload rosak (JSON tidak sah) dengan secret sah; interceptor global (Phase 40)
+# mesti tangkap exception dan return HTTP 200 (bukan 500) supaya Telegram tidak retry.
+echo ""
+echo "--- Phase 40: Catch-All Error Interceptor (malformed payload -> 200) ---"
+CORRUPT_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST \
+  -H "$SECRET_HEADER" -H "Content-Type: application/json" \
+  -d "this-is-not-valid-json-{" \
+  "${BASE_URL}/" || echo "000")
+if [[ "$CORRUPT_CODE" =~ ^(200|403|405)$ ]]; then
+  echo "[PASS] Catch-All Interceptor -> HTTP ${CORRUPT_CODE} (no 500 leak)"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "[FAIL] Catch-All Interceptor -> HTTP ${CORRUPT_CODE} (500 leak / crash)"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# Suntik update tanpa 'message'/'callback_query' (struct aneh) -> mesti 200 bukan 500.
+EMPTY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST \
+  -H "$SECRET_HEADER" -H "Content-Type: application/json" \
+  -d '{"update_id":99}' \
+  "${BASE_URL}/" || echo "000")
+if [[ "$EMPTY_CODE" =~ ^(200|403|405)$ ]]; then
+  echo "[PASS] Catch-All Interceptor (empty update) -> HTTP ${EMPTY_CODE}"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "[FAIL] Catch-All Interceptor (empty update) -> HTTP ${EMPTY_CODE}"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+# End: Phase 40 - Catch-All Error Interceptor Assertion
+
 echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"

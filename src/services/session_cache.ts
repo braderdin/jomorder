@@ -97,4 +97,36 @@ export async function clearCommandSession(env: Env, telegramId: number): Promise
 export async function touchCommandSession(env: Env, telegramId: number): Promise<void> {
   await redisCommand(env, ['EXPIRE', sessionKey(telegramId), SESSION_TTL_SECONDS]);
 }
+// Start: Phase 40 - Dead Session Eviction Hardening (Fasal 7 Strategy 2)
+/**
+ * clearDeadMerchantInput
+ * Padam secara eksplisit state input peniaga yang tergantung (dangling) semasa
+ * thread reset / onboarding digugurkan. Pastikan tiada parameter bersisa
+ * (shop_name kosong, awaiting_shop_name terbengkalai) tersimpan dalam Redis.
+ * Dipanggil oleh handler bila pengguna ubah arah (contoh: /menu dari tengah
+ * onboarding) supaya state tidak bocor ke sesi akan datang.
+ */
+export async function clearDeadMerchantInput(env: Env, telegramId: number): Promise<void> {
+  await redisCommand(env, ['DEL', sessionKey(telegramId)]);
+}
+
+/**
+ * purgeExpiredSessionsBatch
+ * Implikasi client-side sweep: gelintar senarai key session dengan prefix
+ * jo:cmd_session: dan padam mana-mana yang tamat tempoh (EX sudah 0). Upstash
+ * Redis tak sokong SCAN berat; kita guna pendekatan DEL idempoten pada set
+ * key yang diberi caller. Fungsi ini menyediakan API selamat supaya scheduler
+ * boleh panggil semasa cron pembersihan harian (fail-open).
+ */
+export async function purgeExpiredSessionsBatch(env: Env, ids: number[]): Promise<void> {
+  for (const id of ids) {
+    try {
+      await redisCommand(env, ['DEL', sessionKey(id)]);
+    } catch {
+      // swallow - satu kegagalan tidak hentikan sweep
+    }
+  }
+}
+// End: Phase 40 - Dead Session Eviction Hardening
+
 // End: Phase 32 - Upstash Redis Session Cache

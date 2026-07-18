@@ -563,4 +563,60 @@ export async function restoreInventoryOnCancel(
 
 // End: Fasa 7 - Order Commit Transaction (Checkout Lifecycle)
 
+// Start: Phase 40 - Atomic Order Mutation Wrapper (deadlock-safe via fn_update_pesanan_atomic)
+/**
+ * updateOrderStatusAtomic
+ * Panggil RPC fn_update_pesanan_atomic (migration 014) untuk update status pesanan
+ * secara optimistik berversi. Elak dua update serentak tindih (race condition) bila
+ * admin dan pelanggan tembak PATCH pada baris sama. Ikatan merchant_telegram_id
+ * menjamin isolasi multi-tenant (Fasal 7 Strategy 1) walaupun melalui RPC.
+ * @param expectedUpdatedAt timestamp updated_at yang dibaca caller sebelum update
+ *   (jika null, kita baca semula dari DB dulu untuk dapatkan nilai semasa).
+ * @returns true jika tepat satu baris dikemaskini (optimistic OK), false jika
+ *   versi sudah berubah (conflict) atau RPC gagal.
+ */
+export async function updateOrderStatusAtomic(
+  env: Env,
+  orderId: string,
+  merchantTelegramId: string,
+  newStatus: string,
+  expectedUpdatedAt?: string
+): Promise<boolean> {
+  let expected = expectedUpdatedAt;
+  if (!expected) {
+    // Baca updated_at semasa (best-effort) sebelum commit.
+    try {
+      const getRes = await fetch(
+        `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?id=eq.${encodeURIComponent(orderId)}&merchant_telegram_id=eq.${encodeURIComponent(merchantTelegramId)}&select=updated_at&limit=1`,
+        { method: 'GET', headers: supabaseHeaders(env) }
+      );
+      if (getRes.ok) {
+        const rows = (await getRes.json()) as Array<{ updated_at?: string }>;
+        if (Array.isArray(rows) && rows.length > 0) expected = rows[0].updated_at;
+      }
+    } catch {
+      // swallow - fallback ke direct update tanpa guard versi
+    }
+  }
+  const url = `${env.SUPABASE_URL}/rest/v1/rpc/fn_update_pesanan_atomic`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...supabaseHeaders(env), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        p_id: orderId,
+        p_merchant_telegram_id: merchantTelegramId,
+        p_new_status: newStatus,
+        p_expected_updated_at: expected ?? null,
+      }),
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as boolean;
+    return data === true;
+  } catch {
+    return false; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Phase 40 - Atomic Order Mutation Wrapper
+
 // End: JomOrder Fasa 4 - Supabase Data Layer (Fail 1)

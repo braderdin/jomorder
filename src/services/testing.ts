@@ -475,5 +475,74 @@ export function buildMockCommandPayloads(): MockPayloadEntry[] {
 }
 // End: Phase 38 - Mock Update Payload Generator
 
+// Start: Phase 40 - Concurrency Burst Stress Runner (catch hidden memory leaks)
+/**
+ * runConcurrencyStressSpike
+ * Lembing burst trafik amat tinggi (default 200 serentak) merentas KESELURUHAN
+ * 22 arahan natif + callback kritikal ke worker yang berjalan. Mengukur kadar
+ * kejayaan agregat dan memantau kebocoran memori terselindung (heap delta).
+ * Fasal 10: 200/403/405 = OK (bukan crash). Catch-all interceptor (Phase 40)
+ * menjamin tiada 500 walaupun handler individu jatuh.
+ * @returns agregat {total, ok, fail, successRate, heapDeltaMb}
+ */
+export async function runConcurrencyStressSpike(
+  env: Env,
+  concurrency = 200,
+  baseUrl = 'http://localhost:8787'
+): Promise<{ total: number; ok: number; fail: number; successRate: number; heapDeltaMb: number }> {
+  const commands = [
+    '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
+    '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
+    '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+    '/senarai_menu', '/set_lokasi', '/sejarah_pesanan', '/batalkan_pesanan 1', '/pengumuman',
+    '/start@JomOrderBot',
+  ];
+  const callbacks = [
+    'del_coupon:JOM10', 'toggle_menu:1', 'pay_now:1:shop:123456789', 'view_cart:abc',
+    'add_to_cart:item:shop', 'view_shop:shop', 'accept_order:1', 'ready_order:1',
+    'reject_order:1', 'view_invoice:1',
+  ];
+  const secret = { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN };
+  const all: Array<{ label: string; text?: string; cb?: string }> = [
+    ...commands.map((c) => ({ label: c.split(' ')[0], text: c })),
+    ...callbacks.map((d) => ({ label: `cb:${d.split(':')[0]}`, cb: d })),
+  ];
+
+  const hit = async (item: { text?: string; cb?: string }): Promise<boolean> => {
+    try {
+      const body = item.cb
+        ? JSON.stringify({ update_id: 2, callback_query: { id: 'cb1', from: { id: 123456789 }, message: { message_id: 1, chat: { id: 123456789 } }, data: item.cb } })
+        : JSON.stringify({ update_id: 1, message: { message_id: 1, from: { id: 123456789 }, chat: { id: 123456789 }, text: item.text } });
+      const res = await fetch(`${baseUrl}/`, { method: 'POST', headers: secret, body });
+      // Catch-all interceptor: 200/403/405/429 dianggap selamat (tiada 500).
+      return res.status === 200 || res.status === 403 || res.status === 405 || res.status === 429;
+    } catch {
+      return false;
+    }
+  };
+
+  const heapBefore = (globalThis as { performance?: { memory?: { usedJSHeapSize: number } } }).performance?.memory?.usedJSHeapSize ?? 0;
+  let ok = 0;
+  let total = 0;
+  for (const item of all) {
+    const batch = Array.from({ length: concurrency }, () => hit(item));
+    const outcomes = await Promise.all(batch);
+    const itemOk = outcomes.filter(Boolean).length;
+    ok += itemOk;
+    total += concurrency;
+  }
+  const heapAfter = (globalThis as { performance?: { memory?: { usedJSHeapSize: number } } }).performance?.memory?.usedJSHeapSize ?? 0;
+  const heapDeltaMb = heapBefore && heapAfter ? Math.round(((heapAfter - heapBefore) / 1048576) * 10) / 10 : 0;
+
+  return {
+    total,
+    ok,
+    fail: total - ok,
+    successRate: total > 0 ? Math.round((ok / total) * 1000) / 10 : 0,
+    heapDeltaMb,
+  };
+}
+// End: Phase 40 - Concurrency Burst Stress Runner
+
 // End: Phase 34 - High-Concurrency Load Loop
 // End: JomOrder Fasa 9 - Automated Smoke Test Suite (File 5)

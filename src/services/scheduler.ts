@@ -183,6 +183,62 @@ export async function triggerSaasPulseReport(env: Env): Promise<boolean> {
     return false;
   }
 }
+// Start: Phase 40 - Webhook Heartbeat Cron Validation (telemetry drift guard)
+/**
+ * runWebhookHeartbeatCheck
+ * Siasat kesihatan endpoint worker secara berkala (cron). Tarik /health dan
+ * /smoke; jika /health jatuh (DRIFT_DETECTED), rekam telemetry audit. Fail-open:
+ * ralat fetch tidak throw (Fasal 7 Strategy 4).
+ * @returns true jika pulse sihat, false jika drift kesan.
+ */
+export async function runWebhookHeartbeatCheck(env: Env, baseUrl = 'http://localhost:8787'): Promise<boolean> {
+  try {
+    const res = await fetch(`${baseUrl}/health`, { method: 'GET' });
+    const body = res.ok ? await res.text() : '';
+    const healthy = body === 'OK';
+    await auditTelemetryHealth(env, {
+      component: 'webhook_heartbeat',
+      status: healthy ? 'OK' : 'DRIFT_DETECTED',
+      detail_json: { health_body: body.slice(0, 60) },
+    });
+    return healthy;
+  } catch {
+    // Network drop -> anggap drift tapi jangan crash scheduler.
+    try {
+      await auditTelemetryHealth(env, {
+        component: 'webhook_heartbeat',
+        status: 'DRIFT_DETECTED',
+        detail_json: { note: 'fetch_failed' },
+      });
+    } catch {
+      // swallow
+    }
+    return false;
+  }
+}
+
+/** Helper audit telemetry dalam scheduler tanpa import cycle (local copy). */
+async function auditTelemetryHealth(env: Env, rec: { component: string; status: string; detail_json: Record<string, unknown> }): Promise<void> {
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/audit_telemetry_health`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        component: rec.component,
+        status: rec.status,
+        detail_json: rec.detail_json,
+      }),
+    });
+  } catch {
+    // swallow - telemetry bukan kritikal
+  }
+}
+// End: Phase 40 - Webhook Heartbeat Cron Validation
+
 // End: Phase 37 - SaaS Pulse Report Engine
 
 // End: JomOrder Fasa 6 - Subscription Alert Scheduler (Cron Utility)

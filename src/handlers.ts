@@ -26,6 +26,7 @@ import { handleSenaraiMenu, handleSetLokasi } from './handlers/merchant';
 import { handleSejarahPesanan, handleBatalkanPesanan } from './handlers/customer';
 import { handlePengumumanBroadcast } from './handlers/admin';
 import { fetchMerchantSalesSummary } from './services/analytics';
+import { withCommandGuard } from './services/command_error_interceptor';
 
 /** Handler /laporan_jualan - agregat jualan kedai sendiri (merchant-scoped). */
 async function handleMerchantSalesSummary(env: Env, chatId: number, tgId: number): Promise<void> {
@@ -299,78 +300,78 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Arahan teks di-delegate ke sub-handler khusus (LOOP 1-2 modules).
   const cmd = normalizeCommand(msg.text);
   if (cmd === '/help' || cmd === '/bantuan') {
-    await handleHelp(env, chatId, msg.from);
+    await withCommandGuard(env, chatId, '/help', () => handleHelp(env, chatId, msg.from));
     return;
   }
   if (cmd === '/menu') {
-    await handleShopMenu(env, chatId);
+    await withCommandGuard(env, chatId, '/menu', () => handleShopMenu(env, chatId));
     return;
   }
   if (cmd === '/urus' || cmd === '/dashboard') {
-    await handleMerchantDashboard(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/urus', () => handleMerchantDashboard(env, chatId, tgId));
     return;
   }
   // Start: Phase 32 - 16-Command Activation Matrix (Commerce/Marketing/Admin)
   // Deep-link: /start dengan payload ?startapp=kedai_id=XXX.
   if (cmd.startsWith('/start')) {
     const payload = cmd.includes(' ') ? cmd.split(/\s+/)[1] : undefined;
-    await handleStartDeepLink(env, chatId, msg.from, payload);
+    await withCommandGuard(env, chatId, '/start', () => handleStartDeepLink(env, chatId, msg.from, payload));
     return;
   }
   // Marketing coupon commands (merchant).
   if (cmd.startsWith('/cipta_kupon')) {
-    await handleCreateCoupon(env, chatId, tgId, cmd);
+    await withCommandGuard(env, chatId, '/cipta_kupon', () => handleCreateCoupon(env, chatId, tgId, cmd));
     return;
   }
   if (cmd === '/senarai_kupon') {
-    await handleListCoupons(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/senarai_kupon', () => handleListCoupons(env, chatId, tgId));
     return;
   }
   if (cmd.startsWith('/padam_kupon')) {
-    await handleDeleteCoupon(env, chatId, tgId, cmd);
+    await withCommandGuard(env, chatId, '/padam_kupon', () => handleDeleteCoupon(env, chatId, tgId, cmd));
     return;
   }
   // Customer commerce commands.
   if (cmd === '/cari_makan') {
-    await handleCariMakan(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/cari_makan', () => handleCariMakan(env, chatId, tgId));
     return;
   }
   if (cmd === '/pesanan_saya') {
-    await handlePesananSaya(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/pesanan_saya', () => handlePesananSaya(env, chatId, tgId));
     return;
   }
   // Admin protected commands.
   if (cmd === '/admin_stats') {
-    await handleAdminStats(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/admin_stats', () => handleAdminStats(env, chatId, tgId));
     return;
   }
   if (cmd === '/senarai_pendaftaran') {
-    await handleSenaraiPendaftaran(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/senarai_pendaftaran', () => handleSenaraiPendaftaran(env, chatId, tgId));
     return;
   }
   if (cmd === '/naiktaraf') {
-    await handleNaikTaraf(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/naiktaraf', () => handleNaikTaraf(env, chatId, tgId));
     return;
   }
   // Start: Phase 37 - New 6-Command Activation Matrix (22-command convergence)
   if (cmd === '/senarai_menu') {
-    await handleSenaraiMenu(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/senarai_menu', () => handleSenaraiMenu(env, chatId, tgId));
     return;
   }
   if (cmd === '/set_lokasi') {
-    await handleSetLokasi(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/set_lokasi', () => handleSetLokasi(env, chatId, tgId));
     return;
   }
   if (cmd === '/sejarah_pesanan') {
-    await handleSejarahPesanan(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/sejarah_pesanan', () => handleSejarahPesanan(env, chatId, tgId));
     return;
   }
   if (cmd.startsWith('/batalkan_pesanan')) {
-    await handleBatalkanPesanan(env, chatId, tgId, cmd);
+    await withCommandGuard(env, chatId, '/batalkan_pesanan', () => handleBatalkanPesanan(env, chatId, tgId, cmd));
     return;
   }
   if (cmd === '/pengumuman') {
-    await handlePengumumanBroadcast(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/pengumuman', () => handlePengumumanBroadcast(env, chatId, tgId));
     return;
   }
   if (cmd === '/laporan_jualan') {
@@ -378,7 +379,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
       return;
     }
-    await handleMerchantSalesSummary(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/laporan_jualan', () => handleMerchantSalesSummary(env, chatId, tgId));
     return;
   }
   // End: Phase 37 - New 6-Command Activation Matrix
@@ -403,13 +404,13 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   // Customer: carian kedai berdekatan
   if (text === '📍 Kedai Berdekatan') {
-    await handleCustomerNearby(env, chatId, tgId);
+    await withCommandGuard(env, chatId, 'nearby_btn', () => handleCustomerNearby(env, chatId, tgId));
     return;
   }
 
   // Customer: checkout payload trigger
   if (text === '💳 Bayar Sekarang') {
-    await handleCheckout(env, chatId, tgId);
+    await withCommandGuard(env, chatId, 'checkout_btn', () => handleCheckout(env, chatId, tgId));
     return;
   }
 
@@ -422,7 +423,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Pembeli taip /kupon <KOD> -> halakan ke customer handler apply kupon ke cart buffer.
   if (text.startsWith('/kupon ')) {
     const kod = text.split(/\s+/)[1] || '';
-    await handleApplyCoupon(env, chatId, tgId, kod);
+    await withCommandGuard(env, chatId, '/kupon', () => handleApplyCoupon(env, chatId, tgId, kod));
     return;
   }
   // End: Fasa 15 - Customer Coupon Router hook
@@ -437,7 +438,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
       return;
     }
-    await handleViewCart(env, chatId, tgId);
+    await withCommandGuard(env, chatId, '/troli', () => handleViewCart(env, chatId, tgId));
     return;
   }
 
@@ -479,7 +480,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
       return;
     }
-    await handleMerchantInvoiceText(env, chatId, tgId, text);
+    await withCommandGuard(env, chatId, '/invois', () => handleMerchantInvoiceText(env, chatId, tgId, text));
     return;
   }
   // End: Phase 29 - /invois command
@@ -497,7 +498,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // End: Phase 23 - Merchant state prefix routing
 
   // Default fallback -> merchant handler
-  await handleMerchantMessage(env, chatId, tgId, text);
+  await withCommandGuard(env, chatId, 'merchant_fallback', () => handleMerchantMessage(env, chatId, tgId, text));
 }
 
 // Start: Fasa 6 - Scheduled Maintenance Wiring (orchestration kekal di distributor)

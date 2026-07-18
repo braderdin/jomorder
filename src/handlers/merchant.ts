@@ -343,10 +343,16 @@ export async function handleMerchantMessage(
   // Semak state sedia ada (Fasal 7 Strategy 2)
   const current = await getState(env, tgId);
   if (current?.step === 'awaiting_shop_name') {
+    // Phase 40: sanitasi + validasi nama kedai sebelum commit (clean dangling params).
+    const cleanName = sanitizeShopName(text);
+    if (!isValidNameKedai(cleanName)) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Nama kedai tidak sah. Sila taip nama kedai yang sah (1-60 aksara).'), daftarKedaiKeyboard());
+      return;
+    }
     // Langkah B: simpan nama kedai, minta lokasi native Telegram (Fasal 7 Strategy 2).
     const next: MerchantState = {
       merchant_telegram_id: tgId,
-      shop_name: text,
+      shop_name: cleanName,
       step: 'awaiting_shop_location',
       last_active: new Date().toISOString(),
     };
@@ -354,7 +360,7 @@ export async function handleMerchantMessage(
     await sendMessage(
       env,
       chatId,
-      escapeMarkdownV2(`📍 Terima kasih! Kedai "${text}" disimpan sementara. Sila hantar 📍 lokasi kedai anda untuk melengkapkan pendaftaran.`),
+      escapeMarkdownV2(`📍 Terima kasih! Kedai "${cleanName}" disimpan sementara. Sila hantar 📍 lokasi kedai anda untuk melengkapkan pendaftaran.`),
       {
         keyboard: [[{ text: '📍 Kongsi Lokasi Kedai', request_location: true }]],
         resize_keyboard: true,
@@ -404,6 +410,25 @@ export async function handleMerchantMessage(
 
   await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), merchantMenuKeyboard());
 }
+
+// Start: Phase 40 - Onboarding Input Sanitizer (clean dangling params)
+/**
+ * sanitizeShopName
+ * Bersihkan input nama kedai: potong 60 char, buang whitespace hadapan/akhir,
+ * elak injection karakter baris baru. Guard input dangling (Fasal 7 S4).
+ */
+function sanitizeShopName(raw: string): string {
+  return (raw || '').replace(/[\r\n]/g, ' ').trim().slice(0, 60);
+}
+
+/**
+ * isValidNameKedai
+ * Sahkan nama kedai tidak kosong selepas sanitasi.
+ */
+function isValidNameKedai(name: string): boolean {
+  return sanitizeShopName(name).length > 0;
+}
+// End: Phase 40 - Onboarding Input Sanitizer
 
 // Start: Phase 23 - Merchant Geolocation Intercept (awaiting_shop_location)
 // Tangkap native Telegram location object, kunci lat/long, dan commit ke

@@ -92,6 +92,8 @@ export async function broadcastAnnouncementSlots(
 
   for (let i = 0; i < total; i += slotSize) {
     const slot = recipientIds.slice(i, i + slotSize);
+    // Phase 40: Telemetry logging cycle - rekod progres slot ke audit trail.
+    await auditBroadcastProgress(env, i / slotSize + 1, total, slot.length);
     // Hantar serentak dalam slot (25) - di bawah had 30/sec Telegram.
     await Promise.all(
       slot.map(async (id) => {
@@ -109,7 +111,46 @@ export async function broadcastAnnouncementSlots(
     }
   }
 
+  // Phase 40: Telemetry logging cycle - rekod kesimpulan broadcast pukal.
+  await auditBroadcastProgress(env, 0, total, 0, { sent, failed, finished: true });
   return { sent, total, failed };
+}
+
+/**
+ * auditBroadcastProgress
+ * Tulis log telemetry ke audit_telemetry_health (migration 010) untuk jejak
+ * kitaran broadcast pukal Super-Admin. Soft-fail: sebarang ralat ditelan.
+ * @param slotNo nombor slot semasa (0 = ringkasan akhir)
+ * @param total jumlah penerima keseluruhan
+ * @param slotSize saiz slot dihantar
+ * @param summary ringkasan akhir (sent/failed) bila slotNo=0
+ */
+async function auditBroadcastProgress(
+  env: Env,
+  slotNo: number,
+  total: number,
+  slotSize: number,
+  summary?: { sent: number; failed: number; finished: boolean }
+): Promise<void> {
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/audit_telemetry_health`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        component: 'admin_broadcast',
+        status: summary?.finished ? 'DONE' : 'IN_PROGRESS',
+        detail_json: summary?.finished
+          ? { sent: summary.sent, failed: summary.failed, total }
+          : { slot_no: slotNo, slot_size: slotSize, total },
+      }),
+    });
+  } catch {
+    // swallow - telemetry bukan kritikal (Fasal 7 S4)
+  }
 }
 // End: Phase 38 - Batch Rate-Limiter Slot Engine for Bulk Announcements
 // End: JomOrder Fasa 8
