@@ -55,4 +55,61 @@ async function sendAdminStats(env: Env, chatId: number): Promise<void> {
     `🔒 _Diasing via service\\_role \\(Fasal 7\\)_`;
   await sendMessage(env, chatId, text);
 }
+// Start: Phase 37 - Administrative Broadcast (pengumuman platform)
+/**
+ * handlePengumumanBroadcast
+ * Hantar pengumuman platform ke semua peniaga berdaftar (Fasal 7 Strategy 1).
+ * Hanya ADMIN_TELEGRAM_ID dibenarkan (guard dalam handleAdminMessage).
+ * Loop secure: dispatch ke merchant_telegram_id setiap baris.
+ */
+export async function handlePengumumanBroadcast(
+  env: Env,
+  chatId: number,
+  tgId: number
+): Promise<boolean> {
+  const adminId = Number(env.ADMIN_TELEGRAM_ID);
+  if (!env.ADMIN_TELEGRAM_ID || Number.isNaN(adminId)) return false;
+  if (tgId !== adminId) return false;
+
+  try {
+    const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?select=merchant_telegram_id&status_langganan=neq.TAMAT`;
+    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!res.ok) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai peniaga.'));
+      return true;
+    }
+    const rows = (await res.json()) as Array<{ merchant_telegram_id?: string }>;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada peniaga aktif untuk dihantar pengumuman.'));
+      return true;
+    }
+    let sent = 0;
+    for (const r of rows) {
+      const id = Number(r.merchant_telegram_id);
+      if (!id) continue;
+      await sendMessage(
+        env,
+        id,
+        escapeMarkdownV2('📢 PENGUMUMAN JOMORDER:\\n') +
+          escapeMarkdownV2('Sistem dalam penyelenggaraan berkala. Terima kasih atas sokongan anda!')
+      );
+      sent++;
+    }
+    await sendMessage(env, chatId, escapeMarkdownV2(`✅ Pengumuman dihantar ke ${sent} peniaga.`));
+  } catch {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat menghantar pengumuman.'));
+  }
+  return true;
+}
+
+/** Header Supabase service_role standard (admin module). */
+function supabaseHeaders(env: Env): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+  };
+}
+// End: Phase 37 - Administrative Broadcast
+
 // End: JomOrder Fasa 13 - Super-Admin Handlers (File 3)

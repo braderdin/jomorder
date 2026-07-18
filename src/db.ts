@@ -403,6 +403,61 @@ export async function getMenuByKedaiId(
     return []; // Soft-fail (Fasal 7 Strategy 4)
   }
 }
+// Start: Phase 37 - Merchant Catalog & Location Data Layers (Fasal 7 Strategy 1 RLS)
+/**
+ * Togol status_tersedia item menu (true<->false) ikat kedai_id (RLS isolation).
+ * Rekod semasa diambil dulu, kemudian PATCH nilai songsang. Soft-fail: false.
+ */
+export async function toggleMenuAvailability(
+  env: Env,
+  menuItemId: number,
+  kedaiId: string
+): Promise<boolean> {
+  const getUrl = `${env.SUPABASE_URL}/rest/v1/menu_makanan?id=eq.${menuItemId}&kedai_id=eq.${encodeURIComponent(kedaiId)}&select=status_tersedia&limit=1`;
+  try {
+    const getRes = await fetch(getUrl, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!getRes.ok) return false;
+    const rows = (await getRes.json()) as Array<{ status_tersedia?: boolean }>;
+    if (!Array.isArray(rows) || rows.length === 0) return false;
+    const current = rows[0].status_tersedia ?? false;
+    const patchRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/menu_makanan?id=eq.${menuItemId}&kedai_id=eq.${encodeURIComponent(kedaiId)}`,
+      {
+        method: 'PATCH',
+        headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+        body: JSON.stringify({ status_tersedia: !current }),
+      }
+    );
+    return patchRes.ok;
+  } catch {
+    return false; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+
+/**
+ * Kemaskini koordinat kedai (lat/long) ikat merchant_telegram_id (RLS isolation).
+ * Digunakan oleh handleSetLokasi selepas peniaga hantar 📍 native location.
+ */
+export async function updateMerchantCoordinates(
+  env: Env,
+  tgId: number,
+  latitude: number,
+  longitude: number
+): Promise<boolean> {
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${tgId}`;
+  try {
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+      body: JSON.stringify({ latitude_kedai: latitude, longitude_kedai: longitude }),
+    });
+    return res.ok;
+  } catch {
+    return false; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Phase 37 - Merchant Catalog & Location Data Layers
+
 // End: Phase 24 - Dynamic Menu Browsing
 
 // End: Fasa 7 - Order Commit Transaction (Checkout Lifecycle)

@@ -58,6 +58,17 @@ export function isSearchRestricted(merchantStatus: LanggananStatus): boolean {
   return merchantStatus === 'TAMAT';
 }
 
+/**
+ * GUARD Pembatalan Pesanan: Benarkan batal HANYA jika status masih PENDING.
+ * Selepas memasuki MEMASAK/DELIVERY/COMPLETED/REJECTED, pembatalan disekat
+ * (Fasal 7 Strategy 4 - elak mutasi state tidak sah).
+ * @param currentStatus status semasa pesanan (dari DB)
+ * @returns true = boleh dibatalkan
+ */
+export function canCancelOrder(currentStatus: 'PENDING' | 'MEMASAK' | 'DELIVERY' | 'COMPLETED' | 'REJECTED'): boolean {
+  return currentStatus === 'PENDING';
+}
+
 // Start: Fasa 5 - Order Lifecycle Persistence (DB commit on transition)
 /**
  * Lakukan peralihan status pesanan & PERSIST ke rekod_pesanan.status_penghantaran.

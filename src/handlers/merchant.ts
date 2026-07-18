@@ -3,7 +3,7 @@
 // Pindahan dari src/handlers.ts: onboarding, dashboard, order lifecycle, admin approval.
 import { Env, MerchantState } from '../types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from '../telegram';
-import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium } from '../db';
+import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium, getMenuByKedaiId } from '../db';
 import { setState, getState, invalidateSubscriptionCache, checkRateLimit, rateLimitKey } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
@@ -355,6 +355,98 @@ export async function handleMerchantLocation(
   }
   return true;
 }
+// Start: Phase 37 - Merchant Catalog & Location Hooks (22-command matrix)
+/**
+ * handleSenaraiMenu
+ * Papar menu kedai peniaga dengan inline toggle tersedia/tidak (Fasal 6).
+ * Query menu_makanan ikat merchant_telegram_id -> kedai_id (Fasal 7 Strategy 1).
+ */
+export async function handleSenaraiMenu(
+  env: Env,
+  chatId: number,
+  tgId: number
+): Promise<void> {
+  const kedaiId = await getKedaiIdByMerchant(env, tgId);
+  if (!kedaiId) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum daftar kedai. Taip 🏪 Daftar Kedai Saya.'), merchantMenuKeyboard());
+    return;
+  }
+  const menu = await getMenuByKedaiId(env, kedaiId);
+  if (menu.length === 0) {
+    await sendMessage(env, chatId, escapeMarkdownV2('🍽️ Tiada hidangan dalam menu kedai anda.'), merchantMenuKeyboard());
+    return;
+  }
+  const lines = menu
+    .map((m) => `${escapeMarkdownV2(m.nama_hidangan)} \\- RM${m.harga.toFixed(2)}`)
+    .join('\n');
+  const keyboard = menu.map((m) => [
+    {
+      text: `🔄 ${m.nama_hidangan.slice(0, 20)}`,
+      callback_data: `toggle_menu:${m.id}`,
+    },
+  ]);
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2('📋 SENARAI MENU KEDAI:\\n') + lines,
+    { inline_keyboard: keyboard }
+  );
+}
+
+/**
+ * handleSetLokasi
+ * Minta peniaga hantar 📍 lokasi native untuk override koordinat kedai runtime.
+ * Set state awaiting_shop_location supaya handler geolocation intercept ambil alih.
+ */
+export async function handleSetLokasi(
+  env: Env,
+  chatId: number,
+  tgId: number
+): Promise<void> {
+  const exists = await checkMerchantExists(env, tgId);
+  if (!exists) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum daftar kedai. Taip 🏪 Daftar Kedai Saya.'), merchantMenuKeyboard());
+    return;
+  }
+  const next: MerchantState = {
+    merchant_telegram_id: tgId,
+    step: 'awaiting_shop_location',
+    last_active: new Date().toISOString(),
+  };
+  await setState(env, next);
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2('📍 Hantar lokasi baharu kedai anda dengan butang 📍 di bawah:'),
+    {
+      keyboard: [[{ text: '📍 Kongsi Lokasi Kedai', request_location: true }]],
+      resize_keyboard: true,
+      one_time_keyboard: false,
+    }
+  );
+}
+
+/** Helper: dapatkan kedai_id dari merchant_telegram_id (RLS bind). */
+async function getKedaiIdByMerchant(env: Env, tgId: number): Promise<string | null> {
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${tgId}&select=id&limit=1`;
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ id: string }>;
+    return Array.isArray(rows) && rows.length > 0 ? rows[0].id : null;
+  } catch {
+    return null;
+  }
+}
+// End: Phase 37 - Merchant Catalog & Location Hooks
+
 // End: Phase 23 - Merchant Geolocation Intercept
 
 // End: JomOrder Fasa 9 - Modular Merchant Handler (File 2)

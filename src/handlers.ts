@@ -21,7 +21,27 @@ import { handleMerchantDashboard } from './handlers/merchant_dashboard';
 import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon, handleDeleteCouponInline } from './handlers/marketing_coupon';
 import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handlers/customer_commerce';
 import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './handlers/platform_admin';
-// End: Phase 32 - Commerce/Marketing/Admin sub-handler imports
+// Start: Phase 37 - New 22-Command handler imports (merchant/customer/admin modules)
+import { handleSenaraiMenu, handleSetLokasi } from './handlers/merchant';
+import { handleSejarahPesanan, handleBatalkanPesanan } from './handlers/customer';
+import { handlePengumumanBroadcast } from './handlers/admin';
+import { fetchMerchantSalesSummary } from './services/analytics';
+
+/** Handler /laporan_jualan - agregat jualan kedai sendiri (merchant-scoped). */
+async function handleMerchantSalesSummary(env: Env, chatId: number, tgId: number): Promise<void> {
+  const data = await fetchMerchantSalesSummary(env, tgId);
+  if (!data) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan jualan kedai.'));
+    return;
+  }
+  const text =
+    escapeMarkdownV2('📊 LAPORAN JUALAN KEDAI:\\n\\n') +
+    escapeMarkdownV2(`Jumlah Pesanan: ${data.total_orders}\\n`) +
+    escapeMarkdownV2(`Pesanan Dibayar: ${data.paid_orders}\\n`) +
+    escapeMarkdownV2(`Pendapatan: RM${data.total_earnings_rm.toFixed(2)}`);
+  await sendMessage(env, chatId, text);
+}
+// End: Phase 37 - New 22-Command handler imports
 
 // Start: Phase 36 - Sealed 16-Command Distributor Routing Matrix (zero dead-code)
 // Satu sumber benar memetakan kesemua 16 arahan natif ke handler aktif.
@@ -42,13 +62,21 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
   { command: '/senarai_kupon', handler: 'handleListCoupons', active: true },
   { command: '/padam_kupon', handler: 'handleDeleteCoupon', active: true },
   { command: '/invois', handler: 'handleMerchantInvoiceText', active: true },
-  { command: '/laporan_jualan', handler: 'fetchSaasMetrics', active: true },
+  { command: '/laporan_kedai', handler: 'fetchSaasMetrics', active: true },
   { command: '/zon_operasi', handler: 'inline_zones', active: true },
   { command: '/admin_stats', handler: 'handleAdminStats', active: true },
   { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true },
   { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true },
+  { command: '/senarai_menu', handler: 'handleSenaraiMenu', active: true },
+  { command: '/laporan_jualan', handler: 'handleMerchantSalesSummary', active: true },
+  { command: '/set_lokasi', handler: 'handleSetLokasi', active: true },
+  { command: '/sejarah_pesanan', handler: 'handleSejarahPesanan', active: true },
+  { command: '/batalkan_pesanan', handler: 'handleBatalkanPesanan', active: true },
+  { command: '/pengumuman', handler: 'handlePengumumanBroadcast', active: true },
 ];
-// End: Phase 36 - Sealed 16-Command Distributor Routing Matrix
+// End: Phase 37 - Expanded 22-Command Distributor Routing Matrix (zero dead-code)
+// Note: /laporan_jualan diubah dari fetchSaasMetrics (platform) ke handleMerchantSalesSummary (merchant-scoped)
+// di atas; baris asal di bawah dijadikan alias platform (tidak aktif double-count).
 
 /** Toggle status operasi kedai (BUKA <-> TUTUP) ikut RLS merchant_telegram_id. */
 async function handleDashboardToggle(
@@ -299,6 +327,36 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await handleNaikTaraf(env, chatId, tgId);
     return;
   }
+  // Start: Phase 37 - New 6-Command Activation Matrix (22-command convergence)
+  if (cmd === '/senarai_menu') {
+    await handleSenaraiMenu(env, chatId, tgId);
+    return;
+  }
+  if (cmd === '/set_lokasi') {
+    await handleSetLokasi(env, chatId, tgId);
+    return;
+  }
+  if (cmd === '/sejarah_pesanan') {
+    await handleSejarahPesanan(env, chatId, tgId);
+    return;
+  }
+  if (cmd.startsWith('/batalkan_pesanan')) {
+    await handleBatalkanPesanan(env, chatId, tgId, cmd);
+    return;
+  }
+  if (cmd === '/pengumuman') {
+    await handlePengumumanBroadcast(env, chatId, tgId);
+    return;
+  }
+  if (cmd === '/laporan_jualan') {
+    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      return;
+    }
+    await handleMerchantSalesSummary(env, chatId, tgId);
+    return;
+  }
+  // End: Phase 37 - New 6-Command Activation Matrix
   // End: Phase 32 - 16-Command Activation Matrix
   // End: Phase 31 - Core Bot Command Activation Matrix
 

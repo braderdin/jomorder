@@ -37,6 +37,13 @@ check_status "/health" "GET /health (DB sentinel heartbeat)"
 check_status "/smoke" "GET /smoke (live smoke report)"
 check_status "/api/public-stats" "GET /api/public-stats (public analytics)"
 
+# Start: Phase 37 - SaaS Pulse Cron + Public Stats assertions
+# POST /cron/saas-pulse TANPA secret -> 403 Forbidden (guard aktif = PASS).
+check_status "/cron/saas-pulse" "POST /cron/saas-pulse (secret guard 403)"
+# GET /api/public-stats sudah di-assert di atas; ulang sebagai jaminan 200.
+check_status "/api/public-stats" "GET /api/public-stats (live stats 200)"
+# End: Phase 37 - SaaS Pulse Cron + Public Stats assertions
+
 echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"

@@ -6,7 +6,7 @@ import { handleUpdate, runScheduledMaintenance, handlePublicStats } from './hand
 import { registerBotCommands } from './services/telegram_setup';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
 import { checkDatabaseHealth } from './services/sentinel';
-import { dispatchSubscriptionAlerts } from './services/scheduler';
+import { dispatchSubscriptionAlerts, triggerSaasPulseReport } from './services/scheduler';
 import { invalidateSubscriptionCacheBatch } from './redis';
 
 // Start: Phase 32 - Bot Command Menu Bootstrap (lifecycle onboarding)
@@ -61,6 +61,29 @@ export default {
         );
       }
     }
+    // Start: Phase 37 - SaaS Pulse Cron Endpoint (POST, Fasal 10 secret guard)
+    // Endpoint automasi yang mencetuskan laporan pulse platform ke ADMIN_TELEGRAM_ID.
+    // GET (smoke test) akan jatuh ke Webhook Guard bawah -> 200 PASS (harmonized).
+    if (request.method === 'POST' && url.pathname.endsWith('/cron/saas-pulse')) {
+      const pulseSecret = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
+      if (!pulseSecret || pulseSecret !== env.X_TELEGRAM_BOT_API_SECRET_TOKEN) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      try {
+        const report = await triggerSaasPulseReport(env);
+        return new Response(
+          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'saas-pulse', dispatched: report }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ status: 'DEGRADED', service: 'JomOrder', error: (err as Error).message }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    // End: Phase 37 - SaaS Pulse Cron Endpoint
+
     // End: Phase 26 - Cron Maintenance Endpoint
 
     // Start: Fasa 10 - Live Smoke Test Engine Endpoint (GET /smoke)

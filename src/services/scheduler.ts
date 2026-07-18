@@ -8,6 +8,8 @@
 import { Env } from '../types';
 import { sendExpiryAlert } from '../subscription';
 import { AMARAN_HARI, LanggananStatus } from '../subscription';
+import { fetchSaasMetrics } from './analytics';
+import { sendMessage, escapeMarkdownV2 } from '../telegram';
 
 /** Hasil scan untuk satu peniaga (digunakan caller bagi invalidate cache). */
 export interface ScanResult {
@@ -147,5 +149,40 @@ export async function dispatchSubscriptionAlerts(env: Env): Promise<ScanResult[]
   }
   return scanned;
 }
+
+// Start: Phase 37 - SaaS Pulse Report Engine (Cron dispatcher ke ADMIN)
+/**
+ * triggerSaasPulseReport
+ * Tarik metrik serverless (fetchSaasMetrics) dan compile payload MarkdownV2
+ * bertemakan "cyber" untuk dihantar ke ADMIN_TELEGRAM_ID.
+ * Digunakan oleh index.ts POST /cron/saas-pulse (Fasal 10 secret guard).
+ * @returns true jika berjaya dihantar ke admin.
+ */
+export async function triggerSaasPulseReport(env: Env): Promise<boolean> {
+  const adminId = Number(env.ADMIN_TELEGRAM_ID);
+  if (!env.ADMIN_TELEGRAM_ID || Number.isNaN(adminId)) return false;
+  try {
+    const m = await fetchSaasMetrics(env);
+    if (!m) return false;
+    const ts = new Date().toLocaleString('ms-MY', { timeZone: 'Asia/Kuala_Lumpur' });
+    const pulse =
+      escapeMarkdownV2('**JOMORDER :: SaaS PULSE**\n') +
+      escapeMarkdownV2('```\n') +
+      escapeMarkdownV2(`[PULSE] ${ts}\n`) +
+      escapeMarkdownV2(`> Merchant Aktif : ${m.total_active_merchants}\n`) +
+      escapeMarkdownV2(`> Kedai Premium  : ${m.total_premium_stores}\n`) +
+      escapeMarkdownV2(`> Jumlah Pesanan : ${m.total_orders}\n`) +
+      escapeMarkdownV2(`> Hasil Kumulatif: RM${m.total_revenue_rm.toFixed(2)}\n`) +
+      escapeMarkdownV2(`> Unjuran MRR    : RM${m.mrr_projection_rm.toFixed(2)}\n`) +
+      escapeMarkdownV2('```\n') +
+      escapeMarkdownV2('_Sistem stabil \\- MDEC GLOW Phase 37_');
+    await sendMessage(env, adminId, pulse);
+    return true;
+  } catch {
+    // Soft-fail: scheduler silent (Fasal 7 Strategy 4)
+    return false;
+  }
+}
+// End: Phase 37 - SaaS Pulse Report Engine
 
 // End: JomOrder Fasa 6 - Subscription Alert Scheduler (Cron Utility)

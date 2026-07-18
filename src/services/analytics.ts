@@ -174,4 +174,61 @@ export async function fetchPublicStats(env: Env): Promise<PublicStats> {
   }
 }
 
+// Start: Phase 37 - Merchant-Scoped Sales Summary (22-command matrix)
+/**
+ * fetchMerchantSalesSummary
+ * Kira agregat pendapatan kedai ini dari rekod_pesanan yang TELAH_BAYAR
+ * (confirmed paid). Diikat ke merchant_telegram_id -> kedai_id (RLS isolation).
+ * Soft-fail: return zero payload jika gagal.
+ */
+export interface MerchantSalesSummary {
+  kedai_id: string;
+  total_orders: number;
+  paid_orders: number;
+  total_earnings_rm: number;
+}
+
+export async function fetchMerchantSalesSummary(
+  env: Env,
+  tgId: number
+): Promise<MerchantSalesSummary | null> {
+  try {
+    // Dapatkan kedai_id dari merchant_telegram_id (RLS bind Fasal 7 S1).
+    const shopRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${tgId}&select=id&limit=1`,
+      { method: 'GET', headers: supabaseHeaders(env) }
+    );
+    if (!shopRes.ok) return null;
+    const shopRows = (await shopRes.json()) as Array<{ id: string }>;
+    if (!Array.isArray(shopRows) || shopRows.length === 0) return null;
+    const kedaiId = shopRows[0].id;
+
+    const ordRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?kedai_id=eq.${encodeURIComponent(kedaiId)}&select=status_pembayaran,jumlah_harga`,
+      { method: 'GET', headers: supabaseHeaders(env) }
+    );
+    if (!ordRes.ok) return null;
+    const orders = (await ordRes.json()) as Array<{ status_pembayaran?: string; jumlah_harga?: number }>;
+    if (!Array.isArray(orders)) return null;
+
+    let paid = 0;
+    let earnings = 0;
+    for (const o of orders) {
+      if (o.status_pembayaran === 'TELAH_BAYAR') {
+        paid++;
+        earnings += Number(o.jumlah_harga || 0);
+      }
+    }
+    return {
+      kedai_id: kedaiId,
+      total_orders: orders.length,
+      paid_orders: paid,
+      total_earnings_rm: Math.round(earnings * 100) / 100,
+    };
+  } catch {
+    return null; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Phase 37 - Merchant-Scoped Sales Summary
+
 // End: JomOrder Fasa 13 - SaaS Analytics Data Layer (File 2)

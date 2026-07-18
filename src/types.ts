@@ -243,8 +243,14 @@ export const NATIVE_COMMAND_LIST: TelegramBotCommand[] = [
   { command: '/admin_stats', description: 'Statistik pentadbir sistem' },
   { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
   { command: '/naiktaraf', description: 'Naik taraf pelan premium' },
+  { command: '/senarai_menu', description: 'Senarai menu kedai aktif' },
+  { command: '/laporan_jualan', description: 'Laporan jualan kedai saya' },
+  { command: '/set_lokasi', description: 'Tetapkan koordinat kedai' },
+  { command: '/sejarah_pesanan', description: 'Sejarah pesanan saya' },
+  { command: '/batalkan_pesanan', description: 'Batal pesanan tertunda' },
+  { command: '/pengumuman', description: 'Pengumuman pentadbir sistem' },
 ];
-// End: Phase 32 - Native Menu & Session Cache Type Specs
+// End: Phase 37 - 22-Command Native Menu Expansion (BotFather sync)
 
 // Start: Phase 33 - Coupon Inline Callback Type Specs (Fasal 6 interactive grid)
 /** Prefix callback natif untuk tindakan interaktif (router handlers.ts). */

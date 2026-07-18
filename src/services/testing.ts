@@ -48,6 +48,13 @@ export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787')
   // 5. Webhook Guard: secret sah — expect 200 OK (terima payload)
   await probe('Webhook Guard Valid Secret', 'POST', '/', { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN }, 200);
 
+  // 5b. Start: Phase 37 - SaaS Pulse Cron + Public Stats endpoint probes
+  // POST /cron/saas-pulse tanpa secret -> 403 Forbidden (guard aktif).
+  await probe('SaaS Pulse No Secret', 'POST', '/cron/saas-pulse', {}, 403);
+  // GET /api/public-stats -> 200 (route awam, bypass secret).
+  await probe('Public Stats GET', 'GET', '/api/public-stats', {}, 200);
+  // End: Phase 37 - SaaS Pulse Cron + Public Stats endpoint probes
+
   // 6. Start: Fasa 16 Smoke Test Engine Expansion - Coupon Route Validation (/kupon)
   // Mockup POST webhook dengan body mesej pelanggan '/kupon <KOD>' + secret sah.
   // Audit input validation matrix route path /kupon (handler dari customer.ts). Expect 200.
@@ -85,6 +92,7 @@ export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787')
     '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
     '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
     '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+    '/senarai_menu', '/set_lokasi', '/sejarah_pesanan', '/batalkan_pesanan 1', '/pengumuman',
   ];
   for (const c of commands) {
     await cmdProbe(`Cmd: ${c.split(' ')[0]}`, c);
@@ -134,6 +142,7 @@ export async function runConcurrencyLoadTest(
     '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
     '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
     '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+    '/senarai_menu', '/set_lokasi', '/sejarah_pesanan', '/batalkan_pesanan 1', '/pengumuman',
   ];
   const results: LoadResult[] = [];
   const secret = { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN };
@@ -189,6 +198,7 @@ export async function runSpikeBurstTest(
     '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
     '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
     '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+    '/senarai_menu', '/set_lokasi', '/sejarah_pesanan', '/batalkan_pesanan 1', '/pengumuman',
   ];
   const callbacks = ['del_coupon:JOM10', 'toggle_status:abc', 'view_cart:abc', 'add_to_cart:item:shop'];
   const secret = { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN };
