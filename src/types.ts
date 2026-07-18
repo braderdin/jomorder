@@ -137,4 +137,20 @@ export interface AnalyticsQueryBoundary {
 }
 // End: Phase 29 - Invoice & Analytics Type Schemas
 
+/** Kanonikal Order Lifecycle Status (Phase 30 - interactive merchant buttons). */
+export type OrderStatus =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'PREPARING'
+  | 'READY'
+  | 'COMPLETED'
+  | 'REJECTED';
+
+/** Payload map untuk routing lifecycle callback (Fasal 6 inline buttons). */
+export interface OrderStatusPayload {
+  orderId: string;
+  merchantTelegramId: number;
+  status: OrderStatus;
+}
+
 // End: JomOrder Fasa 3 - Core Type Definitions

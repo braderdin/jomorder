@@ -12,6 +12,7 @@ import { dispatchSubscriptionAlerts } from './services/scheduler';
 import { fetchSaasMetrics, fetchPublicStats } from './services/analytics';
 import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from './telegram';
 import { handleMerchantInvoiceText, handleInvoiceCallback } from './handlers/merchant_invoice';
+import { handleMerchantOrderCallback } from './handlers/merchant_order';
 
 /** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
 function unifiedGreetingKeyboard() {
@@ -39,6 +40,16 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       if (await handleInvoiceCallback(env, cb, cbChatId, data)) return;
     }
     // End: Phase 29 - Invoice inline callback routing
+    // Start: Phase 30 - Merchant Order Lifecycle callback routing
+    // Fasal 6 (interactive buttons accept/ready/reject) -> delegate ke merchant_order.
+    if (
+      data.startsWith('accept_order:') ||
+      data.startsWith('ready_order:') ||
+      data.startsWith('reject_order:')
+    ) {
+      if (await handleMerchantOrderCallback(env, cb, cbChatId, data)) return;
+    }
+    // End: Phase 30 - Merchant Order Lifecycle callback routing
     // Customer: payment confirmation
     if (await handlePayNow(env, cb, cbChatId, data)) return;
 

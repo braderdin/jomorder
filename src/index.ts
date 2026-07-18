@@ -127,8 +127,16 @@ export default {
       return new Response('OK', { status: 200 });
     }
 
-    // Route update ke Message Router & Onboarding Logic (Fail 3)
-    await handleUpdate(env, update);
+    // Phase 30: Async fire-and-forget untuk elak serverless gateway timeout.
+    // Tangkap callback/customer push chain secara non-blocking; webhook terus
+    // balas 200 supaya Telegram tidak retry. Sebarang error di-log soft-fail.
+    const processing = handleUpdate(env, update).catch((err) => {
+      console.error('[Phase30] update processing soft-fail:', (err as Error).message);
+    });
+    // Jangan tunggu promise tamat — balas segera (Fasal 7 Strategy 4 resilience).
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    void processing;
+
     // End: Update Router
 
     return new Response('OK', { status: 200 });
