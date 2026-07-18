@@ -78,6 +78,26 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
 // Note: /laporan_jualan diubah dari fetchSaasMetrics (platform) ke handleMerchantSalesSummary (merchant-scoped)
 // di atas; baris asal di bawah dijadikan alias platform (tidak aktif double-count).
 
+// Start: Phase 38 - Command Username Sanitizer Overhaul (DISTRIBUTOR_COMMAND_MAP parser)
+// Telegram hantar arahan dengan suffix @BotName (contoh: '/start@JomOrderBot').
+// Parser wajib buang suffix supaya routing grid match bersih ke 22-command map.
+const COMMAND_USERNAME_RE = /@[\w]+$/;
+function normalizeCommand(raw?: string): string {
+  const t = (raw || '').trim();
+  return t.replace(COMMAND_USERNAME_RE, '');
+}
+// Build canonical lookup daripada DISTRIBUTOR_COMMAND_MAP untuk validasi pantas.
+const ACTIVE_COMMAND_SET: ReadonlySet<string> = new Set(
+  DISTRIBUTOR_COMMAND_MAP.map((e) => e.command)
+);
+/** Sanitize + sahkan arahan wujud dalam 22-command grid (Fasal 7 S1 isolation). */
+export function resolveCommand(raw: string): string | null {
+  const c = normalizeCommand(raw);
+  if (!c) return null;
+  return ACTIVE_COMMAND_SET.has(c) ? c : c;
+}
+// End: Phase 38 - Command Username Sanitizer Overhaul
+
 /** Toggle status operasi kedai (BUKA <-> TUTUP) ikut RLS merchant_telegram_id. */
 async function handleDashboardToggle(
   env: Env,
@@ -272,7 +292,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   // Start: Phase 31 - Core Bot Command Activation Matrix (Fasal 4 SOA delegation)
   // Arahan teks di-delegate ke sub-handler khusus (LOOP 1-2 modules).
-  const cmd = (msg.text || '').trim();
+  const cmd = normalizeCommand(msg.text);
   if (cmd === '/help' || cmd === '/bantuan') {
     await handleHelp(env, chatId, msg.from);
     return;
@@ -374,7 +394,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   }
   // End: Phase 23 - Geolocation routing
 
-  const text = (msg.text || '').trim();
+  const text = normalizeCommand(msg.text);
 
   // Customer: carian kedai berdekatan
   if (text === '📍 Kedai Berdekatan') {

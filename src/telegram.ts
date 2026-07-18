@@ -78,6 +78,27 @@ export function parseUpdate(body: string): TelegramUpdate | null {
   }
 }
 
+// Start: Phase 38 - Incoming Update Telemetry Debugger (Fasal 7 S4 resilience)
+// Rekam trace metrik tanpa throw supaya pipeline webhook tidak drop payload.
+// Diambil dari index.ts untuk grid telemetry queue (ERROR/WARN/INFO only).
+export function debugIncomingUpdate(
+  env: Env,
+  rawFrame: string,
+  stage: 'pre-parse' | 'parsed-ok' | 'parse-failed',
+  updateId?: number
+): void {
+  try {
+    const len = rawFrame ? rawFrame.length : 0;
+    const tag = updateId !== undefined ? `[upd:${updateId}]` : '[upd:?]';
+    console.log(
+      `[Phase38][telemetry]${tag} stage=${stage} bytes=${len} ts=${new Date().toISOString()}`
+    );
+  } catch {
+    // Silent: debugger tidak boleh ganggu webhook path utama (Fasal 7 S4).
+  }
+}
+// End: Phase 38 - Incoming Update Telemetry Debugger
+
 // Start: Phase 25 - Telegram Spinner Dismissal Helper (Fasal 6 inline grid UX)
 // answerCallbackQuery: tutup loading spinner segera bila user tekan inline button.
 export async function answerCallbackQuery(

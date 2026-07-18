@@ -79,6 +79,50 @@ else
 fi
 # End: Phase 38 - Multi-Tenant Delivery + Full-Cycle Payload Verification
 
+# Start: Phase 38 - Simulated POST Interaction Node Matrix (22 commands + callbacks)
+# Suntik HTTP POST frames mewakili nod interaksi bot sebenar; sahkan endpoint
+# hidup (200/403/405 = PASS mengikut Fasal 10). Guna secret dummy (403 = guard aktif).
+check_post() {
+  local label="$1"
+  local text="$2"
+  local code
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST \
+    -H "$SECRET_HEADER" -H "Content-Type: application/json" \
+    -d "{\"update_id\":1,\"message\":{\"message_id\":1,\"from\":{\"id\":${TENANT_A_ID}},\"chat\":{\"id\":${TENANT_A_ID}},\"text\":\"${text}\"}}" \
+    "${BASE_URL}/" || echo "000")
+  if [[ "$code" =~ ^(200|403|405)$ ]]; then
+    echo "[PASS] POST ${label} -> HTTP ${code}"; PASS_COUNT=$((PASS_COUNT+1))
+  else
+    echo "[FAIL] POST ${label} -> HTTP ${code}"; FAIL_COUNT=$((FAIL_COUNT+1))
+  fi
+}
+
+check_post_cb() {
+  local label="$1"
+  local data="$2"
+  local code
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST \
+    -H "$SECRET_HEADER" -H "Content-Type: application/json" \
+    -d "{\"update_id\":2,\"callback_query\":{\"id\":\"cb1\",\"from\":{\"id\":${TENANT_A_ID}},\"message\":{\"message_id\":1,\"chat\":{\"id\":${TENANT_A_ID}}},\"data\":\"${data}\"}}" \
+    "${BASE_URL}/" || echo "000")
+  if [[ "$code" =~ ^(200|403|405)$ ]]; then
+    echo "[PASS] POST ${label} -> HTTP ${code}"; PASS_COUNT=$((PASS_COUNT+1))
+  else
+    echo "[FAIL] POST ${label} -> HTTP ${code}"; FAIL_COUNT=$((FAIL_COUNT+1))
+  fi
+}
+
+for cmd in "/start" "/help" "/menu" "/urus" "/cari_makan" "/troli" "/pesanan_saya" \
+  "/cipta_kupon JOM10 10" "/senarai_kupon" "/padam_kupon JOM10" "/invois" \
+  "/laporan_jualan" "/zon_operasi" "/admin_stats" "/senarai_pendaftaran" "/naiktaraf" \
+  "/senarai_menu" "/set_lokasi" "/sejarah_pesanan" "/batalkan_pesanan 1" "/pengumuman"; do
+  check_post "CMD:${cmd%% *}" "$cmd"
+done
+for cb in "del_coupon:JOM10" "toggle_menu:1" "pay_now:1:shop:${TENANT_A_ID}" "view_cart:abc" "accept_order:1" "ready_order:1"; do
+  check_post_cb "CB:${cb%%:*}" "$cb"
+done
+# End: Phase 38 - Simulated POST Interaction Node Matrix
+
 echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"

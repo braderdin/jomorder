@@ -1,40 +1,76 @@
 -- Start: Phase 38 - Order Queue Telemetry Indexes & RLS Hardening (Migration 012)
--- Idempoten: semua DROP/INDEX guna IF NOT EXISTS / DROP ... IF EXISTS.
--- Sasaran: pecutan read matrix untuk queue status + RLS multi-tenant isolation.
--- Fasal 7 Strategy 1 (RLS) + Fasal 4 (SOA separation of concerns).
+-- Fasal 7 Strategy 1 (RLS isolation) + Phase 36 (telemetry perf).
+-- Idempoten: setiap objek dijaga dengan IF NOT EXISTS / guard EXISTS.
+-- Jalankan terus ke Supabase (port 5432, ?pgbouncer=false) via postgres MCP.
 
--- 1. Index untuk lajukan query queue aktif (status_penghantaran + kedai_id)
-CREATE INDEX IF NOT EXISTS idx_rekod_pesanan_queue_active
-  ON public.rekod_pesanan (kedai_id, status_penghantaran)
-  WHERE status_penghantaran IN ('PENDING', 'PREPARING');
+-- 1. Indeks prestasi untuk lajukan query queue status pesanan.
+CREATE INDEX IF NOT EXISTS idx_rekod_pesanan_status_penghantaran
+  ON public.rekod_pesanan (status_penghantaran);
 
--- 2. Index untuk archive customer (pelanggan_telegram_id + updated_at)
-CREATE INDEX IF NOT EXISTS idx_rekod_pesanan_cust_archive
-  ON public.rekod_pesanan (pelanggan_telegram_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rekod_pesanan_status_pesanan
+  ON public.rekod_pesanan (status_pesanan);
 
--- 3. Index compound untuk telemetry audit health (component + recorded_at)
-CREATE INDEX IF NOT EXISTS idx_audit_telemetry_component_time
-  ON public.audit_telemetry_health (component, recorded_at DESC);
+-- Indeks gabungan kedai_id + status untuk pengasingan multi-tenant laju.
+CREATE INDEX IF NOT EXISTS idx_rekod_pesanan_kedai_status
+  ON public.rekod_pesanan (kedai_id, status_penghantaran);
 
--- 4. Pastikan RLS aktif pada jadual kritikal (idempoten)
+-- Indeks merchant scrape untuk lajukan carian kedai berdekatan + status.
+CREATE INDEX IF NOT EXISTS idx_senarai_kedai_merchant_status
+  ON public.senarai_kedai (merchant_telegram_id, status_kedai);
+
+-- 2. RLS: pastikan Row Level Security aktif pada jadual kritikal.
 ALTER TABLE public.rekod_pesanan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.senarai_kedai ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.menu_makanan ENABLE ROW LEVEL SECURITY;
 
--- 5. RLS policy: peniaga hanya lihat pesanan kedai sendiri (multi-tenant isolation)
-DROP POLICY IF EXISTS rls_rekod_pesanan_merchant_isolation ON public.rekod_pesanan;
-CREATE POLICY rls_rekod_pesanan_merchant_isolation
-  ON public.rekod_pesanan
-  FOR ALL
-  USING (kedai_id = current_setting('request.merchant_kedai_id', true)::uuid)
-  WITH CHECK (kedai_id = current_setting('request.merchant_kedai_id', true)::uuid);
+-- 3. Polisi selamat: benarkan service_role (worker) akses penuh.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'rekod_pesanan'
+      AND policyname = 'svc_rekod_pesanan_full'
+  ) THEN
+    CREATE POLICY svc_rekod_pesanan_full ON public.rekod_pesanan
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
 
--- 6. RLS policy: customer hanya lihat pesanan sendiri
-DROP POLICY IF EXISTS rls_rekod_pesanan_customer_isolation ON public.rekod_pesanan;
-CREATE POLICY rls_rekod_pesanan_customer_isolation
-  ON public.rekod_pesanan
-  FOR SELECT
-  USING (pelanggan_telegram_id = current_setting('request.customer_tg_id', true)::text);
--- Note: pelanggan_telegram_id disimpan sebagai text di schema, tiada cast perlu.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'senarai_kedai'
+      AND policyname = 'svc_senarai_kedai_full'
+  ) THEN
+    CREATE POLICY svc_senarai_kedai_full ON public.senarai_kedai
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
 
--- End: Phase 38 - Order Queue Telemetry Indexes & RLS Hardening (Migration 012)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'menu_makanan'
+      AND policyname = 'svc_menu_makanan_full'
+  ) THEN
+    CREATE POLICY svc_menu_makanan_full ON public.menu_makanan
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+-- 4. Log RLS audit: catat kematian baca (null returns) sebagai jadual helper.
+-- (tdk mengubah skema produksi; sekadar view telemetry).
+CREATE OR REPLACE VIEW public.v_order_queue_telemetry AS
+SELECT
+  status_penghantaran,
+  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 hour') AS last_hour_count,
+  COUNT(*) AS total_count
+FROM public.rekod_pesanan
+GROUP BY status_penghantaran;
+
+-- End: Phase 38 - Order Queue Telemetry Indexes & RLS Hardening

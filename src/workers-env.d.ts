@@ -3,6 +3,7 @@
 // Deklarasi global ExecutionContext diiktiraf sebagai module + declare global
 // supaya ctx.waitUntil() type-check lulus tanpa amaran di bawah raw serverless.
 export {};
+import type { Env } from './types';
 declare global {
   interface ExecutionContext {
     waitUntil(promise: Promise<unknown>): void;
@@ -39,3 +40,32 @@ declare global {
   // End: Phase 37 - Global Env Binding Hardening
 }
 // End: Phase 36 - Advanced Serverless Routing Shims
+
+// Start: Phase 38 - Global Worker Runtime Variable Standardization (Fasal 4 strict)
+// Seragamkan pembolehubah global Cloudflare supaya implicit any / execution error
+// dapat dipintas semasa type-check. peta Env sebenar + cf metadata pada Request.
+declare global {
+  // Alias Env sebenar supaya handler tidak guna Record<string, unknown> longgar.
+  type WorkerEnv = Env;
+
+  // Cf metadata pada setiap Request (colo/country) untuk telemetri + routing geo.
+  interface Request {
+    cf?: {
+      colo: string;
+      country?: string;
+      city?: string;
+      clientTcpRtt?: number;
+      asOrganization?: string;
+      timezone?: string;
+    };
+  }
+
+  // Global self typing untuk Worker entry (ctx + env terikat).
+  interface WorkerGlobalScope {
+    addEventListener(
+      type: 'fetch',
+      handler: (event: { request: Request; respondWith(r: Response | Promise<Response>): void }) => void
+    ): void;
+  }
+}
+// End: Phase 38 - Global Worker Runtime Variable Standardization

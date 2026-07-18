@@ -174,6 +174,48 @@ export async function handleMerchantMessage(
   tgId: number,
   text: string
 ): Promise<void> {
+  // Start: Phase 38 - Responsive Onboarding Validation States (anti-abandon)
+  // Tangani /daftar, /set_lokasi, /urus_kedai secara interaktif dengan
+  // persist state segera + prompt jelas supaya thread tak terbengkalai.
+  if (text === '/daftar' || text === '/urus_kedai' || text === '/set_lokasi') {
+    const exists = await checkMerchantExists(env, tgId);
+    if (text === '/set_lokasi') {
+      if (!exists) {
+        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum daftar kedai. Taip /daftar untuk mula.'), daftarKedaiKeyboard());
+        return;
+      }
+      await setState(env, {
+        merchant_telegram_id: tgId,
+        step: 'awaiting_shop_location',
+        last_active: new Date().toISOString(),
+      });
+      await sendMessage(env, chatId, escapeMarkdownV2('📍 Hantar lokasi baharu kedai anda dengan butang 📍 di bawah:'), {
+        keyboard: [[{ text: '📍 Kongsi Lokasi Kedai', request_location: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: false,
+      });
+      return;
+    }
+    // /daftar & /urus_kedai
+    if (exists) {
+      await setState(env, {
+        merchant_telegram_id: tgId,
+        step: 'idle',
+        last_active: new Date().toISOString(),
+      });
+      await sendMessage(env, chatId, escapeMarkdownV2('🏪 Kedai anda sudah berdaftar. Gunakan butang di bawah untuk urus operasi.'), merchantMenuKeyboard());
+      return;
+    }
+    await setState(env, {
+      merchant_telegram_id: tgId,
+      step: 'awaiting_shop_name',
+      last_active: new Date().toISOString(),
+    });
+    await sendMessage(env, chatId, escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:'), daftarKedaiKeyboard());
+    return;
+  }
+  // End: Phase 38 - Responsive Onboarding Validation States
+
   // Start: Fasa 15 - Premium Upsell Command (/naiktaraf)
   if (text === '/naiktaraf') {
     // Start: Fasa 18 Rate-Limit Key Centralization - guna helper rateLimitKey (jo:limit:{id})

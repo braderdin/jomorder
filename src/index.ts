@@ -1,7 +1,7 @@
 // Start: JomOrder Fasa 4 - Core Worker Entry Point (Wired to Fasa 4 modules)
 // Fasal 10 (Webhook Guard) + Fasal 4 (SOA) + Fasal 11 (env binding consistency)
 import { Env, TelegramUpdate } from './types';
-import { parseUpdate } from './telegram';
+import { parseUpdate, debugIncomingUpdate } from './telegram';
 import { handleUpdate, runScheduledMaintenance, handlePublicStats } from './handlers';
 import { registerBotCommands } from './services/telegram_setup';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
@@ -174,11 +174,17 @@ export default {
     }
     // parseUpdate() dah dibalut try/catch (soft-fail null). Tambahan:
     // trim whitespace stream supaya arahan teks mentah ("/start ") parse bersih.
+    // Phase 38: Capture raw frame length sebelum parse untuk telemetry grid.
+    // elak corruption: trim selamat + rekam trace tanpa throw (Fasal 7 S4).
+    debugIncomingUpdate(env, rawBody, 'pre-parse');
     const update: TelegramUpdate | null = parseUpdate(rawBody.trim());
     if (!update) {
       // Soft 200 untuk elak Telegram retry storm (Fasal 7 Strategy 4)
+      debugIncomingUpdate(env, rawBody, 'parse-failed');
       return new Response('OK', { status: 200 });
     }
+    // Rekam trace update berjaya untuk queue telemetry grid (Phase 38).
+    debugIncomingUpdate(env, JSON.stringify(update), 'parsed-ok', update.update_id);
 
     // Phase 34: Bound processing ke execution context via ctx.waitUntil()
     // supaya runtime Cloudflare kekalkan worker hidup sehingga loop latar

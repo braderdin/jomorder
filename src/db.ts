@@ -25,6 +25,37 @@ export interface KedaiBerhampiran {
   jarak_km: number;
 }
 
+// Start: Phase 38 - Null-Shield DB Lookup Guard (anti Edge crash)
+/**
+ * safeRows
+ * Jamin hasil query sentiasa array (bukan null/undefined) supaya Edge runtime
+ * tidak terhenti bila PostgREST return payload aneh. Fasal 7 Strategy 4.
+ */
+export function safeRows<T>(data: unknown): T[] {
+  return Array.isArray(data) ? (data as T[]) : [];
+}
+
+/**
+ * getShopByIdSafe
+ * Lookup kedai ikat kedai_id; return objek typed atau null (bukan throw).
+ * Digunakan oleh handler untuk elak null-pointer dereference (Phase 38).
+ */
+export async function getShopByIdSafe(
+  env: Env,
+  kedaiId: string
+): Promise<{ id: string; nama_kedai: string; status_kedai: string } | null> {
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}&select=id,nama_kedai,status_kedai&limit=1`;
+  try {
+    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!res.ok) return null;
+    const rows = safeRows<{ id: string; nama_kedai: string; status_kedai: string }>(await res.json());
+    return rows.length > 0 ? rows[0] : null;
+  } catch {
+    return null;
+  }
+}
+// End: Phase 38 - Null-Shield DB Lookup Guard
+
 // Start: Phase 36 - Telemetry Audit Wiring (secure DB transactional fetch wrapper)
 /**
  * Rekod kesihatan telemetry ke jadual audit_telemetry_health (migration 010).

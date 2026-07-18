@@ -396,5 +396,50 @@ export function summarizeCycle(steps: CycleStep[]): string {
 }
 // End: Phase 38 - Full-Cycle Request Simulation
 
+// Start: Phase 38 - Mock Update Payload Generator (22-Command passive matrix)
+/** Satu entri mock payload untuk ujian aliran perbualan pasif. */
+export interface MockPayloadEntry {
+  label: string;
+  payload: unknown; // TelegramUpdate selaras schema types.ts
+}
+
+/**
+ * buildMockCommandPayloads
+ * Hasilkan array payload mockupdate Telegram untuk KESELURUHAN 22 arahan natif
+ * + callback kritikal, bagi ujian aliran dalaman secara pasif (tiada side-effect).
+ * Digunakan oleh runSmokeTests / harness ujian untuk lintas grid routing.
+ */
+export function buildMockCommandPayloads(): MockPayloadEntry[] {
+  const uid = 123456789;
+  const mkMsg = (text: string): unknown => ({
+    update_id: 1,
+    message: { message_id: 1, from: { id: uid, is_bot: false, first_name: 'Test' }, chat: { id: uid, type: 'private' }, text },
+  });
+  const mkCb = (data: string): unknown => ({
+    update_id: 2,
+    callback_query: { id: 'cb1', from: { id: uid, is_bot: false, first_name: 'Test' }, message: { message_id: 1, chat: { id: uid, type: 'private' } }, data },
+  });
+
+  const commands = [
+    '/start', '/help', '/menu', '/urus', '/cari_makan', '/troli', '/pesanan_saya',
+    '/cipta_kupon JOM10 10 20', '/senarai_kupon', '/padam_kupon JOM10', '/invois',
+    '/laporan_jualan', '/zon_operasi', '/admin_stats', '/senarai_pendaftaran', '/naiktaraf',
+    '/senarai_menu', '/set_lokasi', '/sejarah_pesanan', '/batalkan_pesanan 1', '/pengumuman',
+    // Suffix @BotName wajib disanitasi oleh router (Phase 38).
+    '/start@JomOrderBot',
+  ];
+  const callbacks = [
+    'del_coupon:JOM10', 'toggle_status:abc', 'view_cart:abc',
+    'add_to_cart:item:shop', 'view_shop:shop', 'pay_now:1:shop:123456789',
+    'accept_order:1', 'ready_order:1', 'reject_order:1', 'view_invoice:1',
+  ];
+
+  const entries: MockPayloadEntry[] = [];
+  for (const c of commands) entries.push({ label: `cmd:${c.split(' ')[0]}`, payload: mkMsg(c) });
+  for (const d of callbacks) entries.push({ label: `cb:${d.split(':')[0]}`, payload: mkCb(d) });
+  return entries;
+}
+// End: Phase 38 - Mock Update Payload Generator
+
 // End: Phase 34 - High-Concurrency Load Loop
 // End: JomOrder Fasa 9 - Automated Smoke Test Suite (File 5)

@@ -7,23 +7,39 @@ const GLOBAL_PREFIX = 'jo:'; // Fasa 17 namespace prefix (multi-tenant isolation
 const SESSION_TTL_SECONDS = 3600; // 1-hour inactivity reset (Fasal 7 Strategy 2).
 
 /** Executor generik ke Upstash Redis REST API (command array format). */
+// Start: Phase 38 - Redis Fetch Timeout Hardening (anti-hang block)
+// Tambah AbortSignal.timeout 5s supaya fetch tidak tersekat selama-lamanya
+// (Fasal 7 Strategy 2 resilience). Retry sekali jika tamat masa.
+const REDIS_TIMEOUT_MS = 5000;
+
+async function redisCommandOnce(env: Env, cmd: unknown[]): Promise<unknown> {
+  const res = await fetch(env.UPSTASH_REDIS_REST_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+    },
+    body: JSON.stringify([cmd]),
+    signal: AbortSignal.timeout(REDIS_TIMEOUT_MS),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as Array<{ result: unknown }>;
+  return data?.[0]?.result ?? null;
+}
+
 async function redisCommand(env: Env, cmd: unknown[]): Promise<unknown> {
   try {
-    const res = await fetch(env.UPSTASH_REDIS_REST_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
-      },
-      body: JSON.stringify([cmd]),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as Array<{ result: unknown }>;
-    return data?.[0]?.result ?? null;
+    return await redisCommandOnce(env, cmd);
   } catch {
-    return null; // Soft-fail (Fasal 7 Strategy 4).
+    // Retry sekali (fail-open resilience Fasal 7 Strategy 4).
+    try {
+      return await redisCommandOnce(env, cmd);
+    } catch {
+      return null;
+    }
   }
 }
+// End: Phase 38 - Redis Fetch Timeout Hardening
 
 const sessionKey = (id: number) => `${GLOBAL_PREFIX}cmd_session:${id}`;
 
@@ -31,15 +47,19 @@ const sessionKey = (id: number) => `${GLOBAL_PREFIX}cmd_session:${id}`;
  * Tulis CommandSessionState ke Redis dengan TTL 1-jam.
  * Auto-reset selepas idle (Fasal 7 Strategy 2).
  */
-export async function setCommandSession(env: Env, state: CommandSessionState): Promise<void> {
-  await redisCommand(env, [
+// Start: Phase 38 - Session Commit Confirmation (anti-loss)
+/** Tulis session & SAHKAN kejayaan (return boolean) supaya caller tahu state kekal. */
+export async function setCommandSession(env: Env, state: CommandSessionState): Promise<boolean> {
+  const res = await redisCommand(env, [
     'SET',
     sessionKey(state.telegram_id),
     JSON.stringify(state),
     'EX',
     SESSION_TTL_SECONDS,
   ]);
+  return res !== null;
 }
+// End: Phase 38 - Session Commit Confirmation
 
 /** Baca CommandSessionState semasa; null jika tamat tempoh / tiada. */
 export async function getCommandSession(

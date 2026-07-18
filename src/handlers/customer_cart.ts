@@ -31,10 +31,19 @@ export async function handleViewCart(
   tgId: number,
   queryId?: string
 ): Promise<boolean> {
+  // Start: Phase 38 - Spinner Dismissal First (millisecond guarantee)
+  // Jangan tunggu Redis getState: tutup loading screen DULU dalam milisaat
+  // supaya client tidak tergantung walaupun Upstash perlahan (Fasal 7 S4).
+  if (queryId) {
+    await answerCallbackQuery(env, queryId, undefined, false);
+  }
+  // End: Phase 38 - Spinner Dismissal First
+
   const state = await getState(env, tgId);
   const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
 
   // Start: Phase 25 - Dismiss spinner segera bila callback view_cart ditekan
+  // (redundan selamat jika queryId diberi semula selepas state load)
   if (queryId) {
     await answerCallbackQuery(env, queryId, undefined, false);
   }

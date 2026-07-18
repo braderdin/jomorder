@@ -17,7 +17,12 @@ declare abstract class KVNamespace {
 /** Cloudflare Worker Environment Bindings (single source of truth = wrangler.toml) */
 export interface Env {
   // Telegram Integration (Fasal 6 + Fasal 10)
-  TELEGRAM_BOT_TOKEN: string; // Secret: bot API token
+  // Start: Phase 38 - TELEGRAM_BOT_TOKEN Binding Harmonization (Fasal 11 + Fasal 4)
+  // Nama binding WAJIB sepadan 1:1 dengan wrangler.toml secret + .dev.vars.
+  // Dihapuskan sebarang implicit any; token diiktiraf sebagai string wajib supaya
+  // telegram.ts compile lulus tanpa drift (tiada optional chaining terkedukur).
+  TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
+  // End: Phase 38 - TELEGRAM_BOT_TOKEN Binding Harmonization
   X_TELEGRAM_BOT_API_SECRET_TOKEN: string; // Secret: validates X-Telegram-Bot-Api-Secret-Token header
 
   // Supabase Multi-Tenant DB (Fasal 7 Strategy 1 RLS)
