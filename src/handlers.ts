@@ -17,6 +17,11 @@ import { handleStart } from './handlers/start';
 import { handleHelp } from './handlers/help';
 import { handleShopMenu } from './handlers/shop_menu';
 import { handleMerchantDashboard } from './handlers/merchant_dashboard';
+// Start: Phase 32 - Commerce/Marketing/Admin sub-handler imports
+import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon } from './handlers/marketing_coupon';
+import { handleCariMakan, handleTroliAlias, handlePesananSaya, handleStartDeepLink } from './handlers/customer_commerce';
+import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './handlers/platform_admin';
+// End: Phase 32 - Commerce/Marketing/Admin sub-handler imports
 
 /** Toggle status operasi kedai (BUKA <-> TUTUP) ikut RLS merchant_telegram_id. */
 async function handleDashboardToggle(
@@ -193,10 +198,6 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Start: Phase 31 - Core Bot Command Activation Matrix (Fasal 4 SOA delegation)
   // Arahan teks di-delegate ke sub-handler khusus (LOOP 1-2 modules).
   const cmd = (msg.text || '').trim();
-  if (cmd === '/start' || cmd === '/mula') {
-    await handleStart(env, chatId, msg.from);
-    return;
-  }
   if (cmd === '/help' || cmd === '/bantuan') {
     await handleHelp(env, chatId, msg.from);
     return;
@@ -209,6 +210,49 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await handleMerchantDashboard(env, chatId, tgId);
     return;
   }
+  // Start: Phase 32 - 16-Command Activation Matrix (Commerce/Marketing/Admin)
+  // Deep-link: /start dengan payload ?startapp=kedai_id=XXX.
+  if (cmd.startsWith('/start')) {
+    const payload = cmd.includes(' ') ? cmd.split(/\s+/)[1] : undefined;
+    await handleStartDeepLink(env, chatId, msg.from, payload);
+    return;
+  }
+  // Marketing coupon commands (merchant).
+  if (cmd.startsWith('/cipta_kupon')) {
+    await handleCreateCoupon(env, chatId, tgId, cmd);
+    return;
+  }
+  if (cmd === '/senarai_kupon') {
+    await handleListCoupons(env, chatId, tgId);
+    return;
+  }
+  if (cmd.startsWith('/padam_kupon')) {
+    await handleDeleteCoupon(env, chatId, tgId, cmd);
+    return;
+  }
+  // Customer commerce commands.
+  if (cmd === '/cari_makan') {
+    await handleCariMakan(env, chatId, tgId);
+    return;
+  }
+  if (cmd === '/pesanan_saya') {
+    await handlePesananSaya(env, chatId, tgId);
+    return;
+  }
+  // Admin protected commands.
+  if (cmd === '/admin_stats') {
+    await handleAdminStats(env, chatId, tgId);
+    return;
+  }
+  if (cmd === '/senarai_pendaftaran') {
+    await handleSenaraiPendaftaran(env, chatId, tgId);
+    return;
+  }
+  if (cmd === '/naiktaraf') {
+    await handleNaikTaraf(env, chatId, tgId);
+    return;
+  }
+  // End: Phase 32 - 16-Command Activation Matrix
   // End: Phase 31 - Core Bot Command Activation Matrix
 
   // Start: Phase 23 - Geolocation routing (merchant intercept vs customer pipeline)

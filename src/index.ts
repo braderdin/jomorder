@@ -3,14 +3,35 @@
 import { Env, TelegramUpdate } from './types';
 import { parseUpdate } from './telegram';
 import { handleUpdate, runScheduledMaintenance, handlePublicStats } from './handlers';
+import { registerBotCommands } from './services/telegram_setup';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
 import { checkDatabaseHealth } from './services/sentinel';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
 import { invalidateSubscriptionCacheBatch } from './redis';
 
+// Start: Phase 32 - Bot Command Menu Bootstrap (lifecycle onboarding)
+// Daftarkan 16 arahan natif ke menu Telegram sekali sahaja per cold-start worker.
+// Fire-and-forget: tidak sekat response webhook (Fasal 7 Strategy 4 resilience).
+let commandMenuBootstrapped = false;
+async function bootstrapCommandMenu(env: Env): Promise<void> {
+  if (commandMenuBootstrapped) return;
+  commandMenuBootstrapped = true;
+  try {
+    const ok = await registerBotCommands(env);
+    if (!ok) console.warn('[Phase32] registerBotCommands soft-fail (menu mungkin belum sync).');
+  } catch (err) {
+    console.warn('[Phase32] registerBotCommands error:', (err as Error).message);
+  }
+}
+// End: Phase 32 - Bot Command Menu Bootstrap
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // Phase 32: trigger bootstrap menu secara async (tidak sekat route).
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    void bootstrapCommandMenu(env);
 
     // Start: Phase 26 - Cron Maintenance Endpoint (POST sahaja, Fasal 10 guard)
     // GitHub Actions / Cloudflare Cron tembak POST dengan header rahsia.

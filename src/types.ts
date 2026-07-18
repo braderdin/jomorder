@@ -201,4 +201,49 @@ export interface CommandSessionState {
 }
 // End: Phase 31 - Bot Command Registry
 
+// Start: Phase 32 - Native Menu & Session Cache Type Specs (Schema Integrity)
+/** Payload tunggal untuk Telegram setMyCommands API. */
+export interface TelegramBotCommand {
+  command: string; // mesti bermula dengan '/'
+  description: string; // max ~32 aksara (BM)
+}
+
+/** Response wrapper spesifik setMyCommands. */
+export interface SetMyCommandsResponse {
+  ok: boolean;
+  description?: string;
+}
+
+/** Skema cache Redis untuk CommandSessionState (selari session_cache.ts). */
+export interface CachedCommandSession {
+  telegram_id: number;
+  step: InteractiveCommandStep;
+  last_active: string; // ISO timestamp
+  ttl_seconds: number; // 3600 (1-jam)
+}
+
+/** Peranan command untuk panduan menu natif (customer/merchant/admin). */
+export type CommandRole = 'customer' | 'merchant' | 'admin' | 'both';
+
+/** Registry 16-command natif (satu sumber benar untuk telegram_setup.ts). */
+export const NATIVE_COMMAND_LIST: TelegramBotCommand[] = [
+  { command: '/start', description: 'Mula & pilih peranan' },
+  { command: '/help', description: 'Panduan interaktif bot' },
+  { command: '/menu', description: 'Senarai kedai aktif' },
+  { command: '/urus', description: 'Papan pemerintah peniaga' },
+  { command: '/cari_makan', description: 'Cari kedai makan berdekatan' },
+  { command: '/troli', description: 'Lihat troli pesanan saya' },
+  { command: '/pesanan_saya', description: 'Senarai pesanan aktif' },
+  { command: '/cipta_kupon', description: 'Cipta kupon diskaun baru' },
+  { command: '/senarai_kupon', description: 'Senarai kupon aktif' },
+  { command: '/padam_kupon', description: 'Padam kupon diskaun' },
+  { command: '/invois', description: 'Jana invois digital' },
+  { command: '/laporan_jualan', description: 'Laporan jualan platform' },
+  { command: '/zon_operasi', description: 'Zon operasi perkhidmatan' },
+  { command: '/admin_stats', description: 'Statistik pentadbir sistem' },
+  { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
+  { command: '/naiktaraf', description: 'Naik taraf pelan premium' },
+];
+// End: Phase 32 - Native Menu & Session Cache Type Specs
+
 // End: JomOrder Fasa 3 - Core Type Definitions
