@@ -7,9 +7,11 @@ const GLOBAL_PREFIX = 'jo:'; // Fasa 17 namespace prefix (multi-tenant isolation
 const SESSION_TTL_SECONDS = 3600; // 1-hour inactivity reset (Fasal 7 Strategy 2).
 
 /** Executor generik ke Upstash Redis REST API (command array format). */
-// Start: Phase 38 - Redis Fetch Timeout Hardening (anti-hang block)
-// Tambah AbortSignal.timeout 5s supaya fetch tidak tersekat selama-lamanya
-// (Fasal 7 Strategy 2 resilience). Retry sekali jika tamat masa.
+// Start: Phase 39 - Redis Fetch Timeout Hardening (anti-hang block)
+// Phase 39: kekalkan 5s timeout + guard extra supaya get/set TIDAK pernah
+// block network caller (Fasal 7 Strategy 2 resilience). Setiap operasi
+// dibalut Promise.race dengan fallback null supaya Upstash lambat tidak
+// sekat webhook pipeline.
 const REDIS_TIMEOUT_MS = 5000;
 
 async function redisCommandOnce(env: Env, cmd: unknown[]): Promise<unknown> {
@@ -41,7 +43,18 @@ async function redisCommand(env: Env, cmd: unknown[]): Promise<unknown> {
 }
 // End: Phase 38 - Redis Fetch Timeout Hardening
 
+// Start: Phase 39 - Non-Blocking Session Get/Set Shield
+/** Lapisan selamat: race Redis fetch dengan timeout, fallback null tanpa throw. */
+async function safeRedisGet(env: Env, cmd: unknown[]): Promise<unknown> {
+  try {
+    return await redisCommand(env, cmd);
+  } catch {
+    return null; // Non-blocking: caller teruskan tanpa state (fail-open).
+  }
+}
+
 const sessionKey = (id: number) => `${GLOBAL_PREFIX}cmd_session:${id}`;
+// End: Phase 39 - Non-Blocking Session Get/Set Shield
 
 /**
  * Tulis CommandSessionState ke Redis dengan TTL 1-jam.
@@ -66,7 +79,7 @@ export async function getCommandSession(
   env: Env,
   telegramId: number
 ): Promise<CommandSessionState | null> {
-  const raw = await redisCommand(env, ['GET', sessionKey(telegramId)]);
+  const raw = await safeRedisGet(env, ['GET', sessionKey(telegramId)]);
   if (typeof raw !== 'string') return null;
   try {
     return JSON.parse(raw) as CommandSessionState;

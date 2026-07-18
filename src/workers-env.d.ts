@@ -69,3 +69,30 @@ declare global {
   }
 }
 // End: Phase 38 - Global Worker Runtime Variable Standardization
+
+// Start: Phase 39 - Consolidated Cloudflare Request Structure Shims (Fasal 4 + Fasal 11)
+// Selaraskan global runtime supaya index.ts + semua module type-check lulus
+// tanpa amaran implicit any. Termasuk AbortSignal.timeout (session_cache.ts),
+// R2Bucket + KVNamespace (types.ts), dan structuredClone global.
+declare global {
+  // AbortSignal.timeout digunakan dalam session_cache.ts (5s Redis timeout).
+  interface AbortSignalConstructor {
+    timeout(ms: number): AbortSignal;
+  }
+
+  // Cloudflare native storage interfaces (selari types.ts declare abstract).
+  abstract class R2Bucket {
+    put(key: string, value: BodyInit): Promise<unknown>;
+    get(key: string): Promise<unknown>;
+    delete(key: string): Promise<void>;
+  }
+  abstract class KVNamespace {
+    get(key: string): Promise<string | null>;
+    put(key: string, value: string): Promise<void>;
+    delete(key: string): Promise<void>;
+  }
+
+  // structuredClone wujud dalam Workers runtime (digunakan oleh beberapa handler).
+  function structuredClone<T>(value: T): T;
+}
+// End: Phase 39 - Consolidated Cloudflare Request Structure Shims

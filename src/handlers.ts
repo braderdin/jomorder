@@ -78,13 +78,18 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
 // Note: /laporan_jualan diubah dari fetchSaasMetrics (platform) ke handleMerchantSalesSummary (merchant-scoped)
 // di atas; baris asal di bawah dijadikan alias platform (tidak aktif double-count).
 
-// Start: Phase 38 - Command Username Sanitizer Overhaul (DISTRIBUTOR_COMMAND_MAP parser)
-// Telegram hantar arahan dengan suffix @BotName (contoh: '/start@JomOrderBot').
+// Start: Phase 39 - Command Username Sanitizer Overhaul (DISTRIBUTOR_COMMAND_MAP parser)
+// Telegram hantar arahan dengan suffix@BotName (contoh: '/start@JomOrderBot').
 // Parser wajib buang suffix supaya routing grid match bersih ke 22-command map.
-const COMMAND_USERNAME_RE = /@[\w]+$/;
+// Phase 39: handle multiple @ (bot forward chains) dan guard empty input.
+const COMMAND_USERNAME_RE = /@[\w]+/g;
 function normalizeCommand(raw?: string): string {
-  const t = (raw || '').trim();
-  return t.replace(COMMAND_USERNAME_RE, '');
+  if (!raw) return '';
+  const t = raw.trim();
+  if (!t) return '';
+  // Buang semua kemunculan @BotName (bukan cuma akhir) untuk routing bersih.
+  const cleaned = t.replace(COMMAND_USERNAME_RE, '').trim();
+  return cleaned;
 }
 // Build canonical lookup daripada DISTRIBUTOR_COMMAND_MAP untuk validasi pantas.
 const ACTIVE_COMMAND_SET: ReadonlySet<string> = new Set(
@@ -96,7 +101,7 @@ export function resolveCommand(raw: string): string | null {
   if (!c) return null;
   return ACTIVE_COMMAND_SET.has(c) ? c : c;
 }
-// End: Phase 38 - Command Username Sanitizer Overhaul
+// End: Phase 39 - Command Username Sanitizer Overhaul
 
 /** Toggle status operasi kedai (BUKA <-> TUTUP) ikut RLS merchant_telegram_id. */
 async function handleDashboardToggle(

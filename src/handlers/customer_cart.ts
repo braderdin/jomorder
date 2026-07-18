@@ -1,9 +1,25 @@
-// Start: Phase 25 - Modular Cart Inspection Engine (File 5)
+// Start: Phase 39 - Modular Cart Inspection Engine (File 5)
 // Fasal 4 (SOA) + Fasal 7 Strategy 3 (cart buffer Redis) + Fasal 6 (escape/keyboard).
 // handleViewCart: parse JSONB cart buffer dari Upstash, kira total, papar breakdown mobile.
+// Phase 39: guarantee answerCallbackQuery triggered in milliseconds for ALL cart triggers.
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, inlineKeyboard, answerCallbackQuery } from '../telegram';
 import { getState, setState } from '../redis';
+
+/**
+ * dismissSpinnerFast
+ * Helper awam untuk dismiss loading spinner dalam milisaat apabila mana-mana
+ * cart callback ditekan (add_to_cart / view_cart / checkout). Mencegah
+ * client spinner tergantung (Fasal 6 UX + Fasal 7 S4 resilience).
+ */
+export async function dismissSpinnerFast(env: Env, queryId?: string, text?: string): Promise<void> {
+  if (!queryId) return;
+  try {
+    await answerCallbackQuery(env, queryId, text, false);
+  } catch {
+    // Silent fail: spinner dismiss tidak boleh block flow utama.
+  }
+}
 
 /** Struktur cart buffer pelanggan (selari dengan customer.ts CartBuffer). */
 interface CartItem {
@@ -31,23 +47,19 @@ export async function handleViewCart(
   tgId: number,
   queryId?: string
 ): Promise<boolean> {
-  // Start: Phase 38 - Spinner Dismissal First (millisecond guarantee)
+  // Start: Phase 39 - Spinner Dismissal First (millisecond guarantee)
   // Jangan tunggu Redis getState: tutup loading screen DULU dalam milisaat
   // supaya client tidak tergantung walaupun Upstash perlahan (Fasal 7 S4).
-  if (queryId) {
-    await answerCallbackQuery(env, queryId, undefined, false);
-  }
-  // End: Phase 38 - Spinner Dismissal First
+  await dismissSpinnerFast(env, queryId);
+  // End: Phase 39 - Spinner Dismissal First
 
   const state = await getState(env, tgId);
   const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
 
-  // Start: Phase 25 - Dismiss spinner segera bila callback view_cart ditekan
-  // (redundan selamat jika queryId diberi semula selepas state load)
-  if (queryId) {
-    await answerCallbackQuery(env, queryId, undefined, false);
-  }
-  // End: Phase 25 - Dismiss spinner
+  // Start: Phase 39 - Dismiss spinner redundan selamat (idempotent guard)
+  // Panggilan kedua tidak berbahaya; pastikan spinner pasti tertutup.
+  await dismissSpinnerFast(env, queryId);
+  // End: Phase 39 - Dismiss spinner redundan
 
   if (!buffer || !buffer.items || buffer.items.length === 0) {
     await sendMessage(

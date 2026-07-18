@@ -396,6 +396,40 @@ export function summarizeCycle(steps: CycleStep[]): string {
 }
 // End: Phase 38 - Full-Cycle Request Simulation
 
+// Start: Phase 39 - Mock Simulation Suite Wiring (Fasal 7 S4 + Fasal 10)
+import { runMockInjection } from './mock_telegram_worker_test';
+
+/**
+ * runMockSimulationSuite
+ * Lembing kesemua 22-command mock frame ke worker yang berjalan dan kira
+ * kadar kejayaan (200/403/405 = PASS, Fasal 10 harmonized). Menggunakan
+ * enjin simulasi mock_telegram_worker_test secara langsung.
+ */
+export async function runMockSimulationSuite(
+  env: Env,
+  baseUrl = 'http://localhost:8787'
+): Promise<{ total: number; ok: number; fail: number; successRate: number }> {
+  const frames = runMockInjection();
+  const secret = { 'X-Telegram-Bot-Api-Secret-Token': env.X_TELEGRAM_BOT_API_SECRET_TOKEN };
+  let ok = 0;
+  for (const f of frames) {
+    try {
+      const res = await fetch(`${baseUrl}/`, { method: 'POST', headers: secret, body: f.rawFrame });
+      if (res.status === 200 || res.status === 403 || res.status === 405) ok++;
+    } catch {
+      // network fail -> tidak dikira ok
+    }
+  }
+  const total = frames.length;
+  return {
+    total,
+    ok,
+    fail: total - ok,
+    successRate: total > 0 ? Math.round((ok / total) * 1000) / 10 : 0,
+  };
+}
+// End: Phase 39 - Mock Simulation Suite Wiring
+
 // Start: Phase 38 - Mock Update Payload Generator (22-Command passive matrix)
 /** Satu entri mock payload untuk ujian aliran perbualan pasif. */
 export interface MockPayloadEntry {

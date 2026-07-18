@@ -54,6 +54,46 @@ export async function getShopByIdSafe(
     return null;
   }
 }
+// Start: Phase 39 - Multi-Tenant Shop Lookup Hardening (Fasal 7 Strategy 1 RLS)
+/**
+ * getShopByMerchantSafe
+ * Cari kedai ikat terus ke merchant_telegram_id (RLS boundary). Return null
+ * jika tiada / gagal. Menjamin caller tidak terkena null-pointer crash bila
+ * peniaga belum daftar kedai (Phase 39 hardening).
+ */
+export async function getShopByMerchantSafe(
+  env: Env,
+  telegramId: number
+): Promise<{ id: string; nama_kedai: string; status_kedai: string; status_langganan?: string } | null> {
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${telegramId}&select=id,nama_kedai,status_kedai,status_langganan&limit=1`;
+  try {
+    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!res.ok) return null;
+    const rows = safeRows<{ id: string; nama_kedai: string; status_kedai: string; status_langganan?: string }>(await res.json());
+    return rows.length > 0 ? rows[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * getShopByIdSafe fortekan: pastikan result di-normalize dan tak pernah throw.
+ * (Wrapper sedia ada dipertingkat dengan safeRows guard tambahan.)
+ */
+export async function getShopByIdSafeHardened(
+  env: Env,
+  kedaiId: string
+): Promise<{ id: string; nama_kedai: string; status_kedai: string } | null> {
+  const result = await getShopByIdSafe(env, kedaiId);
+  if (!result) return null;
+  return {
+    id: result.id || kedaiId,
+    nama_kedai: result.nama_kedai || 'KEDAI_TIDAK_DIKETAHUI',
+    status_kedai: result.status_kedai || 'TUTUP',
+  };
+}
+// End: Phase 39 - Multi-Tenant Shop Lookup Hardening
+
 // End: Phase 38 - Null-Shield DB Lookup Guard
 
 // Start: Phase 36 - Telemetry Audit Wiring (secure DB transactional fetch wrapper)

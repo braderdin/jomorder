@@ -17,12 +17,12 @@ declare abstract class KVNamespace {
 /** Cloudflare Worker Environment Bindings (single source of truth = wrangler.toml) */
 export interface Env {
   // Telegram Integration (Fasal 6 + Fasal 10)
-  // Start: Phase 38 - TELEGRAM_BOT_TOKEN Binding Harmonization (Fasal 11 + Fasal 4)
-  // Nama binding WAJIB sepadan 1:1 dengan wrangler.toml secret + .dev.vars.
-  // Dihapuskan sebarang implicit any; token diiktiraf sebagai string wajib supaya
-  // telegram.ts compile lulus tanpa drift (tiada optional chaining terkedukur).
-  TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
-  // End: Phase 38 - TELEGRAM_BOT_TOKEN Binding Harmonization
+// Start: Phase 39 - TELEGRAM_BOT_TOKEN Binding Harmonization (Fasal 11 + Fasal 4)
+// Nama binding WAJIB sepadan 1:1 dengan wrangler.toml secret + .dev.vars.
+// Dihapuskan sebarang implicit any; token diiktiraf sebagai string wajib supaya
+// telegram.ts compile lulus tanpa drift (tiada optional chaining terkedukur).
+TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
+// End: Phase 39 - TELEGRAM_BOT_TOKEN Binding Harmonization
   X_TELEGRAM_BOT_API_SECRET_TOKEN: string; // Secret: validates X-Telegram-Bot-Api-Secret-Token header
 
   // Supabase Multi-Tenant DB (Fasal 7 Strategy 1 RLS)
@@ -314,5 +314,16 @@ export interface TelemetryAlertPayload {
 }
 // End: Phase 36 - Telemetry <-> Analytics Schema Synchronization
 // End: Phase 35 - Network Telemetry Stats Schema
+
+// Start: Phase 39 - Webhook Force-Register Config Contract (Fasal 10 + Fasal 11)
+/** Konfigurasi untuk force-setWebhook telegram (bin/force-webhook-register.sh). */
+export interface WebhookRegisterConfig {
+  botToken: string; // TELEGRAM_BOT_TOKEN (dari .dev.vars / secret)
+  webhookUrl: string; // URL penuh worker https (Fasal 10 endpoint)
+  secretToken: string; // X_TELEGRAM_BOT_API_SECRET_TOKEN (Fasal 10 guard)
+  dropPendingUpdates?: boolean; // Bersihkan queue lama semasa reconnect
+  maxConnections?: number; // 1-100 (default 40)
+}
+// End: Phase 39 - Webhook Force-Register Config Contract
 
 // End: JomOrder Fasa 3 - Core Type Definitions

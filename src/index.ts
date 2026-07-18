@@ -8,6 +8,7 @@ import { runSmokeTests, summarizeSmokeTests } from './services/testing';
 import { checkDatabaseHealth } from './services/sentinel';
 import { dispatchSubscriptionAlerts, triggerSaasPulseReport } from './services/scheduler';
 import { invalidateSubscriptionCacheBatch } from './redis';
+import { captureRawWebhookFrame } from './services/telegram_webhook_diagnostics';
 
 // Start: Phase 32 - Bot Command Menu Bootstrap (lifecycle onboarding)
 // Daftarkan 16 arahan natif ke menu Telegram sekali sahaja per cold-start worker.
@@ -164,13 +165,28 @@ export default {
     // End: Webhook Guard
 
     // Start: Update Router (Fasa 4 - delegate ke handlers.ts)
-    // Phase 31: Hardened raw command stream ingestion.
+    // Phase 39: Live Webhook Alignment - raw body capture SEBELUM secret verify
+    // supaya payload Telegram tidak hilang jika header verification gagal.
     // Guard saiz payload mentah supaya stream arahan panjang tidak mematikan
     // edge gateway (Fasal 7 Strategy 4 resilience + Fasal 10 timeout block).
-    const rawBody = await request.text();
+    let rawBody: string;
+    try {
+      rawBody = await request.text();
+    } catch (readErr) {
+      // Fasal 7 S4: jangan crash worker bila stream read gagal. Soft 200.
+      console.error('[Phase39] raw body read fail:', (readErr as Error).message);
+      return new Response('OK', { status: 200 });
+    }
     // Had 1MB: tolak senyap payload abnormal tanpa crash worker.
     if (rawBody.length > 1_000_000) {
       return new Response('OK', { status: 200 });
+    }
+    // Phase 39: Dump raw frame ke diagnostic engine SEBELUM parse/trim.
+    // Ini mengelak corruption: kita simpan copy mentah untuk error isolation.
+    try {
+      await captureRawWebhookFrame(env, rawBody);
+    } catch {
+      // Diagnostic gagal tidak boleh sekat webhook utama (Fasal 7 S4).
     }
     // parseUpdate() dah dibalut try/catch (soft-fail null). Tambahan:
     // trim whitespace stream supaya arahan teks mentah ("/start ") parse bersih.

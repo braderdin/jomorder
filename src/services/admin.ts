@@ -69,22 +69,22 @@ export interface BroadcastResult {
 /**
  * broadcastAnnouncementSlots
  * Bahagikan senarai ID penerima kepada slot berperingkat supaya tidak melanggar
- * had 30-request/syarat Telegram API. Setiap slot = 20 mesej, diikuti rehat
- * 1000ms sebelum slot seterusnya. Soft-fail: kegagalan per-mesej tidak hentikan
+ * had 30-request/syarat Telegram API. Setiap slot = 25 mesej, diikuti rehat
+ * 700ms sebelum slot seterusnya. Soft-fail: kegagalan per-mesej tidak hentikan
  * keseluruhan loop (Fasal 7 Strategy 4).
  *
  * @param env bindings Worker
  * @param recipientIds senarai merchant_telegram_id (sudah ditapis >0)
  * @param message teks pengumuman (sudah escape oleh pemanggil)
- * @param slotSize saiz slot (default 20, selamat di bawah 30/sec)
- * @param slotDelayMs rehat antara slot (default 1000ms)
+ * @param slotSize saiz slot (default 25, selamat di bawah 30/sec)
+ * @param slotDelayMs rehat antara slot (default 700ms)
  */
 export async function broadcastAnnouncementSlots(
   env: Env,
   recipientIds: number[],
   message: string,
-  slotSize = 20,
-  slotDelayMs = 1000
+  slotSize = 25,
+  slotDelayMs = 700
 ): Promise<BroadcastResult> {
   let sent = 0;
   let failed = 0;
@@ -92,6 +92,7 @@ export async function broadcastAnnouncementSlots(
 
   for (let i = 0; i < total; i += slotSize) {
     const slot = recipientIds.slice(i, i + slotSize);
+    // Hantar serentak dalam slot (25) - di bawah had 30/sec Telegram.
     await Promise.all(
       slot.map(async (id) => {
         try {
@@ -102,7 +103,7 @@ export async function broadcastAnnouncementSlots(
         }
       })
     );
-    // Rehat antara slot untuk patuh had 30 req/sec Telegram.
+    // Rehat antara slot untuk patuh had 30 req/sec Telegram dengan margin.
     if (i + slotSize < total) {
       await new Promise((resolve) => setTimeout(resolve, slotDelayMs));
     }

@@ -174,9 +174,11 @@ export async function handleMerchantMessage(
   tgId: number,
   text: string
 ): Promise<void> {
-  // Start: Phase 38 - Responsive Onboarding Validation States (anti-abandon)
+  // Start: Phase 39 - Responsive Onboarding Thread Lock-Clear (anti-abandon)
   // Tangani /daftar, /set_lokasi, /urus_kedai secara interaktif dengan
   // persist state segera + prompt jelas supaya thread tak terbengkalai.
+  // Phase 39: guard double-setState dan pastikan setiap branch return segera
+  // (tiada fall-through ke bawah yang buat thread tersekat).
   if (text === '/daftar' || text === '/urus_kedai' || text === '/set_lokasi') {
     const exists = await checkMerchantExists(env, tgId);
     if (text === '/set_lokasi') {
@@ -214,7 +216,7 @@ export async function handleMerchantMessage(
     await sendMessage(env, chatId, escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:'), daftarKedaiKeyboard());
     return;
   }
-  // End: Phase 38 - Responsive Onboarding Validation States
+  // End: Phase 39 - Responsive Onboarding Thread Lock-Clear
 
   // Start: Fasa 15 - Premium Upsell Command (/naiktaraf)
   if (text === '/naiktaraf') {

@@ -78,26 +78,48 @@ export function parseUpdate(body: string): TelegramUpdate | null {
   }
 }
 
-// Start: Phase 38 - Incoming Update Telemetry Debugger (Fasal 7 S4 resilience)
+// Start: Phase 39 - Incoming Update Telemetry Debugger (Fasal 7 S4 resilience)
 // Rekam trace metrik tanpa throw supaya pipeline webhook tidak drop payload.
-// Diambil dari index.ts untuk grid telemetry queue (ERROR/WARN/INFO only).
+// Phase 39: tambah tracer response pipeline untuk Bot API call latency grid.
 export function debugIncomingUpdate(
   env: Env,
   rawFrame: string,
-  stage: 'pre-parse' | 'parsed-ok' | 'parse-failed',
+  stage: 'pre-parse' | 'parsed-ok' | 'parse-failed' | 'api-send',
   updateId?: number
 ): void {
   try {
     const len = rawFrame ? rawFrame.length : 0;
     const tag = updateId !== undefined ? `[upd:${updateId}]` : '[upd:?]';
     console.log(
-      `[Phase38][telemetry]${tag} stage=${stage} bytes=${len} ts=${new Date().toISOString()}`
+      `[Phase39][telemetry]${tag} stage=${stage} bytes=${len} ts=${new Date().toISOString()}`
     );
   } catch {
     // Silent: debugger tidak boleh ganggu webhook path utama (Fasal 7 S4).
   }
 }
-// End: Phase 38 - Incoming Update Telemetry Debugger
+
+/**
+ * traceApiCall - rekam latency & status setiap panggilan ke Telegram Bot API.
+ * Safe: tidak throw, hanya log. Digunakan dalam sendMessage/answerCallbackQuery.
+ */
+export async function traceApiCall<T>(
+  env: Env,
+  label: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const start = Date.now();
+  try {
+    const result = await fn();
+    const ms = Date.now() - start;
+    debugIncomingUpdate(env, `api=${label} ms=${ms}`, 'api-send');
+    return result;
+  } catch (err) {
+    const ms = Date.now() - start;
+    console.error(`[Phase39][api-trace] ${label} FAILED ms=${ms} err=${(err as Error).message}`);
+    throw err;
+  }
+}
+// End: Phase 39 - Incoming Update Telemetry Debugger
 
 // Start: Phase 25 - Telegram Spinner Dismissal Helper (Fasal 6 inline grid UX)
 // answerCallbackQuery: tutup loading spinner segera bila user tekan inline button.

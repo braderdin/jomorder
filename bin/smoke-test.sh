@@ -123,6 +123,23 @@ for cb in "del_coupon:JOM10" "toggle_menu:1" "pay_now:1:shop:${TENANT_A_ID}" "vi
 done
 # End: Phase 38 - Simulated POST Interaction Node Matrix
 
+# Start: Phase 39 - Full 22-Command Live Webhook Frame Injection
+# Suntik HTTP POST frames mewakili KESELURUHAN 22 arahan natif + callback
+# kritikal secara live ke worker. Sekali lagi sahkan 200/403/405 = PASS.
+echo ""
+echo "--- Phase 39: 22-Command Live Webhook Injection ---"
+for cmd in "/start@JomOrderBot" "/start" "/help" "/menu" "/urus" "/cari_makan" "/troli" \
+  "/pesanan_saya" "/cipta_kupon JOM10 10 20" "/senarai_kupon" "/padam_kupon JOM10" \
+  "/invois" "/laporan_jualan" "/zon_operasi" "/admin_stats" "/senarai_pendaftaran" \
+  "/naiktaraf" "/senarai_menu" "/set_lokasi" "/sejarah_pesanan" "/batalkan_pesanan 1" \
+  "/pengumuman"; do
+  check_post "PH39:${cmd%% *}" "$cmd"
+done
+for cb in "del_coupon:JOM10" "toggle_status:abc" "add_to_cart:item:shop" "view_shop:shop" "reject_order:1" "view_invoice:1"; do
+  check_post_cb "PH39:CB:${cb%%:*}" "$cb"
+done
+# End: Phase 39 - Full 22-Command Live Webhook Frame Injection
+
 echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"

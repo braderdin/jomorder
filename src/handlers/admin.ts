@@ -106,6 +106,30 @@ function supabaseHeaders(env: Env): Record<string, string> {
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
   };
 }
-// End: Phase 37 - Administrative Broadcast
+
+// Start: Phase 39 - Strict Admin Gate Helper (Fasal 7 Strategy 1 isolation)
+/**
+ * isAdminCaller
+ * Sahkan panggilan datang dari ADMIN_TELEGRAM_ID yang sah. Return false jika
+ * env tiada / NaN / tgId tidak sepadan. Single source of truth untuk guard
+ * /admin_stats dan /pengumuman (elak duplikasi check rawak).
+ */
+export function isAdminCaller(env: Env, tgId: number): boolean {
+  const adminId = Number(env.ADMIN_TELEGRAM_ID);
+  if (!env.ADMIN_TELEGRAM_ID || Number.isNaN(adminId) || adminId <= 0) return false;
+  return tgId === adminId;
+}
+
+/**
+ * denyNonAdmin
+ * Jika caller bukan admin, hantar mesej halang (Fasal 7 S1) dan return true
+ * supaya router tidak teruskan ke handler lain (access guard tertutup).
+ */
+export async function denyNonAdmin(env: Env, chatId: number, tgId: number): Promise<boolean> {
+  if (isAdminCaller(env, tgId)) return false;
+  await sendMessage(env, chatId, escapeMarkdownV2('⛔ Akses ditolak. Arahan ini khusus untuk pentadbir.'));
+  return true;
+}
+// End: Phase 39 - Strict Admin Gate Helper
 
 // End: JomOrder Fasa 13 - Super-Admin Handlers (File 3)
