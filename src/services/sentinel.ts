@@ -4,6 +4,8 @@
 import { Env, NetworkTelemetryStats, TelemetryAlertPayload } from '../types';
 import { sendMessage, escapeMarkdownV2 } from '../telegram';
 
+const TELEGRAM_API = 'https://api.telegram.org/bot';
+
 /** Hard ceiling untuk heartbeat round-trip sebelum kita isytihar DRIFT. */
 const HEARTBEAT_TIMEOUT_MS = 5000;
 
@@ -208,6 +210,7 @@ export async function evaluateTelemetryThresholds(env: Env, metrics: {
 export interface StatusSnapshot {
   db: boolean;
   redis: boolean;
+  telegram?: boolean;
   ts: string;
 }
 
@@ -233,9 +236,28 @@ export async function getStatusSnapshot(env: Env): Promise<StatusSnapshot> {
       redis = false;
     }
   }
+  // Start: Phase 45 - Telegram API Ping Probe
+  let telegram = false;
+  if (env.TELEGRAM_BOT_TOKEN) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), HEARTBEAT_TIMEOUT_MS);
+      const res = await fetch(`${TELEGRAM_API}/getMe`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      telegram = res.ok;
+    } catch {
+      telegram = false;
+    }
+  }
+  // End: Phase 45 - Telegram API Ping Probe
   return {
     db,
     redis,
+    telegram,
     ts: new Date().toISOString(),
   };
 }

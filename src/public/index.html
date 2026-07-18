@@ -26,6 +26,7 @@
       }
     }
   </script>
+  <link rel="stylesheet" href="./style.css" />
   <!-- Meta Pixel -->
   <script id="meta-pixel" data-pixel-id="NEXT_PUBLIC_META_PIXEL_ID"></script>
   <!-- Google Analytics -->
@@ -43,10 +44,12 @@
   <header class="relative min-h-screen flex items-center justify-center overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-br from-cyber-accent/20 via-cyber-bg to-cyber-neon/10"></div>
     <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 2px 2px, #00f0ff 1px, transparent 0); background-size: 40px 40px;"></div>
+    <div class="animated-glow absolute -top-40 -left-40 w-96 h-96 bg-cyber-neon/20 rounded-full blur-3xl"></div>
+    <div class="animated-glow2 absolute -bottom-40 -right-40 w-96 h-96 bg-cyber-accent/20 rounded-full blur-3xl"></div>
 
     <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
       <div class="inline-block mb-6 px-4 py-2 rounded-full border border-cyber-neon/40 bg-cyber-neon/10 text-cyber-neon text-sm font-mono tracking-widest">
-        MDEC GLOW PROJECT PORTFOLIO
+        🏆 MDEC GLOW PROJECT PORTFOLIO
       </div>
 
       <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
@@ -69,7 +72,7 @@
           🚀 Cuba Bot Telegram
         </a>
         <a href="#metrics" class="px-8 py-4 rounded-xl border border-gray-600 hover:border-cyber-neon text-gray-200 font-semibold transition-all w-full sm:w-auto">
-          Lihat Statistik Langsung
+          📊 Lihat Statistik Langsung
         </a>
       </div>
 
@@ -90,13 +93,38 @@
     </div>
   </header>
 
-  <!-- SECTION B: DYNAMIC METRICS -->
+  <!-- SECTION B: CARA BERFUNGSI (3 LANGKAH) -->
+  <section class="py-20 px-6 bg-cyber-panel/40">
+    <div class="max-w-5xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Cara <span class="text-cyber-neon">Berfungsi</span></h2>
+      <p class="text-gray-400 mb-12">Hanya 3 langkah mudah untuk mula menerima pesanan</p>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg reveal">
+          <div class="text-5xl mb-4">🏪</div>
+          <h3 class="text-xl font-bold text-cyber-neon mb-2">1. Daftar Kedai</h3>
+          <p class="text-gray-400 text-sm">Taip <code class="text-cyber-gold">/daftar</code> di Telegram. Isi nama kedai & lokasi dalam 1 minit.</p>
+        </div>
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg reveal">
+          <div class="text-5xl mb-4">📋</div>
+          <h3 class="text-xl font-bold text-cyber-accent mb-2">2. Tambah Menu</h3>
+          <p class="text-gray-400 text-sm">Guna <code class="text-cyber-gold">/tambah_menu</code> untuk bina senarai hidangan dengan harga.</p>
+        </div>
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg reveal">
+          <div class="text-5xl mb-4">💸</div>
+          <h3 class="text-xl font-bold text-cyber-gold mb-2">3. Terima Order</h3>
+          <p class="text-gray-400 text-sm">Pelanggan cari & bayar via DuitNow. Anda terima notifikasi segera.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION C: DYNAMIC METRICS -->
   <section id="metrics" class="py-20 px-6 bg-cyber-panel/50">
     <div class="max-w-5xl mx-auto text-center">
       <h2 class="text-3xl md:text-4xl font-bold mb-4">
         Statistik <span class="text-cyber-neon">Langsung</span> dari Supabase
       </h2>
-      <p class="text-gray-400 mb-12">Data dikemas kini secara real-time melalui <code class="text-cyber-neon">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></p>
+      <p class="text-gray-400 mb-12">Data dikemas kini secara real-time melalui <code class="text-cyber-neon">/api/public-stats</code></p>
 
       <div class="grid md:grid-cols-3 gap-6">
         <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg">
@@ -119,7 +147,99 @@
     </div>
   </section>
 
-  <!-- SECTION C: ANALYTICS PIXEL HOOKS -->
+  <!-- SECTION D: FEATURE GRID -->
+  <section class="py-20 px-6 bg-cyber-panel/40">
+    <div class="max-w-5xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-12">Kenapa <span class="text-cyber-neon">JomOrder</span>?</h2>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="p-5 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <div class="text-3xl mb-2">🤖</div>
+          <h4 class="font-bold text-cyber-neon">22 Command BM</h4>
+          <p class="text-gray-400 text-sm mt-1">Bot lengkap dalam Bahasa Malaysia.</p>
+        </div>
+        <div class="p-5 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <div class="text-3xl mb-2">💳</div>
+          <h4 class="font-bold text-cyber-gold">Bayaran DuitNow</h4>
+          <p class="text-gray-400 text-sm mt-1">QR auto-jana, bayaran terus masuk.</p>
+        </div>
+        <div class="p-5 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <div class="text-3xl mb-2">🔒</div>
+          <h4 class="font-bold text-cyber-accent">RLS Multi-Tenant</h4>
+          <p class="text-gray-400 text-sm mt-1">Data kedai diasingkan selamat.</p>
+        </div>
+        <div class="p-5 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <div class="text-3xl mb-2">📍</div>
+          <h4 class="font-bold text-cyber-neon">Cari Berdekatan</h4>
+          <p class="text-gray-400 text-sm mt-1">Haversine engine cari kedai terdekat.</p>
+        </div>
+        <div class="p-5 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <div class="text-3xl mb-2">🎟️</div>
+          <h4 class="font-bold text-cyber-gold">Kupon Diskaun</h4>
+          <p class="text-gray-400 text-sm mt-1">Cipta promosi untuk pelanggan.</p>
+        </div>
+        <div class="p-5 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <div class="text-3xl mb-2">📊</div>
+          <h4 class="font-bold text-cyber-accent">Laporan Jualan</h4>
+          <p class="text-gray-400 text-sm mt-1">Analitik pendapatan masa nyata.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION E: TESTIMONI -->
+  <section class="py-20 px-6 bg-cyber-panel/50">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-12">Kata <span class="text-cyber-neon">Peniaga</span></h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <p class="text-gray-300 italic">"Sejak guna JomOrder, order makin lancar. Pelanggan bayar terus via DuitNow."</p>
+          <p class="text-cyber-gold mt-3 font-semibold">— Kak Nor, Gerai Nasi Ayam</p>
+        </div>
+        <div class="p-6 rounded-2xl border border-gray-700 bg-cyber-bg text-left">
+          <p class="text-gray-300 italic">"RM0 sebulan, tapi dapat sistem pesanan automatik. Berbaloi!"</p>
+          <p class="text-cyber-gold mt-3 font-semibold">— Abang Joe, Kedai Kopi</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION F: FAQ -->
+  <section class="py-20 px-6 bg-cyber-panel/40">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-3xl md:text-4xl font-bold mb-12 text-center">Soalan <span class="text-cyber-neon">Lazim</span></h2>
+      <div class="space-y-4" id="faq-list">
+        <div class="faq-item border border-gray-700 rounded-xl bg-cyber-bg overflow-hidden">
+          <button class="faq-toggle w-full text-left p-4 font-semibold text-cyber-neon flex justify-between">
+            <span>Adakah JomOrder percuma?</span><span class="icon">+</span>
+          </button>
+          <div class="faq-body hidden p-4 text-gray-400 text-sm">Ya, kos operasi RM0 sepenuhnya. Tiada yuran bulanan untuk plan asas.</div>
+        </div>
+        <div class="faq-item border border-gray-700 rounded-xl bg-cyber-bg overflow-hidden">
+          <button class="faq-toggle w-full text-left p-4 font-semibold text-cyber-neon flex justify-between">
+            <span>Bagaimana cara daftar?</span><span class="icon">+</span>
+          </button>
+          <div class="faq-body hidden p-4 text-gray-400 text-sm">Buka @JomOrderBot di Telegram, taip <code class="text-cyber-gold">/daftar</code> dan ikut arahan.</div>
+        </div>
+        <div class="faq-item border border-gray-700 rounded-xl bg-cyber-bg overflow-hidden">
+          <button class="faq-toggle w-full text-left p-4 font-semibold text-cyber-neon flex justify-between">
+            <span>Bolehkah terima bayaran online?</span><span class="icon">+</span>
+          </button>
+          <div class="faq-body hidden p-4 text-gray-400 text-sm">Ya, sistem jana QR DuitNow automatik untuk setiap pesanan.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION G: CTA FOOTER -->
+  <section class="py-20 px-6 text-center border-t border-gray-800 bg-gradient-to-br from-cyber-accent/10 to-cyber-neon/5">
+    <h2 class="text-3xl md:text-4xl font-bold mb-6">Sedia Tingkatkan <span class="text-cyber-neon">Perniagaan</span> Anda?</h2>
+    <a href="https://t.me/JomOrderBot" target="_blank" rel="noopener"
+       class="inline-block px-10 py-4 rounded-xl bg-cyber-neon text-cyber-bg font-bold text-lg hover:bg-cyan-300 transition-all shadow-lg shadow-cyber-neon/30">
+      🚀 Mula Sekarang (Percuma)
+    </a>
+  </section>
+
+  <!-- SECTION H: ANALYTICS PIXEL HOOKS -->
   <section class="py-16 px-6 text-center border-t border-gray-800">
     <p class="text-sm text-gray-500 font-mono">
       Analytics: Meta Pixel (<span id="pixel-status">menunggu</span>) | Google Analytics (<span id="ga-status">menunggu</span>)

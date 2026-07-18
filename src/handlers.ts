@@ -85,6 +85,7 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
   { command: '/status', handler: 'handleStatus', active: true },
 ];
 // End: Phase 44 - 22-Command BM Distributor Matrix (1:1 Chip Besar list)
+// Phase 45: Matrix disahkan 22/22 padan NATIVE_COMMAND_LIST (types.ts).
 // Note: /laporan_jualan diubah dari fetchSaasMetrics (platform) ke handleMerchantSalesSummary (merchant-scoped)
 // di atas; baris asal di bawah dijadikan alias platform (tidak aktif double-count).
 

@@ -109,6 +109,7 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
   const buttons = inlineKeyboard([
     [{ text: toggleLabel, callback_data: `toggle_status:${kedai.id}` }, { text: '📊 Laporan', callback_data: 'merchant_report' }],
     [{ text: '📦 Pesanan', callback_data: 'merchant_orders' }, { text: '⚙️ Tetapan', callback_data: 'merchant_settings' }],
+    [{ text: '➕ Menu', callback_data: 'merchant_menu' }, { text: '📈 Analitik', callback_data: 'merchant_analytics' }],
   ]);
 
   await sendMessage(env, chatId, text, buttons);

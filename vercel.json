@@ -11,12 +11,12 @@
       "destination": "https://t.me/JomOrderBot"
     },
     {
-      "source": "/api/health",
-      "destination": "/api/health.json"
+      "source": "/api/public-stats",
+      "destination": "https://jomorder-worker.braderdin006.workers.dev/api/public-stats"
     },
     {
-      "source": "/api/public-stats",
-      "destination": "https://jomorder-worker.jomorder.workers.dev/api/public-stats"
+      "source": "/api/health",
+      "destination": "https://jomorder-worker.braderdin006.workers.dev/health"
     }
   ],
   "redirects": [

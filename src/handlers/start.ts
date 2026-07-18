@@ -7,6 +7,18 @@ import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboa
 import { checkMerchantExists } from '../db';
 import { setState } from '../redis';
 
+// Start: Phase 45 - Rich Start Inline Keyboard (Fasal 6 mobile 2-3 btn/row)
+function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
+  return {
+    inline_keyboard: [
+      [{ text: '🍜 Cari Makan', callback_data: 'open_nearby' }, { text: '🛒 Troli', callback_data: 'open_cart' }],
+      [{ text: '🏪 Daftar Kedai', callback_data: 'merchant_settings' }, { text: '📊 Status', callback_data: 'merchant_report' }],
+      [{ text: '❓ Bantuan', callback_data: 'help_menu' }],
+    ],
+  };
+}
+// End: Phase 45 - Rich Start Inline Keyboard
+
 /**
  * Controller untuk arahan '/start' dan '/mula'.
  * Logik:
@@ -70,7 +82,7 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
     escapeMarkdownV2('• 🛒 Troli\\n') +
     escapeMarkdownV2('• 📍 Kedai Berdekatan\\n') +
     escapeMarkdownV2('• ❓ Taip /help untuk panduan penuh\\.');
-  await sendMessage(env, chatId, text, customerMenuKeyboard());
+  await sendMessage(env, chatId, text, startQuickActionKeyboard());
 }
 
 // End: Phase 31 - /start & /mula Command Controller

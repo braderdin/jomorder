@@ -52,6 +52,14 @@ export async function handleStatus(env: Env, chatId: number, tgId: number): Prom
     escapeMarkdownV2(`👤 Peranan: ${roleLabel}\\n`) +
     escapeMarkdownV2(`⭐ Pelan: ${tier}\\n`) +
     escapeMarkdownV2(`🕒 Masa: ${ts}`);
-  await sendMessage(env, chatId, text);
+
+  // Start: Phase 45 - Rich Status Inline Keyboard (Fasal 6)
+  const buttons = {
+    inline_keyboard: [
+      [{ text: '🔄 Segarkan', callback_data: 'status_refresh' }, { text: '📞 Sokongan', url: 'https://t.me/JomOrderSupport' }],
+    ],
+  };
+  // End: Phase 45 - Rich Status Inline Keyboard
+  await sendMessage(env, chatId, text, buttons);
 }
 // End: Phase 44 - /status Command Controller

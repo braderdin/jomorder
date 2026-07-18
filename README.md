@@ -1,9 +1,10 @@
 # jomorder
 Multi-tenant Telegram bot SaaS untuk kedai makan Malaysia
 
-## Status: 22/22 Command Aktif (Phase 44)
+## Status: 22/22 Command Aktif (Phase 44) + UI/UX Menarik (Phase 45)
 
-Bot JomOrder menyokong 22 arahan natif Bahasa Malaysia yang berfungsi sepenuhnya:
+Bot JomOrder menyokong 22 arahan natif Bahasa Malaysia yang berfungsi sepenuhnya.
+Portal landings page di-reka cantik (neon/glassmorphism) dengan statistik langsung dari Supabase.
 
 - /start - Mula & pilih peranan
 - /bantuan - Panduan interaktif bot

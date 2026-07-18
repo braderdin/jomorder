@@ -64,6 +64,18 @@ export function customerMenuKeyboard() {
   };
 }
 
+// Start: Phase 45 - Rich Dashboard Inline Helper (Fasal 6)
+/** Inline keyboard papan pemerintah peniaga kaya (max 2 btn/row). */
+export function merchantDashboardKeyboard(kedaiId: string, isBuka: boolean) {
+  const toggleLabel = isBuka ? '🔴 Tutup Kedai' : '🟢 Buka Kedai';
+  return inlineKeyboard([
+    [{ text: toggleLabel, callback_data: `toggle_status:${kedaiId}` }, { text: '📊 Laporan', callback_data: 'merchant_report' }],
+    [{ text: '📦 Pesanan', callback_data: 'merchant_orders' }, { text: '⚙️ Tetapan', callback_data: 'merchant_settings' }],
+    [{ text: '➕ Menu', callback_data: 'merchant_menu' }, { text: '📈 Analitik', callback_data: 'merchant_analytics' }],
+  ]);
+}
+// End: Phase 45 - Rich Dashboard Inline Helper
+
 /** Template Inline Keyboard generik (max 2-3 btn/row) */
 export function inlineKeyboard(buttons: Array<Array<{ text: string; callback_data: string }>>) {
   return { inline_keyboard: buttons };

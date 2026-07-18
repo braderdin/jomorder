@@ -68,9 +68,49 @@ function initAnalyticsStatus() {
   if (gaEl) gaEl.textContent = typeof gtag === "function" ? "aktif" : "tidak dikonfigurasi";
 }
 
+// FAQ accordion toggle (Phase 45 UI enhancement)
+function initFaq() {
+  const toggles = document.querySelectorAll(".faq-toggle");
+  toggles.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const body = btn.parentElement?.querySelector(".faq-body");
+      const icon = btn.querySelector(".icon");
+      if (!body) return;
+      const isHidden = body.classList.contains("hidden");
+      if (isHidden) {
+        body.classList.remove("hidden");
+        if (icon) icon.textContent = "-";
+      } else {
+        body.classList.add("hidden");
+        if (icon) icon.textContent = "+";
+      }
+    });
+  });
+}
+
+// Scroll-reveal IntersectionObserver (Phase 45 UI enhancement)
+function initScrollReveal() {
+  const items = document.querySelectorAll(".reveal");
+  if (!("IntersectionObserver" in window)) {
+    items.forEach((el) => el.classList.add("revealed"));
+    return;
+  }
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("revealed");
+        obs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  items.forEach((el) => obs.observe(el));
+}
+
 // Boot
 async function init() {
   initAnalyticsStatus();
+  initFaq();
+  initScrollReveal();
   await fetchPublicStats();
   const now = new Date();
   const lu = document.getElementById("last-updated");
@@ -78,4 +118,4 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
-// End: JomOrder Portal Live Metrics Fetch (Phase 27)
+// End: JomOrder Portal Live Metrics Fetch (Phase 27 + Phase 45 UI)

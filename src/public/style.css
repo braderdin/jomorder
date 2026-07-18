@@ -1,0 +1,65 @@
+/* Start: JomOrder Phase 45 - Portal Custom Styles (neon + glassmorphism) */
+/* Diperlukan oleh index.html untuk animasi ringan tanpa bergantung 100% Tailwind CDN. */
+
+:root {
+  --cyber-bg: #0a0e1a;
+  --cyber-panel: #111827;
+  --cyber-neon: #00f0ff;
+  --cyber-accent: #7c3aed;
+  --cyber-gold: #fbbf24;
+}
+
+body {
+  background-color: var(--cyber-bg);
+}
+
+/* Animated glow orbs di hero */
+.animated-glow {
+  animation: float1 8s ease-in-out infinite;
+}
+.animated-glow2 {
+  animation: float2 10s ease-in-out infinite;
+}
+@keyframes float1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  50% { transform: translate(30px, 40px) scale(1.1); opacity: 0.8; }
+}
+@keyframes float2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  50% { transform: translate(-40px, -30px) scale(1.15); opacity: 0.7; }
+}
+
+/* Scroll-reveal untuk section */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* FAQ smooth */
+.faq-body {
+  transition: max-height 0.3s ease;
+}
+
+/* Glassmorphism panel halus */
+section .rounded-2xl {
+  backdrop-filter: blur(6px);
+}
+
+/* Hover lift untuk card */
+.grid .rounded-2xl:hover {
+  border-color: var(--cyber-neon);
+  transform: translateY(-4px);
+  transition: all 0.25s ease;
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .animated-glow, .animated-glow2 { animation: none; }
+  .reveal { opacity: 1; transform: none; }
+}
+/* End: JomOrder Phase 45 - Portal Custom Styles */

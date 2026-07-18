@@ -52,8 +52,9 @@ export async function handleHelp(env: Env, chatId: number, _user: TelegramUser |
 
   const inline = {
     inline_keyboard: [
-      [{ text: '💬 Operator Sokongan', url: 'https://t.me/JomOrderSupport' }],
-      [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🛒 Troli Saya', callback_data: 'open_cart' }],
+      [{ text: '🏪 Panduan Peniaga', callback_data: 'help_merchant' }, { text: '🛒 Panduan Pelanggan', callback_data: 'help_customer' }],
+      [{ text: '⚙️ Pentadbir', callback_data: 'help_admin' }, { text: '💬 Operator', url: 'https://t.me/JomOrderSupport' }],
+      [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🛒 Troli', callback_data: 'open_cart' }],
     ],
   };
 
