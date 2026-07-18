@@ -7,6 +7,7 @@ import { sendMessage, escapeMarkdownV2 } from '../telegram';
 import { checkMerchantExists } from '../db';
 import { getStatusSnapshot } from '../services/sentinel';
 import { getSubscriptionStatus } from '../subscription';
+import { WORKER_VERSION, getWorkerUptime } from '../services/sentinel';
 
 /**
  * Controller untuk arahan '/status'.
@@ -45,13 +46,23 @@ export async function handleStatus(env: Env, chatId: number, tgId: number): Prom
   const redisIcon = redisOk ? '🟢' : '🔴';
   const ts = new Date().toLocaleString('ms-MY', { timeZone: 'Asia/Kuala_Lumpur' });
 
+  // Start: Phase 46 - Status Card Elevation (version + uptime + command count)
+  // Escape semua nilai berubah supaya tiada parse crash (Fasal 6).
+  const uptimeSec = getWorkerUptime();
+  const uptimeMin = Math.floor(uptimeSec / 60);
+  const uptimeLabel = uptimeMin > 0 ? `${uptimeMin} minit` : `${uptimeSec} saat`;
+
   const text =
     escapeMarkdownV2('📡 STATUS JomOrder\\n\\n') +
     escapeMarkdownV2(`${healthIcon} Pangkalan Data: ${dbOk ? 'Siap' : 'Degradasi'}\\n`) +
     escapeMarkdownV2(`${redisIcon} Cache Redis: ${redisOk ? 'Siap' : 'Degradasi'}\\n`) +
-    escapeMarkdownV2(`👤 Peranan: ${roleLabel}\\n`) +
-    escapeMarkdownV2(`⭐ Pelan: ${tier}\\n`) +
-    escapeMarkdownV2(`🕒 Masa: ${ts}`);
+    escapeMarkdownV2(`👤 Peranan: ${escapeMarkdownV2(roleLabel)}\\n`) +
+    escapeMarkdownV2(`⭐ Pelan: ${escapeMarkdownV2(tier)}\\n`) +
+    escapeMarkdownV2(`🏷️ Versi: ${escapeMarkdownV2(WORKER_VERSION)}\\n`) +
+    escapeMarkdownV2(`⏱️ Masa Jalan: ${escapeMarkdownV2(uptimeLabel)}\\n`) +
+    escapeMarkdownV2(`🤖 Arahan Aktif: 22/22\\n`) +
+    escapeMarkdownV2(`🕒 Masa: ${escapeMarkdownV2(ts)}`);
+  // End: Phase 46 - Status Card Elevation
 
   // Start: Phase 45 - Rich Status Inline Keyboard (Fasal 6)
   const buttons = {

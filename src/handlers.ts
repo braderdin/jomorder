@@ -255,6 +255,30 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     ) {
       if (await handleDashboardQuickAction(env, cb, cbChatId, data, cb.from.id)) return;
     }
+    // Start: Phase 46 - Dead Callback Repair (merchant_menu / merchant_analytics)
+    // Button ini dipapar di merchant_dashboard.ts tapi tiada router -> mati.
+    // Delegasikan ke handler sedia ada (handleSenaraiMenu / handleMerchantSalesSummary).
+    if (data === 'merchant_menu') {
+      await answerCallbackQuery(env, cb.id, 'Memuatkan menu...');
+      await withCommandGuard(env, cbChatId, '/senarai_menu', () => handleSenaraiMenu(env, cbChatId, cb.from.id));
+      return;
+    }
+    if (data === 'merchant_analytics') {
+      await answerCallbackQuery(env, cb.id, 'Memuatkan analitik...');
+      await withCommandGuard(env, cbChatId, '/laporan_jualan', () => handleMerchantSalesSummary(env, cbChatId, cb.from.id));
+      return;
+    }
+    // End: Phase 46 - Dead Callback Repair
+
+    // Start: Phase 46 - Status Refresh Callback Repair
+    // Button 'status_refresh' dipapar di status.ts tapi tiada router -> mati.
+    // Delegasikan semula ke handleStatus untuk re-render kad status terkini.
+    if (data === 'status_refresh') {
+      await answerCallbackQuery(env, cb.id, 'Menyegarkan...');
+      await withCommandGuard(env, cbChatId, '/status', () => handleStatus(env, cbChatId, cb.from.id));
+      return;
+    }
+    // End: Phase 46 - Status Refresh Callback Repair
     // End: Phase 31 - Dashboard inline callback routing
 
     // Start: Phase 24 - Menu browsing + interactive cart callback routing
@@ -420,11 +444,19 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   }
   // /profil -> handler profil & langganan baharu.
   if (cmd === '/profil') {
+    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      return;
+    }
     await withCommandGuard(env, chatId, '/profil', () => handleProfil(env, chatId, tgId));
     return;
   }
   // /status -> kad status bot & akaun (Phase 44).
   if (cmd === '/status') {
+    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      return;
+    }
     await withCommandGuard(env, chatId, '/status', () => handleStatus(env, chatId, tgId));
     return;
   }

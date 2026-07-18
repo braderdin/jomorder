@@ -188,6 +188,12 @@ else
 fi
 # End: Phase 40 - Catch-All Error Interceptor Assertion
 
+ echo ""
+echo "--- Phase 46: Dead Callback Repair Assertion ---"
+# Callback yang diperbaiki mesti respon hidup (200/403/405 = PASS).
+for cb in "merchant_menu" "merchant_analytics" "status_refresh"; do
+  check_post_cb "PH46:CB:${cb}" "$cb"
+done
 echo "--------------------------------------------------"
 echo "--- Phase 42: Command Telemetry Table Verification ---"
 # Sahkan table command_telemetry wujud di Supabase (DDL 015 applied).

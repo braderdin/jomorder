@@ -4,6 +4,7 @@
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
 import { getCommandSession, setCommandSession, touchCommandSession } from '../services/session_cache';
+import { fetchMerchantSalesSummary } from '../services/analytics';
 
 /** Baris status kedai minimum. */
 interface KedaiStatus {
@@ -113,6 +114,62 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
   ]);
 
   await sendMessage(env, chatId, text, buttons);
+}
+
+// Start: Phase 46 - Merchant-Scoped Quick Action Router (dipisah dari controller)
+/**
+ * handleDashboardQuickAction - routing untuk button quick-action dari dashboard.
+ * merchant_report kini guna fetchMerchantSalesSummary (kedai sendiri, bukan platform).
+ */
+export async function handleDashboardQuickAction(
+  env: Env,
+  cb: import('../types').TelegramCallbackQuery,
+  chatId: number,
+  action: string,
+  tgId: number
+): Promise<boolean> {
+  const { answerCallbackQuery } = await import('../telegram');
+  await answerCallbackQuery(env, cb.id);
+  switch (action) {
+    case 'merchant_report': {
+      // Start: Phase 46 - Merchant-Scoped Report Fix
+      // Asal guna fetchSaasMetrics (platform). Tukar ke fetchMerchantSalesSummary
+      // (kedai sendiri sahaja) supaya peniaga lihat data mereka, bukan platform.
+      const s = await fetchMerchantSalesSummary(env, tgId);
+      if (!s) {
+        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan kedai.'));
+        return true;
+      }
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('📊 LAPORAN KEDAI ANDA\\n\\n') +
+          escapeMarkdownV2(`Jumlah Pesanan: ${s.total_orders}\\n`) +
+          escapeMarkdownV2(`Pesanan Dibayar: ${s.paid_orders}\\n`) +
+          escapeMarkdownV2(`Pendapatan: RM${s.total_earnings_rm.toFixed(2)}`)
+      );
+      return true;
+      // End: Phase 46 - Merchant-Scoped Report Fix
+    }
+    case 'merchant_orders':
+      await sendMessage(env, chatId, escapeMarkdownV2('📦 Semak pesanan: taip /invois atau lihat butang pesanan.'));
+      return true;
+    case 'merchant_settings':
+      await sendMessage(env, chatId, escapeMarkdownV2('⚙️ Tetapan: taip /urus untuk buka semula papan pemerintah.'));
+      return true;
+    case 'open_nearby': {
+      const { handleCustomerNearby } = await import('../handlers/customer');
+      await handleCustomerNearby(env, chatId, tgId);
+      return true;
+    }
+    case 'open_cart': {
+      const { handleViewCart } = await import('../handlers/customer_cart');
+      await handleViewCart(env, chatId, tgId);
+      return true;
+    }
+    default:
+      return false;
+  }
 }
 
 // End: Phase 31 - /urus & /dashboard Command Controller

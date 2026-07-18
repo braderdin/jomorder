@@ -108,4 +108,12 @@ SET_CMD_RESP="$(curl -s -X POST \
   }')"
 echo "Phase44: setMyCommands response: ${SET_CMD_RESP}"
 # End: Phase 44 - Re-Sync 22 Native Commands
+
+# Start: Phase 46 - Dead Callback Repair Verification Note
+# Semua 22 command natif di atas TELAH diikat ke router callback yang hidup.
+# Phase 46 membaiki 3 callback mati: merchant_menu -> /senarai_menu,
+# merchant_analytics -> /laporan_jualan, status_refresh -> /status.
+# Selepas deploy, jalankan: bash bin/smoke-test.sh <WORKER_URL> dan sahkan
+# PH46:CB:merchant_menu / merchant_analytics / status_refresh = [PASS].
+# End: Phase 46 - Dead Callback Repair Verification Note
 # End: Phase 39 - Force Webhook Register

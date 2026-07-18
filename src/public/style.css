@@ -63,3 +63,22 @@ section .rounded-2xl {
   .reveal { opacity: 1; transform: none; }
 }
 /* End: JomOrder Phase 45 - Portal Custom Styles */
+
+/* Start: Phase 46 - CTA Pulse + Card Glow (Daftar 3 Langkah) */
+.cta-pulse {
+  animation: ctaPulse 2.4s ease-in-out infinite;
+}
+@keyframes ctaPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(0,240,255,0)); }
+  50% { transform: scale(1.04); filter: drop-shadow(0 0 18px rgba(0,240,255,0.55)); }
+}
+
+.card-glow {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+.card-glow:hover {
+  border-color: var(--cyber-neon);
+  box-shadow: 0 0 24px rgba(0,240,255,0.35);
+  transform: translateY(-6px) scale(1.02);
+}
+/* End: Phase 46 - CTA Pulse + Card Glow */

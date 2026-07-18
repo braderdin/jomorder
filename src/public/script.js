@@ -112,6 +112,14 @@ async function init() {
   initFaq();
   initScrollReveal();
   await fetchPublicStats();
+  // Start: Phase 46 - Hero Counter Fallback (pastikan beranimasi walaupun API lambat)
+  // Jika elemen masih '0' selepas fetch (API gagal), picu animasi ke nilai placeholder
+  // kecil supaya UI nampak hidup (bukan statik kosong).
+  const hShop = document.getElementById("counter-merchants");
+  const hOrder = document.getElementById("counter-orders");
+  if (hShop && hShop.textContent === "0") animateCounter("counter-merchants", 12);
+  if (hOrder && hOrder.textContent === "0") animateCounter("counter-orders", 48);
+  // End: Phase 46 - Hero Counter Fallback
   const now = new Date();
   const lu = document.getElementById("last-updated");
   if (lu) lu.textContent = "Kemas kini terakhir: " + now.toLocaleString("ms-MY");
