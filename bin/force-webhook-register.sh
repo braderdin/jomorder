@@ -45,7 +45,28 @@ echo "$RESPONSE"
 
 # Sahkan status webhook.
 echo "Phase39: Mengesahkan getWebhookInfo ..."
-curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo"
+WEBHOOK_INFO=$(curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo")
+echo "$WEBHOOK_INFO"
 echo ""
+
+# Start: Phase 42 - Webhook Live Verification (post-deploy)
+# Parse URL dari getWebhookInfo; sahkan ia point ke worker live kita.
+WEBHOOK_URL_CHECK=$(echo "$WEBHOOK_INFO" | grep -o '"url":"[^"]*"' | head -n1 | sed 's/"url":"//; s/"$//')
+if [[ -n "$WEBHOOK_URL_CHECK" && "$WEBHOOK_URL_CHECK" == "${WORKER_URL}/" ]]; then
+  echo "[PASS] Phase42: Webhook URL sepadan worker live: ${WEBHOOK_URL_CHECK}"
+else
+  echo "[RALAT] Phase42: Webhook URL TIDAK sepadan! Dijumpai: '${WEBHOOK_URL_CHECK}' (jangka: ${WORKER_URL}/)"
+  echo "[RALAT] Sila semak worker deploy berjaya sebelum webhook register."
+fi
+
+# Sahkan pending_update_count = 0 (tiada backlog).
+PENDING_COUNT=$(echo "$WEBHOOK_INFO" | grep -o '"pending_update_count":[0-9]*' | head -n1 | grep -o '[0-9]*')
+if [[ "$PENDING_COUNT" == "0" ]]; then
+  echo "[PASS] Phase42: pending_update_count=0 (tiada backlog)."
+else
+  echo "[AMARAN] Phase42: pending_update_count=${PENDING_COUNT} (mungkin ada backlog)."
+fi
+# End: Phase 42 - Webhook Live Verification
+
 echo "Phase39: Webhook register selesai."
 # End: Phase 39 - Force Webhook Register

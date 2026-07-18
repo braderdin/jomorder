@@ -6,6 +6,7 @@
 
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2 } from '../telegram';
+import { recordCommandTelemetry } from './command_telemetry';
 
 /**
  * withCommandGuard
@@ -23,10 +24,28 @@ export async function withCommandGuard<T>(
   fn: () => Promise<T>
 ): Promise<T | undefined> {
   try {
-    return await fn();
+    const result = await fn();
+    // Phase 42: record OK telemetry (fail-open).
+    try {
+      await recordCommandTelemetry(env, { command: commandLabel, chatId });
+    } catch {
+      // telemetry gagal tidak boleh block flow (Fasal 7 S4).
+    }
+    return result;
   } catch (err) {
     const msg = (err as Error).message;
     console.error(`[Phase40][Interceptor] ${commandLabel} throw:`, msg);
+    // Phase 42: record ERROR telemetry (fail-open).
+    try {
+      await recordCommandTelemetry(env, {
+        command: commandLabel,
+        chatId,
+        status: 'ERROR',
+        errorMessage: msg.slice(0, 200),
+      });
+    } catch {
+      // telemetry gagal tidak boleh block flow.
+    }
     try {
       await sendMessage(
         env,
@@ -53,6 +72,8 @@ export async function withSilentGuard<T>(
     return await fn();
   } catch (err) {
     console.error(`[Phase40][SilentGuard] ${commandLabel} throw:`, (err as Error).message);
+    // Phase 42: silent guard tiada env access; telemetry di-handle oleh
+    // caller yang ada env. Di sini hanya log soft (Fasal 7 S4 resilience).
     return undefined;
   }
 }

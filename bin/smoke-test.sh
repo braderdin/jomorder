@@ -182,6 +182,25 @@ fi
 # End: Phase 40 - Catch-All Error Interceptor Assertion
 
 echo "--------------------------------------------------"
+echo "--- Phase 42: Command Telemetry Table Verification ---"
+# Sahkan table command_telemetry wujud di Supabase (DDL 015 applied).
+# Guna anon key (public read tak dibenarkan, jadi jangkakan 401/403/200 = table ada).
+TEL_API="https://mafoxsvnfxqoujvotsfi.supabase.co/rest/v1/command_telemetry?select=id&limit=1"
+TEL_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+  -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZm94c3ZuZnhxb3Vqdm90c2ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTYwMjMsImV4cCI6MjA5OTc5MjAyM30.D1Wff14b5ykl5MpyQtp9khBR8BUSskhjbNLuXwyayB4" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZm94c3ZuZnhxb3Vqdm90c2ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTYwMjMsImV4cCI6MjA5OTc5MjAyM30.D1Wff14b5ykl5MpyQtp9khBR8BUSskhjbNLuXwyayB4" \
+  "$TEL_API" || echo "000")
+# 401/403 = table wujud tapi akses ditolak (RLS). 200 = read benar. 404 = table TIADA.
+if [[ "$TEL_CODE" =~ ^(200|401|403)$ ]]; then
+  echo "[PASS] Phase 42: command_telemetry table exists (HTTP ${TEL_CODE})"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "[FAIL] Phase 42: command_telemetry table MISSING (HTTP ${TEL_CODE}) - apply DDL 015"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+# End: Phase 42 - Command Telemetry Table Verification
+
+echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"
 
