@@ -3,9 +3,10 @@
 // Pindahan dari src/handlers.ts: onboarding, dashboard, order lifecycle, admin approval.
 import { Env, MerchantState } from '../types';
 import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from '../telegram';
-import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium, getMenuByKedaiId } from '../db';
+import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium, getMenuByKedaiId, toggleMenuAvailability } from '../db';
 import { setState, getState, invalidateSubscriptionCache, checkRateLimit, rateLimitKey } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
+import { answerCallbackQuery } from '../telegram';
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
 import { buildDecisionCaption } from '../services/admin';
 import { notifyCustomerOrderUpdate } from '../services/notifications';
@@ -136,6 +137,29 @@ export async function handleMerchantCallback(
     return true;
   }
   // End: Fasa 8 - Admin Approval Gateway callback
+
+  // Start: Phase 37 - Menu Availability Toggle callback (toggle_menu:<ID>)
+  // Peniaga togol status_tersedia item menu terus dari senarai menu (Fasal 6).
+  if (data.startsWith('toggle_menu:')) {
+    const menuItemId = Number(data.slice('toggle_menu:'.length));
+    if (!menuItemId || Number.isNaN(menuItemId)) return true;
+    const kedaiId = await getKedaiIdByMerchant(env, cb.from.id);
+    if (!kedaiId) {
+      await answerCallbackQuery(env, cb.id, 'Kedai tidak dijumpai');
+      return true;
+    }
+    const ok = await toggleMenuAvailability(env, menuItemId, kedaiId);
+    if (ok) {
+      await answerCallbackQuery(env, cb.id, 'Status menu dikemas kini');
+      // Re-render senarai menu terkini
+      await handleSenaraiMenu(env, cbChatId, cb.from.id);
+    } else {
+      await answerCallbackQuery(env, cb.id, 'Gagal kemas kini menu');
+    }
+    return true;
+  }
+  // End: Phase 37 - Menu Availability Toggle callback
+
   return false;
 }
 

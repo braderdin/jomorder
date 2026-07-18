@@ -101,6 +101,12 @@ export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787')
   await cbProbe('Callback: del_coupon', 'del_coupon:JOM10');
   // End: Phase 33 - 16-Command Pathway Audit Matrix
 
+  // Start: Phase 37 - 22-Command Conformance Injection (toggle_menu + pay_now)
+  // Liputi callback fasa 37: toggle ketersediaan menu + pengesahan bayaran.
+  await cbProbe('Callback: toggle_menu', 'toggle_menu:1');
+  await cbProbe('Callback: pay_now', 'pay_now:1:shop:123456789');
+  // End: Phase 37 - 22-Command Conformance Injection
+
   return reports;
 }
 

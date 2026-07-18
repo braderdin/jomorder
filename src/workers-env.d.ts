@@ -26,5 +26,16 @@ declare global {
     env: Record<string, unknown>,
     ctx: ExecutionContext
   ) => Response | Promise<Response>;
+
+  // Start: Phase 37 - Global Env Binding Hardening (Fasal 11 + Fasal 4 SOA)
+  // Cegah implicit any semasa event loop serverless: paksa fetch global &
+  // structuredClone diiktiraf sebagai module standard Workers runtime.
+  interface RequestInit {
+    cf?: unknown;
+  }
+  interface CacheStorage {
+    default: Cache;
+  }
+  // End: Phase 37 - Global Env Binding Hardening
 }
 // End: Phase 36 - Advanced Serverless Routing Shims
