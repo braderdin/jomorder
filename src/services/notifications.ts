@@ -46,7 +46,7 @@ export async function notifyMerchantNewOrder(env: Env, alert: NewOrderAlert): Pr
 /**
  * notifyCustomerOrderUpdate
  * Hantar alert masa nyata ke pembeli bila status pesanan berubah
- * (MEMASAK / DELIVERY / COMPLETED). Diikat ke customer_telegram_id.
+ * (MEMASAK / DELIVERY / COMPLETED / PREPARING / DELIVERED). Diikat ke customer_telegram_id.
  * Soft-fail: kesilapan hantar di-log senyap tanpa hentikan flow (Fasal 7 Strategy 4).
  */
 export async function notifyCustomerOrderUpdate(env: Env, alert: CustomerUpdateAlert): Promise<void> {
@@ -54,6 +54,8 @@ export async function notifyCustomerOrderUpdate(env: Env, alert: CustomerUpdateA
     alert.newStatus === 'MEMASAK' ? '🍳'
     : alert.newStatus === 'DELIVERY' ? '🛵'
     : alert.newStatus === 'COMPLETED' ? '🎉'
+    : alert.newStatus === 'PREPARING' ? '👨‍🍳'
+    : alert.newStatus === 'DELIVERED' ? '✅'
     : '📦';
   const caption =
     `${statusEmoji} *STATUS PESANAN KEMAS KINI*\n\n` +
@@ -63,5 +65,32 @@ export async function notifyCustomerOrderUpdate(env: Env, alert: CustomerUpdateA
     escapeMarkdownV2('Terima kasih menggunakan JomOrder! 🙏');
   await sendMessage(env, alert.customerTelegramId, caption, customerMenuKeyboard());
 }
+
+// Start: Phase 38 - Queue-Driven Instant Customer Dispatch
+/**
+ * notifyCustomerQueueUpdate
+ * Fire status update segera ke chat thread pelanggan bila peniaga mutasi
+ * queue (PENDING -> PREPARING -> DELIVERED). Dijana dari merchant_order.ts
+ * handleQueueNextCallback. Soft-fail selamat (Fasal 7 Strategy 4).
+ */
+export async function notifyCustomerQueueUpdate(
+  env: Env,
+  customerTelegramId: number,
+  orderId: string | number,
+  newStatus: string
+): Promise<void> {
+  const msg =
+    newStatus === 'PREPARING'
+      ? `👨‍🍳 Pesanan #${orderId} sedang disediakan!`
+      : newStatus === 'DELIVERED'
+      ? `🛵 Pesanan #${orderId} telah dihantar!`
+      : `📦 Pesanan #${orderId} -> ${newStatus}`;
+  try {
+    await sendMessage(env, customerTelegramId, escapeMarkdownV2(msg), customerMenuKeyboard());
+  } catch {
+    // Soft-fail (Fasal 7 Strategy 4): jangan crash flow utama.
+  }
+}
+// End: Phase 38 - Queue-Driven Instant Customer Dispatch
 
 // End: JomOrder Fasa 11 - Real-time Notification Engine (File 1)

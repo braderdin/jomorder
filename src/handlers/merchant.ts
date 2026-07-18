@@ -332,6 +332,32 @@ export async function handleMerchantMessage(
     return;
   }
 
+  // Start: Phase 38 - /urus_kedai Onboarding Redis Harmonization
+  // Route eksplisit untuk buka papan kedai; persist state ke Redis (Fasal 7 Strategy 2)
+  // supaya session panjang tidak hilang antara callback.
+  if (text === '/urus_kedai' || text === '/daftar') {
+    const exists = await checkMerchantExists(env, tgId);
+    if (exists) {
+      const st: MerchantState = {
+        merchant_telegram_id: tgId,
+        step: 'idle',
+        last_active: new Date().toISOString(),
+      };
+      await setState(env, st);
+      await sendMessage(env, chatId, escapeMarkdownV2('🏪 Kedai anda sudah berdaftar. Gunakan butang di bawah untuk urus operasi.'), merchantMenuKeyboard());
+      return;
+    }
+    const next: MerchantState = {
+      merchant_telegram_id: tgId,
+      step: 'awaiting_shop_name',
+      last_active: new Date().toISOString(),
+    };
+    await setState(env, next);
+    await sendMessage(env, chatId, escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:'), daftarKedaiKeyboard());
+    return;
+  }
+  // End: Phase 38 - /urus_kedai Onboarding Redis Harmonization
+
   await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), merchantMenuKeyboard());
 }
 

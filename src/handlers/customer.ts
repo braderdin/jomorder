@@ -247,7 +247,7 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
   const committedId = orderId ?? 0;
 
   // 3. Jana teks DuitNow QR & papar skrin bayaran (jumlah berdiskaun)
-  const qrText = generateDuitNowQrText(buffer.kedaiId, finalTotal, `JO-${committedId}`);
+  const qrText = generateDuitNowQrText(buffer.kedaiId, finalTotal, `JO-${committedId}`, buffer.kedaiId);
   const receipt = buildPaymentReceiptLayout({
     orderId: `JO-${committedId}`,
     merchantName: buffer.kedaiId,
@@ -427,12 +427,22 @@ export async function handleSejarahPesanan(
       await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
       return;
     }
-    const lines = rows
+    // Start: Phase 38 - Restrict archive view to TERMINAL states only (completed/rejected)
+    const filtered = rows.filter((r) => {
+      const s = (r.status_penghantaran || '').toUpperCase();
+      return s === 'COMPLETED' || s === 'REJECTED';
+    });
+    if (filtered.length === 0) {
+      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
+      return;
+    }
+    const lines = filtered
       .map((r) => {
         const tarikh = (r.created_at || '').slice(0, 10);
         return `#${r.id} \\- RM${(Number(r.jumlah_harga) || 0).toFixed(2)} \\[${r.status_penghantaran}\\] ${tarikh}`;
       })
       .join('\n');
+    // End: Phase 38 - Restrict archive view
     await sendMessage(env, chatId, escapeMarkdownV2('📜 SEJARAH PESANAN:\\n') + lines, customerMenuKeyboard());
   } catch {
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat baca sejarah pesanan.'), customerMenuKeyboard());

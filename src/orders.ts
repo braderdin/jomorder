@@ -4,7 +4,7 @@
 
 import { Env } from './types';
 import { LanggananStatus } from './subscription';
-import { updateStatusPenghantaran } from './db';
+import { updateStatusPenghantaran, restoreInventoryOnCancel } from './db';
 
 /** Kitar hayat pesanan (selaras rekod_pesanan.status_penghantaran). */
 export type OrderLifecycle = 'PENDING' | 'MEMASAK' | 'DELIVERY' | 'COMPLETED';
@@ -68,6 +68,30 @@ export function isSearchRestricted(merchantStatus: LanggananStatus): boolean {
 export function canCancelOrder(currentStatus: 'PENDING' | 'MEMASAK' | 'DELIVERY' | 'COMPLETED' | 'REJECTED'): boolean {
   return currentStatus === 'PENDING';
 }
+
+// Start: Phase 38 - Inventory Stock Recovery Shield
+/**
+ * restoreInventoryForCancelledOrder
+ * Pulihkan balik stok menu_makanan (status_tersedia=true) apabila pesanan
+ * dibatalkan semasa PENDING. Elak peniaga kehilangan item selepas cancel.
+ * Soft-fail: sebarang ralat ditelan (Fasal 7 Strategy 4) supaya cancel tetap lancar.
+ *
+ * @param env bindings Worker
+ * @param kedaiId UUID kedai (RLS isolation - Fasal 7 Strategy 1)
+ * @param items item pesanan yang perlu dipulihkan ke katalog
+ */
+export async function restoreInventoryForCancelledOrder(
+  env: Env,
+  kedaiId: string,
+  items: Array<{ item_id: string; kuantiti: number }>
+): Promise<void> {
+  try {
+    await restoreInventoryOnCancel(env, kedaiId, items);
+  } catch {
+    // Swallow - inventory recovery bukan blocker untuk cancel.
+  }
+}
+// End: Phase 38 - Inventory Stock Recovery Shield
 
 // Start: Fasa 5 - Order Lifecycle Persistence (DB commit on transition)
 /**

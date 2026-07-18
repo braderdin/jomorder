@@ -3,7 +3,7 @@
 // handleViewCart: parse JSONB cart buffer dari Upstash, kira total, papar breakdown mobile.
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, inlineKeyboard, answerCallbackQuery } from '../telegram';
-import { getState } from '../redis';
+import { getState, setState } from '../redis';
 
 /** Struktur cart buffer pelanggan (selari dengan customer.ts CartBuffer). */
 interface CartItem {
@@ -17,6 +17,7 @@ interface CartBuffer {
   items: CartItem[];
   total: number;
   discountedTotal?: number;
+  checkout_locked?: boolean;
 }
 
 /**
@@ -64,10 +65,26 @@ export async function handleViewCart(
     lines +
     escapeMarkdownV2(`\\n\\nJUMLAH: RM${grandTotal.toFixed(2)}`);
 
-  const keyboard = inlineKeyboard([
-    [{ text: '💳 Bayar Sekarang', callback_data: 'checkout_now' }],
-    [{ text: '🍔 Tambah Lagi', callback_data: 'browse_more' }],
-  ]);
+  // Start: Phase 38 - Cart Checkout Lock (elak duplicate checkout concurrent)
+  // Jika flag checkout_locked aktif, halang double-submit dengan button berbeza.
+  let keyboard;
+  if (buffer.checkout_locked === true) {
+    keyboard = inlineKeyboard([
+      [{ text: '⏳ Sedang Diproses', callback_data: 'checkout_blocked' }],
+      [{ text: '🍔 Tambah Lagi', callback_data: 'browse_more' }],
+    ]);
+  } else {
+    // Kunci segera supaya request concurrent tidak spawn checkout berganda.
+    const nextBuffer: CartBuffer = { ...buffer, checkout_locked: true };
+    if (state) {
+      await setState(env, { ...state, cart_buffer: nextBuffer } as never);
+    }
+    keyboard = inlineKeyboard([
+      [{ text: '💳 Bayar Sekarang', callback_data: 'checkout_now' }],
+      [{ text: '🍔 Tambah Lagi', callback_data: 'browse_more' }],
+    ]);
+  }
+  // End: Phase 38 - Cart Checkout Lock
 
   await sendMessage(env, chatId, header, keyboard);
   return true;

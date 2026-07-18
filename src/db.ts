@@ -456,6 +456,36 @@ export async function updateMerchantCoordinates(
     return false; // Soft-fail (Fasal 7 Strategy 4)
   }
 }
+// Start: Phase 38 - Inventory Stock Recovery on Cancel (Fasal 7 Strategy 1 RLS)
+/**
+ * restoreInventoryOnCancel
+ * Pulihkan status_tersedia=true untuk item menu yang dibatalkan dari pesanan
+ * PENDING (supaya peniaga tidak kehilangan stok). Diikat kedai_id (RLS isolation).
+ * Soft-fail: return false jika mana-mana PATCH gagal (tidak crash caller).
+ */
+export async function restoreInventoryOnCancel(
+  env: Env,
+  kedaiId: string,
+  items: Array<{ item_id: string; kuantiti: number }>
+): Promise<boolean> {
+  let allOk = true;
+  for (const it of items) {
+    const url = `${env.SUPABASE_URL}/rest/v1/menu_makanan?id=eq.${encodeURIComponent(it.item_id)}&kedai_id=eq.${encodeURIComponent(kedaiId)}`;
+    try {
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+        body: JSON.stringify({ status_tersedia: true }),
+      });
+      if (!res.ok) allOk = false;
+    } catch {
+      allOk = false;
+    }
+  }
+  return allOk;
+}
+// End: Phase 38 - Inventory Stock Recovery on Cancel
+
 // End: Phase 37 - Merchant Catalog & Location Data Layers
 
 // End: Phase 24 - Dynamic Menu Browsing

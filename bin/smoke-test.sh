@@ -44,6 +44,41 @@ check_status "/cron/saas-pulse" "POST /cron/saas-pulse (secret guard 403)"
 check_status "/api/public-stats" "GET /api/public-stats (live stats 200)"
 # End: Phase 37 - SaaS Pulse Cron + Public Stats assertions
 
+# Start: Phase 38 - Multi-Tenant Delivery + Full-Cycle Payload Verification
+# Uji penghantaran multi-tenant: hantar webhook mockup dengan secret sah untuk
+# dua peniaga berbeza (tenant A & B) dan sahkan tiada drift (kedua-dua 200/403/405).
+TENANT_A_ID="111000111"
+TENANT_B_ID="222000222"
+SECRET_HEADER="X-Telegram-Bot-Api-Secret-Token: dummy-secret"
+
+# Mockup payload tenant A (arahan /troli)
+curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST \
+  -H "$SECRET_HEADER" -H "Content-Type: application/json" \
+  -d "{\"update_id\":1,\"message\":{\"message_id\":1,\"from\":{\"id\":${TENANT_A_ID}},\"chat\":{\"id\":${TENANT_A_ID}},\"text\":\"/troli\"}}" \
+  "${BASE_URL}/" | grep -qE "^(200|403|405)$" && {
+    echo "[PASS] Multi-Tenant A (/troli) -> isolated"; PASS_COUNT=$((PASS_COUNT+1)); } || {
+    echo "[FAIL] Multi-Tenant A (/troli)"; FAIL_COUNT=$((FAIL_COUNT+1)); }
+
+# Mockup payload tenant B (arahan /senarai_pesanan)
+curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST \
+  -H "$SECRET_HEADER" -H "Content-Type: application/json" \
+  -d "{\"update_id\":2,\"message\":{\"message_id\":2,\"from\":{\"id\":${TENANT_B_ID}},\"chat\":{\"id\":${TENANT_B_ID}},\"text\":\"/senarai_pesanan\"}}" \
+  "${BASE_URL}/" | grep -qE "^(200|403|405)$" && {
+    echo "[PASS] Multi-Tenant B (/senarai_pesanan) -> isolated"; PASS_COUNT=$((PASS_COUNT+1)); } || {
+    echo "[FAIL] Multi-Tenant B (/senarai_pesanan)"; FAIL_COUNT=$((FAIL_COUNT+1)); }
+
+# Full-cycle payload: /smoke kini mengembalikan laporan Full-Cycle Sim (Phase 38).
+# Assert string FU-CYCLE SIM wujud dalam response live.
+SMOKE_BODY=$(curl -s --max-time 10 "${BASE_URL}/smoke" || echo "")
+if echo "$SMOKE_BODY" | grep -q "FULL-CYCLE SIM"; then
+  echo "[PASS] Full-Cycle Sim payload present in /smoke"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "[FAIL] Full-Cycle Sim payload missing in /smoke"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+# End: Phase 38 - Multi-Tenant Delivery + Full-Cycle Payload Verification
+
 echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"

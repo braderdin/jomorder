@@ -4,6 +4,7 @@
 import { Env } from '../types';
 import { escapeMarkdownV2, sendMessage } from '../telegram';
 import { fetchSaasMetrics } from '../services/analytics';
+import { broadcastAnnouncementSlots } from '../services/admin';
 
 /** Format angka RM dengan 2 titik perpuluhan + pemisah ribu. */
 function fmtRm(value: number): string {
@@ -83,19 +84,14 @@ export async function handlePengumumanBroadcast(
       await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada peniaga aktif untuk dihantar pengumuman.'));
       return true;
     }
-    let sent = 0;
-    for (const r of rows) {
-      const id = Number(r.merchant_telegram_id);
-      if (!id) continue;
-      await sendMessage(
-        env,
-        id,
-        escapeMarkdownV2('📢 PENGUMUMAN JOMORDER:\\n') +
-          escapeMarkdownV2('Sistem dalam penyelenggaraan berkala. Terima kasih atas sokongan anda!')
-      );
-      sent++;
-    }
-    await sendMessage(env, chatId, escapeMarkdownV2(`✅ Pengumuman dihantar ke ${sent} peniaga.`));
+    const ids = rows.map((r) => Number(r.merchant_telegram_id)).filter((id) => id > 0);
+    // Phase 38: guna batch rate-limiter slot engine dari services/admin.ts
+    const result = await broadcastAnnouncementSlots(
+      env,
+      ids,
+      '📢 PENGUMUMAN JOMORDER:\\nSistem dalam penyelenggaraan berkala. Terima kasih atas sokongan anda!'
+    );
+    await sendMessage(env, chatId, escapeMarkdownV2(`✅ Pengumuman dihantar ke ${result.sent}/${result.total} peniaga.`));
   } catch {
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat menghantar pengumuman.'));
   }

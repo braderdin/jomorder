@@ -31,12 +31,27 @@ export interface ReceiptUploadResult {
  * Menjana string teks DuitNow QR standard (EMVCo-ish static payload).
  * Format dipermudah: mengandungi ID peniaga + amaun + rujukan pesanan.
  */
+// Start: Phase 38 - DuitNow Tenant Signature Lock
+/**
+ * generateDuitNowQrText
+ * Menjana string teks DuitNow QR standard (EMVCo-ish static payload).
+ * Format dipermudah: mengandungi ID peniaga + amaun + rujukan pesanan.
+ * tenantId + signature di-inject untuk kunci collision multi-tenant (Fasal 7 Strategy 1).
+ */
 export function generateDuitNowQrText(
   merchantId: string,
   amount: number,
-  orderRef: string
+  orderRef: string,
+  tenantId: string = merchantId
 ): string {
   const cleanAmount = amount.toFixed(2);
+  // Signature ringkas mengunci bahawa QR ini milik tenant + amount tak collide.
+  // Cloudflare Workers: guna TextEncoder + btoa (tiada Buffer global).
+  const raw = `${merchantId}:${cleanAmount}:${orderRef}:${tenantId}`;
+  const bytes = new TextEncoder().encode(raw);
+  let bin = '';
+  bytes.forEach((b) => { bin += String.fromCharCode(b); });
+  const signature = btoa(bin).slice(0, 12);
   // DuitNow static payload ringkas (bukan penuh EMVCo, cukup untuk display bot)
   return [
     '00020101', // Payload format indicator
@@ -44,9 +59,11 @@ export function generateDuitNowQrText(
     `MY.DUITNOW.${merchantId}`,
     `54${cleanAmount.length.toString().padStart(2, '0')}${cleanAmount}`, // Amount
     `62${orderRef.length.toString().padStart(2, '0')}${orderRef}`, // Reference
+    `SIG${signature}`, // Phase 38: tenant-bound signature lock
     '6304', // CRC placeholder
   ].join('|');
 }
+// End: Phase 38 - DuitNow Tenant Signature Lock
 
 /**
  * validateReceiptUpload
