@@ -164,6 +164,7 @@ PROJECT_SYNC_MASTER.md
 .env*
 .clineignore
 .agents/
+skills-lock.json
 
 # Start: Phase 50 - Dev Tooling Artifacts (jangan serabut GitHub)
 # Wrangler dev log dari bin/dev-watch.sh + wrangler dev tmp
