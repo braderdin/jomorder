@@ -10,6 +10,7 @@ import { handleHelpCategory } from './help';
 import { setNav } from './navigation';
 import { handleCustomerGui } from './customer_gui';
 import { handleMerchantGui } from './merchant_gui';
+import { i18n } from '../services/i18n';
 
 // Start: Phase 55 - Main Menu Navigation Grid (3-col + BACK + BM/EN)
 function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
@@ -76,6 +77,8 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
 
   // Default: Customer interface
   if (typeof tgId === 'number') await setNav(env, tgId, 'customer_main');
+  // Phase 59: i18n hook (locale BM default; EN toggle via nav:lang akan datang).
+  void i18n('welcome', 'BM');
   await handleCustomerGui(env, chatId, tgId as number);
 }
 

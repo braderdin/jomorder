@@ -108,4 +108,23 @@ export function reorderKeyboard(orderId: number, kedaiId: string) {
   };
 }
 // End: Phase 58 - Rich Menu Item Card Helper
+// Start: Phase 59 - Shop Photo Card Caption (rich item card with image hint)
+/**
+ * buildShopCaption
+ * Bina caption kedai dengan badge foto tersedia (Fasal 8 photo card).
+ * Jika kedai ada menu_photo_url, tunjuk emoji 📸 supaya pelanggan tahu
+ * preview imej ada.
+ */
+export function buildShopCaption(args: {
+  namaKedai: string;
+  adaFoto: boolean;
+  jumlahItem: number;
+}): string {
+  const fotoBadge = args.adaFoto ? ' 📸' : '';
+  const line1 = `🏪 *${args.namaKedai}${fotoBadge}*`;
+  const line2 = `📋 ${args.jumlahItem} hidangan tersedia`;
+  return `${line1}\n${line2}`;
+}
+// End: Phase 59 - Shop Photo Card Caption
+
 // End: Phase 55 - UI Helpers

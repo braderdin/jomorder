@@ -110,6 +110,21 @@ export async function runSmokeTests(env: Env, baseUrl = 'http://localhost:8787')
   await cbProbe('Callback: pay_now', 'pay_now:1:shop:123456789');
   // End: Phase 37 - 22-Command Conformance Injection
 
+  // Start: Phase 59 - GUI Callback Matrix (nested BACK + role nav + zero-command)
+  // Audit penuh callback GUI dari Phase 58: nav grid, persistent keyboard,
+  // nested back chain, onboarding, rating. Setiap route dijangka 200 (Fasal 10).
+  const guiCallbacks = [
+    'nav:main', 'nav:customer', 'nav:merchant', 'nav:admin', 'nav:lang', 'nav:help',
+    'customer_gui', 'merchant_gui', 'onboard_shop', 'onboard_name', 'upload_qr', 'share_loc',
+    'open_shops', 'open_cart', 'open_promo', 'open_history', 'open_profile',
+    'back:customer', 'back:merchant', 'back:cart', 'back:shop', 'rate:1:5',
+    'merchant_menu', 'merchant_analytics', 'status_refresh', 'merchant_orders', 'merchant_settings',
+  ];
+  for (const d of guiCallbacks) {
+    await cbProbe(`GUI: ${d.split(':')[0]}`, d);
+  }
+  // End: Phase 59 - GUI Callback Matrix
+
   return reports;
 }
 

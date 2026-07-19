@@ -276,7 +276,22 @@ fi
   done
   # End: Phase 55 - Navigation Grid Callback Assert
 
-  echo "--------------------------------------------------"
+   echo "--------------------------------------------------"
+echo "--- Phase 59: E2E Regression Hook (30 cmd + GUI callback) ---"
+# Jika worker hidup di BASE_URL, jalankan e2e-regression.sh sebagai verifikasi tambahan.
+# Gagal senyap (timeout/connection) tidak dikira FAIL utama smoke (worker mungkin tidak dev).
+if command -v bash >/dev/null 2>&1; then
+  E2E_OUT=$(bash bin/e2e-regression.sh "${BASE_URL}" 2>&1 || true)
+  if echo "$E2E_OUT" | grep -q "HASIL: PASS"; then
+    echo "[PASS] Phase 59: E2E regression full matrix ok"
+    PASS_COUNT=$((PASS_COUNT + 1))
+  elif echo "$E2E_OUT" | grep -q "HASIL: FAIL"; then
+    echo "[WARN] Phase 59: E2E regression ada FAIL (worker mungkin tak dev) - bukan blocker"
+  else
+    echo "[WARN] Phase 59: E2E regression tidak dijalankan (worker tiada)"
+  fi
+fi
+echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"
 

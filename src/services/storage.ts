@@ -35,17 +35,16 @@ export interface UploadResult {
   error?: string;
 }
 
-// Validasi mentah: saiz + magic byte + paksa WebP (Fasal 8 quality 80-85% di client).
+// Validasi mentah: saiz + magic byte imej sahaja (Fasal 8: 2MB cap kekal).
+// WebP disyorkan (client compress 80-85%) tapi PNG/JPEG/GIF diterima supaya
+// upload dari phone (JPEG) tidak gagal. Compression auto di client via landing page.
 export function validateImageAsset(data: Uint8Array): { ok: boolean; reason?: string } {
   if (data.byteLength === 0) return { ok: false, reason: 'Fail kosong' };
   if (data.byteLength > MAX_BYTES) {
-    return { ok: false, reason: `Saiz ${data.byteLength} byte melebihi had 2MB` };
+    return { ok: false, reason: `Saiz ${(data.byteLength / 1_000_000).toFixed(1)}MB melebihi had 2MB` };
   }
   if (!matchSignature(data) && !isWebp(data)) {
     return { ok: false, reason: 'Bukan imej sah (tiada magic byte PNG/JPEG/GIF/WebP)' };
-  }
-  if (!isWebp(data)) {
-    return { ok: false, reason: 'Format mesti WebP (Fasal 8: compress 80-85% dulu)' };
   }
   return { ok: true };
 }

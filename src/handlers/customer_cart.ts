@@ -6,6 +6,7 @@ import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, customerCommandGrid, inlineKeyboard, answerCallbackQuery, customerReplyKeyboard } from '../telegram';
 import { getState, setState } from '../redis';
 import { reorderKeyboard } from '../services/ui_helpers';
+import { i18n } from '../services/i18n';
 
 /**
  * dismissSpinnerFast
@@ -66,7 +67,7 @@ export async function handleViewCart(
     await sendMessage(
       env,
       chatId,
-      escapeMarkdownV2('🛒 Troli anda kosong.\\n\\n') +
+      escapeMarkdownV2(i18n('cart_empty', 'BM') + '\\n\\n') +
       escapeMarkdownV2('Jom makan dulu? Pilih kedai berdekatan dan tambah menu ke troli! 🍔'),
       inlineKeyboard([
         [{ text: '🏪 Cari Kedai', callback_data: 'open_nearby' }],

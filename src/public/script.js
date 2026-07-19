@@ -106,15 +106,26 @@ function initScrollReveal() {
   items.forEach((el) => obs.observe(el));
 }
 
-// Start: Phase 47 - BM/EN Language Toggle
+// Start: Phase 47 - BM/EN Language Toggle (Phase 59: data-i18n driven)
 const LANG_STRINGS = {
-  ms: { hero_sub: 'Platform Mikro-SaaS Multi-Tenant RM0 Kos Operasi' },
-  en: { hero_sub: 'Multi-Tenant Micro-SaaS Platform RM0 Operating Cost' },
+  ms: {
+    hero_sub: 'Sistem pesanan F&B automatik berkuasa bot Telegram. Peniaga boleh terima pesanan, urus menu, dan terima bayaran DuitNow tanpa kos langganan bulanan.',
+    flow1_t: '1. Kongsi Lokasi',
+    flow1_d: 'Tekan butang lokasi, jumpa kedai berdekatan.',
+  },
+  en: {
+    hero_sub: 'Automated F&B ordering system powered by Telegram bot. Merchants accept orders, manage menu, and receive DuitNow payment with zero monthly cost.',
+    flow1_t: '1. Share Location',
+    flow1_d: 'Tap the location button, find nearby shops.',
+  },
 };
 function applyLang(lang) {
   const s = LANG_STRINGS[lang] || LANG_STRINGS.ms;
-  const sub = document.querySelector('p.text-xl');
-  if (sub) sub.innerHTML = s.hero_sub;
+  // Phase 59: toggle semua elemen data-i18n
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n');
+    if (s[key]) el.textContent = s[key];
+  });
   const toggle = document.getElementById('lang-toggle');
   if (toggle) toggle.textContent = lang === 'en' ? '🌐 EN / BM' : '🌐 BM / EN';
   document.documentElement.lang = lang;

@@ -12,6 +12,7 @@ import { buildDecisionCaption } from '../services/admin';
 import { notifyCustomerOrderUpdate } from '../services/notifications';
 import { createCoupon, listCoupons } from '../services/discounts';
 import { uploadMerchantAsset } from '../services/storage';
+import { guardUpload } from '../services/image_optimize';
 
 // Telegram Bot API base (Fasal 6 - native file send endpoint).
 const TELEGRAM_API = 'https://api.telegram.org/bot';
@@ -621,6 +622,12 @@ export async function handleMerchantPhoto(
   if (!st || (st as unknown as { step?: string }).step !== 'awaiting_qr_upload') return false;
 
   try {
+    // 0. Guard storan sebelum download (jimat bandwidth, Fasal 8).
+    const guard = await guardUpload(env, tgId, 2_000_000);
+    if (!guard.ok) {
+      await sendMessage(env, chatId, escapeMarkdownV2(`⚠️ ${guard.reason ?? 'Storan penuh'}`));
+      return true;
+    }
     // 1. Dapatkan path fail dari Telegram getFile
     const gfUrl = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`;
     const gfRes = await fetch(gfUrl, { method: 'GET' });

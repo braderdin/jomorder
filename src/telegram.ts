@@ -1,6 +1,7 @@
 // Start: JomOrder Fasa 3 - Telegram API Utility Module
 // Fasal 6 (Escape MarkdownV2/HTML) + Fasal 4 (SOA)
 import { Env, TelegramApiResponse, TelegramUpdate } from './types';
+import { bridgeSendMessage, bridgeSendPhoto } from './services/telegram_retry_bridge';
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 
@@ -36,12 +37,7 @@ export async function sendMessage(
   if (replyMarkup) payload.reply_markup = replyMarkup;
   else if (extraReplyKeyboard) payload.reply_markup = extraReplyKeyboard;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  return (await res.json()) as TelegramApiResponse;
+  return bridgeSendMessage(env, chatId, text, 'MarkdownV2', replyMarkup ?? extraReplyKeyboard);
 }
 
 /** Hantar foto ke chat menggunakan Telegram Bot API sendPhoto. */
@@ -49,7 +45,8 @@ export async function sendPhoto(
   env: Env,
   chatId: number,
   photo: string,
-  caption?: string
+  caption?: string,
+  replyMarkup?: object
 ): Promise<TelegramApiResponse> {
   const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
   const payload: Record<string, unknown> = {
@@ -60,12 +57,8 @@ export async function sendPhoto(
     payload.caption = caption;
     payload.parse_mode = 'MarkdownV2';
   }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  return (await res.json()) as TelegramApiResponse;
+  if (replyMarkup) payload.reply_markup = replyMarkup;
+  return bridgeSendPhoto(env, chatId, photo, caption, replyMarkup);
 }
 
 /** Template Custom Keyboard - Menu Peniaga (Fasal 6 mobile-optimized, max 2-3 btn/row) */

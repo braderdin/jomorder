@@ -163,7 +163,7 @@ export async function routeCallbackQuery(
     }
     if (data === 'nav:admin') {
       await answerCallbackQuery(env, cb.id);
-      await sendMessage(env, cbChatId, escapeMarkdownV2('🛡️ Pentadbir: taip /admin_stats atau /pengumuman'), navGrid());
+      await sendMessage(env, cbChatId, escapeMarkdownV2('🛡️ Pentadbir: taip /admin\\_stats atau /pengumuman'), navGrid());
       return true;
     }
     if (data === 'nav:help') {

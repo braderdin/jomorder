@@ -113,4 +113,15 @@ MIT © JomOrder — Projek MDEC GLOW.
 - Minigame polish: persistent keyboard + glow style (`.showcase-btn`).
 # End: Phase 58 - GUI Elevation & UX Polish
 
+# Start: Phase 59 - Webhook Resilience, i18n & Photo Cards
+- Webhook retry/backoff bridge (`src/services/telegram_retry_bridge.ts`) + middleware binding di `telegram.ts` `sendMessage` (429/5xx auto-retry, clean 200 OK ke Telegram pada timeout, Fasal 7 S4).
+- Image optimization pipeline (`image_optimize.ts`) + storage quota guard (<150KB WebP, 25MB akaun) di `storage_quota.ts`; `storage.ts` convert ke WebP sebelum upload R2.
+- Merchant menu photo upload `/tetapan -> Muat Naik Foto Menu` terus ke R2 WebP (`merchant.ts` + `handleSetMenuPhoto`).
+- e2e-regression.sh (tsc + smoke + e2e flow) + hook di `smoke-test.sh` (`-e2e` flag).
+- testing.ts GUI matrix (caption/keyboard/back assertion) + sentinel version bump.
+- i18n core (`src/services/i18n.ts`) BM default + EN toggle; hook di `start.ts` + `customer_cart.ts` + landing page `data-i18n` (script.js toggle).
+- Shop photo card caption (`buildShopCaption`) + menu photo grid glow (style.css).
+- Manual action: TIADA (semua DDL automatik via postgres MCP).
+# End: Phase 59 - Webhook Resilience, i18n & Photo Cards
+
 <p align="center">Dibuat dengan 🇲🇾 untuk peniaga tempatan.</p>

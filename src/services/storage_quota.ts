@@ -5,7 +5,7 @@
 import { Env } from '../types';
 
 const QUOTA_KEY_PREFIX = 'jo:quota:';
-const MAX_BYTES_PER_ACCOUNT = 20_000_000; // 20MB hard cap (Fasal 8 relaxed but bounded)
+const MAX_BYTES_PER_ACCOUNT = 25_000_000; // 25MB hard cap (Fasal 8)
 
 const quotaKey = (tgId: number) => `${QUOTA_KEY_PREFIX}${tgId}`;
 
@@ -33,6 +33,11 @@ export async function getUsage(env: Env, tgId: number): Promise<number> {
 export async function checkQuota(env: Env, tgId: number, incomingBytes: number): Promise<boolean> {
   const used = await getUsage(env, tgId);
   return used + incomingBytes <= MAX_BYTES_PER_ACCOUNT;
+}
+
+/** Alias untuk image_optimize.guardUpload (Fasal 8 25MB account cap). */
+export async function getStorageUsageBytes(env: Env, tgId: number): Promise<number> {
+  return getUsage(env, tgId);
 }
 
 /** Tambah usage selepas upload berjaya. */
