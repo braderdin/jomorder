@@ -8,6 +8,7 @@ import {
   customerMenuKeyboard,
   merchantMenuKeyboard,
   answerCallbackQuery,
+  sendPhoto,
 } from '../telegram';
 import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState, getMenuByKedaiId, getMerchantProfileSafe } from '../db';
 import { getState, setState } from '../redis';
@@ -257,6 +258,25 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
     deliveryLat: buffer.deliveryLat,
     deliveryLng: buffer.deliveryLng,
   });
+  // Start: Phase 51 - Real QR image display (fetch duitnow_qr_url from shop)
+  // Jika kedai ada muat naik QR DuitNow ke R2, papar imej sebenar juga.
+  let qrImageUrl: string | null = null;
+  try {
+    const shopRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(buffer.kedaiId)}&select=duitnow_qr_url`,
+      { method: 'GET', headers: supabaseHeaders(env) }
+    );
+    if (shopRes.ok) {
+      const shopRows = (await shopRes.json()) as Array<{ duitnow_qr_url?: string }>;
+      if (Array.isArray(shopRows) && shopRows[0]?.duitnow_qr_url) {
+        qrImageUrl = shopRows[0].duitnow_qr_url;
+      }
+    }
+  } catch {
+    // soft-fail: terus guna teks QR
+  }
+  // End: Phase 51 - Real QR image display
+
   await sendMessage(
     env,
     chatId,
@@ -265,6 +285,9 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
       inline_keyboard: [[{ text: '✅ Saya Dah Bayar', callback_data: `pay_now:${committedId}:${buffer.kedaiId}:${tgId}` }]],
     }
   );
+  if (qrImageUrl) {
+    await sendPhoto(env, chatId, qrImageUrl, `📷 *Imbas QR DuitNow ini untuk bayar RM${finalTotal.toFixed(2)}*`);
+  }
 }
 
 // Start: Phase 24 - Dynamic Menu Browsing & Interactive Cart Populatio

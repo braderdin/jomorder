@@ -116,4 +116,13 @@ echo "Phase44: setMyCommands response: ${SET_CMD_RESP}"
 # Selepas deploy, jalankan: bash bin/smoke-test.sh <WORKER_URL> dan sahkan
 # PH46:CB:merchant_menu / merchant_analytics / status_refresh = [PASS].
 # End: Phase 46 - Dead Callback Repair Verification Note
+
+# Start: Phase 51 - Cron Route Deployment Note
+# Selepas deploy, pastikan 3 cron route hidup dengan trigger test:
+#   curl -X POST -H "X-Telegram-Bot-Api-Secret-Token: $SECRET_TOKEN" ${WORKER_URL}/cron/daily-digest
+#   curl -X POST -H "X-Telegram-Bot-Api-Secret-Token: $SECRET_TOKEN" ${WORKER_URL}/cron/coupon-sweep
+#   curl -X POST -H "X-Telegram-Bot-Api-Secret-Token: $SECRET_TOKEN" ${WORKER_URL}/cron/maintenance
+# Jika return 200 JSON {status:OK} = cron wired. Jika 403 = secret salah.
+# End: Phase 51 - Cron Route Deployment Note
+
 # End: Phase 39 - Force Webhook Register

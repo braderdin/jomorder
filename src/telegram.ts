@@ -40,6 +40,30 @@ export async function sendMessage(
   return (await res.json()) as TelegramApiResponse;
 }
 
+/** Hantar foto ke chat menggunakan Telegram Bot API sendPhoto. */
+export async function sendPhoto(
+  env: Env,
+  chatId: number,
+  photo: string,
+  caption?: string
+): Promise<TelegramApiResponse> {
+  const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
+  const payload: Record<string, unknown> = {
+    chat_id: chatId,
+    photo,
+  };
+  if (caption) {
+    payload.caption = caption;
+    payload.parse_mode = 'MarkdownV2';
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return (await res.json()) as TelegramApiResponse;
+}
+
 /** Template Custom Keyboard - Menu Peniaga (Fasal 6 mobile-optimized, max 2-3 btn/row) */
 export function merchantMenuKeyboard() {
   return {

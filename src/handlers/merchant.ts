@@ -2,7 +2,7 @@
 // Fasal 4 (SOA) + Fasal 7 Strategy 2 (state) + Fasal 6 (escape/keyboard)
 // Pindahan dari src/handlers.ts: onboarding, dashboard, order lifecycle, admin approval.
 import { Env, MerchantState } from '../types';
-import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from '../telegram';
+import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, sendPhoto } from '../telegram';
 import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium, getMenuByKedaiId, toggleMenuAvailability } from '../db';
 import { setState, getState, invalidateSubscriptionCache, checkRateLimit, rateLimitKey } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
@@ -11,6 +11,10 @@ import { transitionOrderStatus, OrderLifecycle } from '../orders';
 import { buildDecisionCaption } from '../services/admin';
 import { notifyCustomerOrderUpdate } from '../services/notifications';
 import { createCoupon, listCoupons } from '../services/discounts';
+import { uploadMerchantAsset } from '../services/storage';
+
+// Telegram Bot API base (Fasal 6 - native file send endpoint).
+const TELEGRAM_API = 'https://api.telegram.org/bot';
 
 /** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
 function daftarKedaiKeyboard() {
@@ -598,6 +602,82 @@ export async function handleTambahMenu(
 // End: Phase 41 - 22 Command BM Activation (handleTambahMenu export)
 
 // End: Phase 37 - Merchant Catalog & Location Hooks
+
+// Start: Phase 51 - R2 QR Upload Photo Handler (Fasal 8 storage wiring)
+/**
+ * handleMerchantPhoto
+ * Tangkap foto dari peniaga (state awaiting_qr_upload), download dari Telegram
+ * via getFile, upload ke R2 (uploadMerchantAsset), dan patch duitnow_qr_url
+ * di senarai_kedai. Soft-fail: mesej ralat tanpa crash (Fasal 7 Strategy 4).
+ * @returns true jika foto diuruskan (QR upload path)
+ */
+export async function handleMerchantPhoto(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  fileId: string
+): Promise<boolean> {
+  const st = await getState(env, tgId);
+  if (!st || (st as unknown as { step?: string }).step !== 'awaiting_qr_upload') return false;
+
+  try {
+    // 1. Dapatkan path fail dari Telegram getFile
+    const gfUrl = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`;
+    const gfRes = await fetch(gfUrl, { method: 'GET' });
+    if (!gfRes.ok) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil fail imej. Cuba lagi.'));
+      return true;
+    }
+    const gf = (await gfRes.json()) as { ok?: boolean; result?: { file_path?: string } };
+    if (!gf.ok || !gf.result?.file_path) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Fail tidak sah. Cuba lagi.'));
+      return true;
+    }
+    // 2. Download byte imej
+    const dlUrl = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/${gf.result.file_path}`;
+    const dlRes = await fetch(dlUrl, { method: 'GET' });
+    if (!dlRes.ok) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal muat turun imej. Cuba lagi.'));
+      return true;
+    }
+    const buf = new Uint8Array(await dlRes.arrayBuffer());
+
+    // 3. Upload ke R2 (validasi WebP + 2MB auto-dalam storage.ts)
+    const up = await uploadMerchantAsset(env, tgId, 'duitnow_qr', buf);
+    if (!up.success || !up.url) {
+      await sendMessage(env, chatId, escapeMarkdownV2(`⚠️ Gagal simpan QR: ${up.error ?? 'R2 tiada'}`));
+      return true;
+    }
+
+    // 4. Patch duitnow_qr_url ke senarai_kedai (RLS bind tgId)
+    const kedaiId = await getKedaiIdByMerchant(env, tgId);
+    if (kedaiId) {
+      const patchUrl = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}`;
+      await fetch(patchUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({ duitnow_qr_url: up.url }),
+      });
+    }
+
+    // 5. Reset state + confirm
+    await setState(env, {
+      merchant_telegram_id: tgId,
+      step: 'idle',
+      last_active: new Date().toISOString(),
+    });
+    await sendPhoto(env, chatId, up.url, '✅ *QR DuitNow berjaya dimuat naik!* Pelanggan akan lihat QR ini semasa checkout\\.');
+    return true;
+  } catch {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem semasa muat naik. Cuba sebentar lagi.'));
+    return true;
+  }
+}
+// End: Phase 51 - R2 QR Upload Photo Handler (Fasal 8 storage wiring)
 
 // End: Phase 23 - Merchant Geolocation Intercept
 

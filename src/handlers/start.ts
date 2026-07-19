@@ -113,4 +113,46 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
   await sendMessage(env, chatId, text, startQuickActionKeyboard());
 }
 
+// Start: Phase 51 - Adaptive Welcome Card (role + time-aware greeting)
+/**
+ * handleAdaptiveWelcome
+ * Papar kad alu-aluan adaptif berdasarkan:
+ *  - role (merchant vs customer via checkMerchantExists)
+ *  - waktu (pagi/tengahari/petang/malam) untuk sapaan dinamik
+ * Soft-fail: jika DB gagal, anggap customer + greeting neutral.
+ */
+export async function handleAdaptiveWelcome(env: Env, chatId: number, user: TelegramUser | undefined): Promise<void> {
+  const firstName = user?.first_name || 'Pengguna';
+  const hour = new Date().getHours();
+  let greeting = 'Selamat datang';
+  if (hour < 12) greeting = 'Selamat pagi';
+  else if (hour < 15) greeting = 'Selamat tengahari';
+  else if (hour < 19) greeting = 'Selamat petang';
+  else greeting = 'Selamat malam';
+
+  let isMerchant = false;
+  try {
+    if (user?.id) isMerchant = await checkMerchantExists(env, user.id);
+  } catch {
+    isMerchant = false; // soft-fail
+  }
+
+  if (isMerchant) {
+    const text =
+      escapeMarkdownV2(`🌟 ${greeting}, ${firstName}\\n\\n`) +
+      escapeMarkdownV2('Papan pemerintah kedai anda:\\n') +
+      escapeMarkdownV2('🟢 Buka/Tutup · 📦 Pesanan · 📊 Laporan\\n\\n') +
+      escapeMarkdownV2('Taip /urus untuk teruskan. Selamat berniaga! 🇲🇾');
+    await sendMessage(env, chatId, text, merchantMenuKeyboard());
+  } else {
+    const text =
+      escapeMarkdownV2(`🌟 ${greeting}, ${firstName}\\n\\n`) +
+      escapeMarkdownV2('Cari makan berdekatan anda:\\n') +
+      escapeMarkdownV2('📍 Kedai · 🛒 Troli · 🎟️ Kupon\\n\\n') +
+      escapeMarkdownV2('Tekan butang untuk mula. Selamat menjamu selera! 🇲🇾');
+    await sendMessage(env, chatId, text, startQuickActionKeyboard());
+  }
+}
+// End: Phase 51 - Adaptive Welcome Card
+
 // End: Phase 31 - /start & /mula Command Controller

@@ -5,8 +5,8 @@ import { parseUpdate, debugIncomingUpdate } from './telegram';
 import { handleUpdate, runScheduledMaintenance, handlePublicStats } from './handlers';
 import { registerBotCommands } from './services/telegram_setup';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
-import { checkDatabaseHealth } from './services/sentinel';
-import { dispatchSubscriptionAlerts, triggerSaasPulseReport, runDailyCouponSweep } from './services/scheduler';
+import { checkDatabaseHealth, selfHealDrift } from './services/sentinel';
+import { dispatchSubscriptionAlerts, triggerSaasPulseReport, runDailyCouponSweep, sendDailyDigest } from './services/scheduler';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { captureRawWebhookFrame } from './services/telegram_webhook_diagnostics';
 import { captureRetryFailure } from './services/webhook_retry_manager';
@@ -51,8 +51,10 @@ export default {
         if (ids.length > 0) {
           await invalidateSubscriptionCacheBatch(env, ids);
         }
+        // Phase 51: Sentinel self-heal drift recovery (report to admin).
+        const healed = await selfHealDrift(env);
         return new Response(
-          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'maintenance', merchants_notified: ids.length }),
+          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'maintenance', merchants_notified: ids.length, self_healed: healed }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       } catch (err) {
@@ -107,6 +109,28 @@ export default {
       }
     }
     // End: Phase 49 - Coupon Expiry Sweep Cron Endpoint
+
+    // Start: Phase 51 - Daily Merchant Digest Cron Endpoint (POST, Fasal 10 guard)
+    // Timer cron harian (9pg) tembak endpoint ini -> hantar ringkasan harian ke peniaga.
+    if (request.method === 'POST' && url.pathname.endsWith('/cron/daily-digest')) {
+      const digestSecret = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
+      if (!digestSecret || digestSecret !== env.X_TELEGRAM_BOT_API_SECRET_TOKEN) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      try {
+        const sent = await sendDailyDigest(env);
+        return new Response(
+          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'daily-digest', merchants_sent: sent }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ status: 'DEGRADED', service: 'JomOrder', error: (err as Error).message }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    // End: Phase 51 - Daily Merchant Digest Cron Endpoint
 
     // End: Phase 26 - Cron Maintenance Endpoint
 
@@ -165,6 +189,37 @@ export default {
         );
       }
     }
+    // Start: Phase 51 - Menu Showcase Public Route (/api/menu-showcase)
+    // Papar menu trending (gambar + harga) untuk grid landing page.
+    // Public-safe: hanya SELECT menu_makanan + join senarai_kedai (no PII).
+    if (request.method === 'GET' && url.pathname.endsWith('/api/menu-showcase')) {
+      try {
+        const q = `${env.SUPABASE_URL}/rest/v1/menu_makanan?select=id,nama_hidangan,harga,gambar_url,kedai_id&status_tersedia=eq.true&order=created_at.desc&limit=8`;
+        const res = await fetch(q, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: env.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+          },
+        });
+        const items = res.ok ? await res.json() : [];
+        return new Response(JSON.stringify({ items }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=30',
+          },
+        });
+      } catch {
+        return new Response(JSON.stringify({ items: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    // End: Phase 51 - Menu Showcase Public Route
+
     // End: Phase 27 - Public Stats Aggregate Route
 
     // Start: Webhook Guard (Fasal 10)

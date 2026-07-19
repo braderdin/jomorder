@@ -78,3 +78,15 @@ export async function handleShopMenu(env: Env, chatId: number): Promise<void> {
 }
 
 // End: Phase 31 - /menu Command Controller
+
+// Start: Phase 51 - /menu_kedai public browse alias (customer storefront entry)
+/**
+ * handleMenuKedai
+ * Alias untuk /menu_kedai: papar senarai kedai aktif kepada pelanggan supaya
+ * mereka boleh "Lihat Menu" terus ke catalog (view_shop:{id}).
+ * Delegate ke handleShopMenu (single source of truth, Fasal 4 SOA).
+ */
+export async function handleMenuKedai(env: Env, chatId: number): Promise<void> {
+  await handleShopMenu(env, chatId);
+}
+// End: Phase 51 - /menu_kedai public browse alias

@@ -2,7 +2,7 @@
 // Fasal 4 (SOA) + Fasal 9 (modular split). Strip berat ke ./handlers/merchant & ./handlers/customer.
 // Distributor sahaja: terima update, delegate ke modul khusus. Orchestrate cron maintenance.
 import { Env, TelegramUpdate } from './types';
-import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation } from './handlers/merchant';
+import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation, handleMerchantPhoto } from './handlers/merchant';
 import { getState, checkRateLimit, rateLimitKey } from './redis';
 import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon, handleViewShopMenu, handleAddToCart } from './handlers/customer';
 import { handleViewCart } from './handlers/customer_cart';
@@ -15,7 +15,8 @@ import { handleMerchantInvoiceText, handleInvoiceCallback } from './handlers/mer
 import { handleMerchantOrderCallback } from './handlers/merchant_order';
 import { handleStart } from './handlers/start';
 import { handleHelp, handleHelpLocaleToggle } from './handlers/help';
-import { handleShopMenu } from './handlers/shop_menu';
+import { handleShopMenu, handleMenuKedai } from './handlers/shop_menu';
+import { handleTetapan, handleTetapanCallback } from './handlers/settings';
 import { handleMerchantDashboard, handleLaporanJualan, handleExportSalesCsv } from './handlers/merchant_dashboard';
 // Start: Phase 32 - Commerce/Marketing/Admin sub-handler imports
 import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon, handleDeleteCouponInline } from './handlers/marketing_coupon';
@@ -344,6 +345,14 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     }
     // End: Phase 34 - Coupon inline deletion callback wiring
 
+    // Start: Phase 51 - Settings callback router (set_locale: / set_notif)
+    // Panel tetapan /tetapan toggle bahasa + notifikasi (Fasal 6 grid).
+    if (data.startsWith('set_locale:') || data === 'set_notif') {
+      await answerCallbackQuery(env, cb.id, 'Menyimpan...');
+      if (await handleTetapanCallback(env, cbChatId, cb.from.id, data)) return;
+    }
+    // End: Phase 51 - Settings callback router
+
     // Start: Phase 35 - Callback Spinner Hardening (Fasal 7 Strategy 4)
     // Dismiss spinner untuk callback tak dikenali supaya Tiada Telegram retry hang.
     await answerCallbackQuery(env, cb.id, '✅');
@@ -371,6 +380,14 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   }
   if (cmd === '/menu') {
     await withCommandGuard(env, chatId, '/menu', () => handleShopMenu(env, chatId));
+    return;
+  }
+  if (cmd === '/menu_kedai') {
+    await withCommandGuard(env, chatId, '/menu_kedai', () => handleMenuKedai(env, chatId));
+    return;
+  }
+  if (cmd === '/tetapan') {
+    await withCommandGuard(env, chatId, '/tetapan', () => handleTetapan(env, chatId, tgId));
     return;
   }
   if (cmd === '/urus' || cmd === '/dashboard') {
@@ -510,6 +527,16 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     return;
   }
   // End: Phase 23 - Geolocation routing
+
+  // Start: Phase 51 - Merchant Photo Upload routing (R2 QR capture)
+  // Jika mesej ada imej dan peniaga dalam state awaiting_qr_upload,
+  // delegate ke handleMerchantPhoto (download Telegram -> R2 -> patch DB).
+  if (msg.photo && msg.photo.length > 0) {
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    const handled = await handleMerchantPhoto(env, chatId, tgId, fileId);
+    if (handled) return;
+  }
+  // End: Phase 51 - Merchant Photo Upload routing
 
   const text = normalizeCommand(msg.text);
 

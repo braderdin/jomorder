@@ -137,7 +137,7 @@ export async function fetchPublicStats(env: Env): Promise<PublicStats> {
   try {
     const [shopsRes, ordersRes] = await Promise.all([
       fetch(`${base}/senarai_kedai?select=count`, { headers }),
-      fetch(`${base}/rekod_pesanan?select=total_amount`, { headers }),
+      fetch(`${base}/rekod_pesanan?select=jumlah_harga`, { headers }),
     ]);
     let totalShops = 0;
     if (shopsRes.ok) {
@@ -150,7 +150,7 @@ export async function fetchPublicStats(env: Env): Promise<PublicStats> {
       const od = await ordersRes.json();
       if (Array.isArray(od)) {
         totalOrders = od.length;
-        totalGmv = od.reduce((s, r) => s + (parseFloat(r.total_amount) || 0), 0);
+        totalGmv = od.reduce((s, r) => s + (parseFloat(r.jumlah_harga) || 0), 0);
       }
     }
     const payload: PublicStats = {

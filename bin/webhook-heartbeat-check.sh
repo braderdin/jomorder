@@ -34,6 +34,12 @@ probe "/smoke" "GET /smoke (resilience report)"
 probe "/" "GET / (webhook-ready 200)"
 probe "/api/public-stats" "GET /api/public-stats (public analytics)"
 
+# Phase 51: Cron endpoint matrix (secret-less GET = 404/405 = route wujud)
+# 404 dianggap OK kerana cron hanya terima POST; route tetap di-deploy.
+probe "/cron/daily-digest" "GET /cron/daily-digest (route deployed)"
+probe "/cron/coupon-sweep" "GET /cron/coupon-sweep (route deployed)"
+probe "/cron/maintenance" "GET /cron/maintenance (route deployed)"
+
 # Auto-repair: jika drift kesan dan RETRY_URL diberi, tembak semula register.
 if [[ "$FAIL" -gt 0 && -n "$RETRY_URL" ]]; then
   echo "[REPAIR] Telemetry drift kesan -> trigger auto-repair @ ${RETRY_URL}"

@@ -5,6 +5,7 @@ import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, inlineKeyboard, merchantDashboardKeyboardV2 } from '../telegram';
 import { getCommandSession, setCommandSession, touchCommandSession } from '../services/session_cache';
 import { fetchMerchantSalesSummary } from '../services/analytics';
+import { setState } from '../redis';
 
 /** Baris status kedai minimum. */
 interface KedaiStatus {
@@ -164,6 +165,13 @@ export async function handleDashboardQuickAction(
       return true;
     }
     case 'upload_qr': {
+      // Start: Phase 51 - Set QR upload state (capture next photo)
+      await setState(env, {
+        merchant_telegram_id: tgId,
+        step: 'awaiting_qr_upload',
+        last_active: new Date().toISOString(),
+      });
+      // End: Phase 51 - Set QR upload state
       await sendMessage(
         env,
         chatId,

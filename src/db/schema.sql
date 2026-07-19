@@ -93,6 +93,11 @@ CREATE TABLE IF NOT EXISTS menu_makanan (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Start: Phase 51 - Menu item photo column (Fasal 8 storage wiring)
+ALTER TABLE menu_makanan
+    ADD COLUMN IF NOT EXISTS gambar_url TEXT;
+-- End: Phase 51 - Menu item photo column
+
 ALTER TABLE menu_makanan ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS menu_makanan_public_read ON menu_makanan;

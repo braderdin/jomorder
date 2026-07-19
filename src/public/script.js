@@ -133,12 +133,49 @@ try {
 } catch (e) {}
 // End: Phase 47 - BM/EN Language Toggle
 
+// Start: Phase 51 - Live Menu Photo Grid Fetcher
+// Tarik menu terkini dari endpoint worker (/api/menu-showcase) dan papar
+// grid gambar + harga. Fail-open: jika tiada gambar, papar placeholder teks.
+async function fetchMenuGrid() {
+  const grid = document.getElementById("menu-grid");
+  if (!grid) return;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch("/api/menu-showcase", { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (items.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-gray-500 text-sm">Tiada menu dipaparkan lagi.</div>';
+      return;
+    }
+    grid.innerHTML = items.map((it) => {
+      const img = it.gambar_url
+        ? `<img src="${it.gambar_url}" alt="" class="w-full h-32 object-cover rounded-xl" loading="lazy" />`
+        : `<div class="w-full h-32 rounded-xl bg-cyber-bg border border-gray-700 flex items-center justify-center text-2xl">🍽️</div>`;
+      return `<div class="rounded-xl overflow-hidden border border-gray-700 bg-cyber-bg text-left">
+        ${img}
+        <div class="p-2">
+          <div class="text-xs text-gray-200 truncate">${it.nama_hidangan || "Hidangan"}</div>
+          <div class="text-xs text-cyber-gold font-bold">RM ${Number(it.harga || 0).toFixed(2)}</div>
+        </div>
+      </div>`;
+    }).join("");
+  } catch {
+    grid.innerHTML = '<div class="col-span-full text-gray-500 text-sm">Menu tidak dapat dimuatkan.</div>';
+  }
+}
+// End: Phase 51 - Live Menu Photo Grid Fetcher
+
 // Boot
 async function init() {
   initAnalyticsStatus();
   initFaq();
   initScrollReveal();
   await fetchPublicStats();
+  await fetchMenuGrid();
   // Start: Phase 46 - Hero Counter Fallback (pastikan beranimasi walaupun API lambat)
   // Jika elemen masih '0' selepas fetch (API gagal), picu animasi ke nilai placeholder
   // kecil supaya UI nampak hidup (bukan statik kosong).

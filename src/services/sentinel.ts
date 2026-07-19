@@ -271,3 +271,35 @@ export async function getStatusSnapshot(env: Env): Promise<StatusSnapshot> {
   };
 }
 // End: Phase 44 - Status Snapshot Exporter
+
+// Start: Phase 51 - Sentinel Self-Heal Drift Recovery
+/**
+ * selfHealDrift
+ * Jika probe DRIFT_DETECTED (DB/R2/Telegram mati), cuba re-connect sekali lagi
+ * dan laporkan ke admin. Fail-open: tidak throw, return boolean recovery status.
+ * Dipanggil dari cron /cron/maintenance selepas scanAndFlag.
+ * @returns true jika sistem pulih (atau tidak pernah drift)
+ */
+export async function selfHealDrift(env: Env): Promise<boolean> {
+  try {
+    const snap = await getStatusSnapshot(env);
+    const drifted = !snap.db || !snap.redis || !snap.telegram;
+    if (!drifted) return true;
+    // Retry once (soft reconnect attempt)
+    const retry = await getStatusSnapshot(env);
+    const recovered = Boolean(retry.db) && Boolean(retry.redis) && Boolean(retry.telegram);
+    const adminId = Number(env.ADMIN_TELEGRAM_ID);
+    if (adminId) {
+      const state = recovered ? 'PULIH' : 'MASIH_DRIFT';
+      await sendMessage(
+        env,
+        adminId,
+        escapeMarkdownV2(`🩺 SENTINEL SELF-HEAL: ${state}\\nDB:${retry.db} REDIS:${retry.redis} TG:${retry.telegram}`)
+      );
+    }
+    return recovered;
+  } catch {
+    return false; // Soft-fail
+  }
+}
+// End: Phase 51 - Sentinel Self-Heal Drift Recovery

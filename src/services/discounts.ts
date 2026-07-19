@@ -160,8 +160,8 @@ export async function sweepExpiredCoupons(env: Env): Promise<number> {
     // 1. Ambil kupon tamat tempoh yang masih aktif (join senarai_kedai untuk tgId).
     const selectUrl =
       `${env.SUPABASE_URL}/rest/v1/kempen_diskaun` +
-      `?select=id,kod_kupon,tamat_pano,kedai_id(senarai_kedai(merchant_telegram_id))` +
-      `&tamat_pano=lte.${new Date().toISOString()}` +
+      `?select=id,kod_kupon,tamat_pada,kedai_id(senarai_kedai(merchant_telegram_id))` +
+      `&tamat_pada=lte.${new Date().toISOString()}` +
       `&status_aktif=eq.true`;
     const selRes = await fetch(selectUrl, { method: 'GET', headers: supabaseHeaders(env) });
     if (!selRes.ok) return 0;

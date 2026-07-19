@@ -36,6 +36,10 @@ JomOrder membantu peniaga F&B Malaysia menerima pesanan secara digital tanpa kos
 - Kupon diskaun & laporan jualan
 - Portal web dengan statistik langsung
 - Keselamatan isolation per-peniaga (RLS)
+- Muat naik QR DuitNow (R2) + foto menu (Fasal 8)
+- Kad alu-aluan adaptif (waktu + peranan)
+- Grid menu foto langsung di portal
+- Ringkasan harian peniaga (digest cron)
 
 ---
 

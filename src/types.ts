@@ -79,6 +79,7 @@ export interface TelegramMessage {
   chat: TelegramChat;
   text?: string;
   location?: TelegramLocation;
+  photo?: Array<{ file_id: string; width: number; height: number }>;
 }
 
 export interface TelegramCallbackQuery {
@@ -113,7 +114,8 @@ export type MerchantStep =
   | 'awaiting_location'
   | 'browsing_menu'
   | 'awaiting_menu_item'
-  | 'awaiting_order_confirm';
+  | 'awaiting_order_confirm'
+  | 'awaiting_qr_upload';
 
 export interface MerchantState {
   merchant_telegram_id: number;

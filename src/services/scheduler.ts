@@ -259,4 +259,50 @@ export async function runDailyCouponSweep(env: Env): Promise<number> {
 
 // End: Phase 37 - SaaS Pulse Report Engine
 
+// Start: Phase 51 - Daily Merchant Digest Dispatcher
+/**
+ * sendDailyDigest
+ * Hantar ringkasan harian (pesanan baru + pendapatan) ke setiap peniaga aktif
+ * pada 9 pagi. Dipanggil dari cron /cron/daily-digest.
+ * Soft-fail: return 0 jika gagal (Fasal 7 Strategy 4).
+ * @returns bilangan peniaga yang dihantar digest
+ */
+export async function sendDailyDigest(env: Env): Promise<number> {
+  try {
+    const { fetchMerchantSalesSummary } = await import('./analytics');
+    const { sendMessage, escapeMarkdownV2 } = await import('../telegram');
+    // Tarik peniaga aktif (status_kedai AKTIF) dari senarai_kedai.
+    const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?status_kedai=eq.AKTIF&select=merchant_telegram_id`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!res.ok) return 0;
+    const rows = (await res.json()) as Array<{ merchant_telegram_id: number }>;
+    if (!Array.isArray(rows)) return 0;
+    let count = 0;
+    for (const r of rows) {
+      const s = await fetchMerchantSalesSummary(env, r.merchant_telegram_id);
+      if (!s) continue;
+      await sendMessage(
+        env,
+        r.merchant_telegram_id,
+        escapeMarkdownV2('🌅 RINGKASAN HARIAN\\n\\n') +
+          escapeMarkdownV2(`Pesanan: ${s.total_orders}\\n`) +
+          escapeMarkdownV2(`Dibayar: ${s.paid_orders}\\n`) +
+          escapeMarkdownV2(`Pendapatan: RM${s.total_earnings_rm.toFixed(2)}`)
+      );
+      count++;
+    }
+    return count;
+  } catch {
+    return 0; // Soft-fail
+  }
+}
+// End: Phase 51 - Daily Merchant Digest Dispatcher
+
 // End: JomOrder Fasa 6 - Subscription Alert Scheduler (Cron Utility)
