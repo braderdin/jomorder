@@ -14,9 +14,9 @@ import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from './telegram';
 import { handleMerchantInvoiceText, handleInvoiceCallback } from './handlers/merchant_invoice';
 import { handleMerchantOrderCallback } from './handlers/merchant_order';
 import { handleStart } from './handlers/start';
-import { handleHelp } from './handlers/help';
+import { handleHelp, handleHelpLocaleToggle } from './handlers/help';
 import { handleShopMenu } from './handlers/shop_menu';
-import { handleMerchantDashboard } from './handlers/merchant_dashboard';
+import { handleMerchantDashboard, handleLaporanJualan, handleExportSalesCsv } from './handlers/merchant_dashboard';
 // Start: Phase 32 - Commerce/Marketing/Admin sub-handler imports
 import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon, handleDeleteCouponInline } from './handlers/marketing_coupon';
 import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handlers/customer_commerce';
@@ -270,6 +270,38 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     }
     // End: Phase 46 - Dead Callback Repair
 
+    // Start: Phase 49 - History Pagination Router (sejarah_page:<n>)
+    // Butang "Laman Seterusnya" dari handleSejarahPesanan mati sebelum ini.
+    // Delegate ke handleSejarahPesanan dengan page parse dari callback.
+    if (data.startsWith('sejarah_page:')) {
+      const page = Number(data.slice('sejarah_page:'.length)) || 1;
+      await answerCallbackQuery(env, cb.id, 'Memuatkan...');
+      await withCommandGuard(env, cbChatId, '/sejarah_pesanan', () => handleSejarahPesanan(env, cbChatId, cb.from.id, page));
+      return;
+    }
+    // End: Phase 49 - History Pagination Router
+
+    // Start: Phase 49 - Sales CSV Export Callback Router (export_sales_csv:)
+    // Butang "Muat Turun CSV" dari handleLaporanJualan mati sebelum ini.
+    if (data.startsWith('export_sales_csv:')) {
+      await answerCallbackQuery(env, cb.id, 'Menyediakan CSV...');
+      await withCommandGuard(env, cbChatId, '/laporan_jualan', () => handleExportSalesCsv(env, cbChatId, cb.from.id));
+      return;
+    }
+    // End: Phase 49 - Sales CSV Export Callback Router
+
+    // Start: Phase 49 - Help Locale Toggle Router (help_locale:<cat>:<locale>)
+    // Butang BM/EN dalam handleHelpCategory (Fasal 6 bilingual grid).
+    if (data.startsWith('help_locale:')) {
+      const parts = data.slice('help_locale:'.length).split(':');
+      const cat = (parts[0] || 'pelanggan') as 'peniaga' | 'pelanggan' | 'pentadbir';
+      const loc = (parts[1] || 'ms') as 'ms' | 'en';
+      await answerCallbackQuery(env, cb.id, 'Menukar bahasa...');
+      await withCommandGuard(env, cbChatId, '/bantuan', () => handleHelpLocaleToggle(env, cbChatId, cat, loc));
+      return;
+    }
+    // End: Phase 49 - Help Locale Toggle Router
+
     // Start: Phase 46 - Status Refresh Callback Repair
     // Button 'status_refresh' dipapar di status.ts tapi tiada router -> mati.
     // Delegasikan semula ke handleStatus untuk re-render kad status terkini.
@@ -413,7 +445,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
       return;
     }
-    await withCommandGuard(env, chatId, '/laporan_jualan', () => handleMerchantSalesSummary(env, chatId, tgId));
+    await withCommandGuard(env, chatId, '/laporan_jualan', () => handleLaporanJualan(env, chatId, tgId));
     return;
   }
   // Start: Phase 41 - 22 Command BM Activation Matrix (alias + profil)

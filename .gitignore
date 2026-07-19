@@ -163,3 +163,10 @@ PROJECT_SYNC_MASTER.md
 .vercel
 .env*
 .clineignore
+
+# Start: Phase 50 - Dev Tooling Artifacts (jangan serabut GitHub)
+# Wrangler dev log dari bin/dev-watch.sh + wrangler dev tmp
+/tmp/jomorder-wrangler.log
+.wrangler/
+.dev.vars.state/
+# End: Phase 50 - Dev Tooling Artifacts

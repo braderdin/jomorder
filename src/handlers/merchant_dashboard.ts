@@ -2,7 +2,7 @@
 // Fasal 4 (SOA) + Fasal 6 (mobile grid) + Fasal 7 Strategy 1 (RLS merchant binding)
 // Arahan: papan pemerintah peniaga - toggle status operasi, semak jualan, query.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
+import { sendMessage, escapeMarkdownV2, inlineKeyboard, merchantDashboardKeyboardV2 } from '../telegram';
 import { getCommandSession, setCommandSession, touchCommandSession } from '../services/session_cache';
 import { fetchMerchantSalesSummary } from '../services/analytics';
 
@@ -107,11 +107,7 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
     escapeMarkdownV2(`Pesanan Hari Ini: ${pesananHariIni}\\n\\n`) +
     escapeMarkdownV2('Pilih tindakan di bawah:');
 
-  const buttons = inlineKeyboard([
-    [{ text: toggleLabel, callback_data: `toggle_status:${kedai.id}` }, { text: '📊 Laporan', callback_data: 'merchant_report' }],
-    [{ text: '📦 Pesanan', callback_data: 'merchant_orders' }, { text: '⚙️ Tetapan', callback_data: 'merchant_settings' }],
-    [{ text: '➕ Menu', callback_data: 'merchant_menu' }, { text: '📈 Analitik', callback_data: 'merchant_analytics' }],
-  ]);
+  const buttons = merchantDashboardKeyboardV2();
 
   await sendMessage(env, chatId, text, buttons);
 }
@@ -167,9 +163,73 @@ export async function handleDashboardQuickAction(
       await handleViewCart(env, chatId, tgId);
       return true;
     }
+    case 'upload_qr': {
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('📤 MUAT NAIK QR DUITNOW\\n\\n') +
+          escapeMarkdownV2('Hantar gambar QR DuitNow anda ke chat ini\\. Sistem akan:\\n') +
+          escapeMarkdownV2('• Mampat ke WebP (Fasal 8)\\n') +
+          escapeMarkdownV2('• Had 2MB / akaun 25MB\\n') +
+          escapeMarkdownV2('• Papar di papan bayaran pelanggan\\n\\n') +
+          escapeMarkdownV2('Sila hantar imej sekarang.')
+      );
+      return true;
+    }
     default:
       return false;
   }
 }
+
+// Start: Phase 49 - Merchant Sales Report with CSV Export (JomOrder Modern-Siber)
+/**
+ * handleLaporanJualan
+ * Papar ringkasan jualan kedai sendiri + butang "Muat Turun CSV"
+ * yang trigger callback export_sales_csv: (dikendali di handlers.ts).
+ * Soft-fail: mesej ralat jika fetch gagal (Fasal 7 Strategy 4).
+ */
+export async function handleLaporanJualan(env: Env, chatId: number, tgId: number): Promise<void> {
+  const data = await fetchMerchantSalesSummary(env, tgId);
+  if (!data) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan jualan kedai.'));
+    return;
+  }
+  const text =
+    escapeMarkdownV2('📊 LAPORAN JUALAN KEDAI ANDA\\n\\n') +
+    escapeMarkdownV2(`Jumlah Pesanan: ${data.total_orders}\\n`) +
+    escapeMarkdownV2(`Pesanan Dibayar: ${data.paid_orders}\\n`) +
+    escapeMarkdownV2(`Pendapatan: RM${data.total_earnings_rm.toFixed(2)}\\n\\n`) +
+    escapeMarkdownV2('Tekan butang di bawah untuk muat turun CSV penuh.');
+  const buttons = inlineKeyboard([
+    [{ text: '📥 Muat Turun CSV', callback_data: 'export_sales_csv:' }],
+  ]);
+  await sendMessage(env, chatId, text, buttons);
+}
+
+/**
+ * handleExportSalesCsv
+ * Terima callback export_sales_csv: -> panggil exportMerchantSalesCsv,
+ * hantar hasil sebagai dokumen Telegram (RFC 4180 CSV string).
+ * Soft-fail: mesej ralat jika kosong/gagal (Fasal 7 S4).
+ */
+export async function handleExportSalesCsv(env: Env, chatId: number, tgId: number): Promise<void> {
+  try {
+    const { exportMerchantSalesCsv } = await import('../services/analytics');
+    const csv = await exportMerchantSalesCsv(env, tgId);
+    if (!csv) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Tiada rekod jualan untuk dieksport.'));
+      return;
+    }
+    const url = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendDocument`;
+    const form = new FormData();
+    form.append('chat_id', String(chatId));
+    form.append('document', new Blob([csv], { type: 'text/csv' }), `jualan_${tgId}.csv`);
+    form.append('caption', escapeMarkdownV2('📥 Laporan jualan kedai anda (CSV).'));
+    await fetch(url, { method: 'POST', body: form });
+  } catch {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal eksport CSV. Cuba sebentar lagi.'));
+  }
+}
+// End: Phase 49 - Merchant Sales Report with CSV Export
 
 // End: Phase 31 - /urus & /dashboard Command Controller

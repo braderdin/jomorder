@@ -239,6 +239,24 @@ async function auditTelemetryHealth(env: Env, rec: { component: string; status: 
 }
 // End: Phase 40 - Webhook Heartbeat Cron Validation
 
+// Start: Phase 49 - Daily Coupon Expiry Sweep Dispatcher
+/**
+ * runDailyCouponSweep
+ * Jalankan sweepExpiredCoupons (discounts.ts) bagi matikan kupon tamat
+ * secara automatik + notify peniaga. Dipanggil dari cron /cron/coupon-sweep.
+ * Soft-fail: return 0 jika gagal (Fasal 7 Strategy 4).
+ * @returns bilangan kupon yang ditutup
+ */
+export async function runDailyCouponSweep(env: Env): Promise<number> {
+  try {
+    const { sweepExpiredCoupons } = await import('./discounts');
+    return await sweepExpiredCoupons(env);
+  } catch {
+    return 0; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Phase 49 - Daily Coupon Expiry Sweep Dispatcher
+
 // End: Phase 37 - SaaS Pulse Report Engine
 
 // End: JomOrder Fasa 6 - Subscription Alert Scheduler (Cron Utility)

@@ -6,7 +6,7 @@ import { handleUpdate, runScheduledMaintenance, handlePublicStats } from './hand
 import { registerBotCommands } from './services/telegram_setup';
 import { runSmokeTests, summarizeSmokeTests } from './services/testing';
 import { checkDatabaseHealth } from './services/sentinel';
-import { dispatchSubscriptionAlerts, triggerSaasPulseReport } from './services/scheduler';
+import { dispatchSubscriptionAlerts, triggerSaasPulseReport, runDailyCouponSweep } from './services/scheduler';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { captureRawWebhookFrame } from './services/telegram_webhook_diagnostics';
 import { captureRetryFailure } from './services/webhook_retry_manager';
@@ -85,6 +85,28 @@ export default {
       }
     }
     // End: Phase 37 - SaaS Pulse Cron Endpoint
+
+    // Start: Phase 49 - Coupon Expiry Sweep Cron Endpoint (POST, Fasal 10 guard)
+    // Timer cron harian tembak endpoint ini -> matikan kupon tamat + notify peniaga.
+    if (request.method === 'POST' && url.pathname.endsWith('/cron/coupon-sweep')) {
+      const sweepSecret = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
+      if (!sweepSecret || sweepSecret !== env.X_TELEGRAM_BOT_API_SECRET_TOKEN) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      try {
+        const closed = await runDailyCouponSweep(env);
+        return new Response(
+          JSON.stringify({ status: 'OK', service: 'JomOrder', cron: 'coupon-sweep', coupons_closed: closed }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ status: 'DEGRADED', service: 'JomOrder', error: (err as Error).message }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    // End: Phase 49 - Coupon Expiry Sweep Cron Endpoint
 
     // End: Phase 26 - Cron Maintenance Endpoint
 

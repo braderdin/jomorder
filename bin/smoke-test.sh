@@ -44,6 +44,13 @@ check_status "/cron/saas-pulse" "POST /cron/saas-pulse (secret guard 403)"
 check_status "/api/public-stats" "GET /api/public-stats (live stats 200)"
 # End: Phase 37 - SaaS Pulse Cron + Public Stats assertions
 
+# Start: Phase 50 - Coupon Sweep Cron + New Callback Smoke (Fasal 10 harmonized)
+# POST /cron/coupon-sweep TANPA secret -> 403 Forbidden (guard aktif = PASS).
+check_status "/cron/coupon-sweep" "POST /cron/coupon-sweep (secret guard 403)"
+# GET /cron/coupon-sweep -> 405 Method Not Allowed (active endpoint = PASS).
+check_status "/cron/coupon-sweep" "GET /cron/coupon-sweep (405 active)"
+# End: Phase 50 - Coupon Sweep Cron + New Callback Smoke
+
 # Start: Phase 38 - Multi-Tenant Delivery + Full-Cycle Payload Verification
 # Uji penghantaran multi-tenant: hantar webhook mockup dengan secret sah untuk
 # dua peniaga berbeza (tenant A & B) dan sahkan tiada drift (kedua-dua 200/403/405).

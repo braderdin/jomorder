@@ -82,9 +82,12 @@ export async function handleViewCart(
   const grandTotal = buffer.discountedTotal ?? buffer.total ?? itemTotal;
 
   const header =
-    escapeMarkdownV2('🛒 TROLI ANDA:\\n') +
+    escapeMarkdownV2('╔════════════════════╗\\n') +
+    escapeMarkdownV2('   🛒 TROLI ANDA\\n') +
+    escapeMarkdownV2('╚════════════════════╝\\n\\n') +
     lines +
-    escapeMarkdownV2(`\\n\\nJUMLAH: RM${grandTotal.toFixed(2)}`);
+    escapeMarkdownV2(`\\n\\n💰 JUMLAH: RM${grandTotal.toFixed(2)}\\n`) +
+    escapeMarkdownV2('Terima kasih atas pesanan anda! 🇲🇾');
 
   // Start: Phase 38 - Cart Checkout Lock (elak duplicate checkout concurrent)
   // Jika flag checkout_locked aktif, halang double-submit dengan button berbeza.

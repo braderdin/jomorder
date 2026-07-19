@@ -1,5 +1,6 @@
-// Start: Phase 32 - Marketing Coupon Handlers (Merchant Kupon Engine)
-// Fasal 4 (SOA) + Fasal 6 (BM UI, escape MarkdownV2) + Fasal 7 S1 (RLS bind merchant_telegram_id).
+// Start: Phase 49 - Marketing Coupon Handlers (Unified kempen_diskaun)
+// Fasal4 (SOA) + Fasal 6 (BM UI, escape MarkdownV2) + Fasal 7 S1 (RLS bind kedai_id).
+// Semua kupon kini guna jadual kempen_diskaun (single source of truth, selari discounts.ts).
 // Setiap fungsi self-contained, soft-fail (Fasal 7 Strategy 4), tidak throw ke caller.
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
@@ -15,9 +16,23 @@ function svcHeaders(env: Env): Record<string, string> {
   };
 }
 
+/** Dapatkan kedai_id dari merchant_telegram_id (RLS bind Fasal 7 S1). */
+async function getKedaiId(env: Env, tgId: number): Promise<string | null> {
+  const url = `${SUPABASE_REST(env)}/senarai_kedai?merchant_telegram_id=eq.${tgId}&select=id&limit=1`;
+  try {
+    const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ id: string }>;
+    return Array.isArray(rows) && rows.length > 0 ? rows[0].id : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * /cipta_kupon <KOD> <DISKAUN%> <MIN_RM>
- * Cipta rekod kupon diskaun terikat ke merchant semasa.
+ * /cipta_kupon <KOD> <DISKAUN%> [TAMAT_HARI] [MIN_RM]
+ * Cipta rekod kupon diskaun terikat ke kedai merchant semasa (kempen_diskaun).
+ * Sokong tamat_tempoh (TAMAT_HARI) supaya scheduler sweep boleh matikan auto.
  */
 export async function handleCreateCoupon(
   env: Env,
@@ -27,30 +42,40 @@ export async function handleCreateCoupon(
 ): Promise<void> {
   try {
     const parts = text.trim().split(/\s+/);
-    if (parts.length < 4) {
+    if (parts.length < 3) {
       await sendMessage(
         env,
         chatId,
-        escapeMarkdownV2('⚠️ Format: /cipta_kupon <KOD> <DISKAUN%> <MIN_RM>\nContoh: /cipta_kupon JOM10 10 20')
+        escapeMarkdownV2('⚠️ Format: /cipta_kupon <KOD> <DISKAUN%> [TAMAT_HARI] [MIN_RM]\nContoh: /cipta_kupon JOM10 10 30')
       );
       return;
     }
     const kod = parts[1].toUpperCase();
     const diskaun = Number(parts[2]);
-    const minRm = Number(parts[3]);
-    if (!kod || Number.isNaN(diskaun) || Number.isNaN(minRm) || diskaun <= 0 || diskaun > 100) {
+    const tamatHari = parts[3] ? Number(parts[3]) : 0;
+    const minRm = parts[4] ? Number(parts[4]) : 0;
+    if (!kod || Number.isNaN(diskaun) || diskaun <= 0 || diskaun > 100) {
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Diskaun mesti nombor 1-100. Sila cuba lagi.'));
       return;
     }
-    const res = await fetch(`${SUPABASE_REST(env)}/kupon_kedai`, {
+    const kedaiId = await getKedaiId(env, tgId);
+    if (!kedaiId) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai tidak dijumpai. Daftar kedai dulu.'));
+      return;
+    }
+    const tamatPano = tamatHari > 0
+      ? new Date(Date.now() + tamatHari * 86_400_000).toISOString()
+      : null;
+    const res = await fetch(`${SUPABASE_REST(env)}/kempen_diskaun`, {
       method: 'POST',
       headers: { ...svcHeaders(env), Prefer: 'return=minimal' },
       body: JSON.stringify({
-        kod,
-        diskaun_peratus: diskaun,
-        min_pesanan_rm: minRm,
-        merchant_telegram_id: tgId,
-        aktif: true,
+        kedai_id: kedaiId,
+        kod_kupon: kod,
+        jenis_diskaun: 'PERCENT',
+        nilai_diskaun: diskaun,
+        tamat_pano: tamatPano,
+        status_aktif: true,
       }),
     });
     if (!res.ok) {
@@ -60,36 +85,39 @@ export async function handleCreateCoupon(
     await sendMessage(
       env,
       chatId,
-      escapeMarkdownV2(`✅ Kupon ${kod} dicipta!\\nDiskaun: ${diskaun}%\\nMin: RM${minRm}`)
+      escapeMarkdownV2(`✅ Kupon ${kod} dicipta!\\nDiskaun: ${diskaun}%\\nTamat: ${tamatHari > 0 ? tamatHari + ' hari' : 'Tiada'}`)
     );
   } catch {
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem. Cuba sebentar lagi.'));
   }
 }
 
-/** /senarai_kupon - papar kupon aktif milik merchant (inline grid max 2/row). */
+/** /senarai_kupon - papar kupon aktif milik merchant dari kempen_diskaun (inline grid max 2/row). */
 export async function handleListCoupons(env: Env, chatId: number, tgId: number): Promise<void> {
   try {
-    const url = `${SUPABASE_REST(env)}/kupon_kedai?merchant_telegram_id=eq.${tgId}&select=kod,diskaun_peratus,min_pesanan_rm,aktif`;
+    const kedaiId = await getKedaiId(env, tgId);
+    if (!kedaiId) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai tidak dijumpai. Daftar kedai dulu.'));
+      return;
+    }
+    const url = `${SUPABASE_REST(env)}/kempen_diskaun?kedai_id=eq.${encodeURIComponent(kedaiId)}&select=kod_kupon,status_aktif`;
     const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });
     if (!res.ok) {
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai kupon.'));
       return;
     }
     const rows = (await res.json()) as Array<{
-      kod: string;
-      diskaun_peratus: number;
-      min_pesanan_rm: number;
-      aktif: boolean;
+      kod_kupon: string;
+      status_aktif: boolean;
     }>;
     if (!Array.isArray(rows) || rows.length === 0) {
       await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada kupon aktif. Taip /cipta_kupon untuk mula.'));
       return;
     }
     const lines = rows
-      .map((r) => `🎟️ ${escapeMarkdownV2(r.kod)} \\- ${r.diskaun_peratus}% \\(min RM${r.min_pesanan_rm}\\)`)
+      .map((r) => `🎟️ ${escapeMarkdownV2(r.kod_kupon)} \\- ${r.status_aktif ? '✅ Aktif' : '⛔ Dimatikan'}`)
       .join('\\n');
-    const buttons = rows.map((r) => [{ text: `🗑️ ${r.kod}`, callback_data: `del_coupon:${r.kod}` }]);
+    const buttons = rows.map((r) => [{ text: `🗑️ ${r.kod_kupon}`, callback_data: `del_coupon:${r.kod_kupon}` }]);
     await sendMessage(
       env,
       chatId,
@@ -104,11 +132,13 @@ export async function handleListCoupons(env: Env, chatId: number, tgId: number):
 /** Snapshot kupon sebelum padam (rollback buffer) -> audit_kupon_padam. */
 async function snapshotCouponForAudit(env: Env, tgId: number, kod: string): Promise<void> {
   try {
-    const getUrl = `${SUPABASE_REST(env)}/kupon_kedai?kod=eq.${encodeURIComponent(kod)}&merchant_telegram_id=eq.${tgId}&select=*`;
+    const kedaiId = await getKedaiId(env, tgId);
+    if (!kedaiId) return;
+    const getUrl = `${SUPABASE_REST(env)}/kempen_diskaun?kod_kupon=eq.${encodeURIComponent(kod)}&kedai_id=eq.${encodeURIComponent(kedaiId)}&select=*`;
     const snap = await fetch(getUrl, { method: 'GET', headers: svcHeaders(env) });
     if (!snap.ok) return; // Soft-fail: audit bukan blocker.
     const rows = (await snap.json()) as Array<Record<string, unknown>>;
-    const payload = Array.isArray(rows) && rows.length > 0 ? rows[0] : { kod, merchant_telegram_id: tgId };
+    const payload = Array.isArray(rows) && rows.length > 0 ? rows[0] : { kod, kedai_id: kedaiId };
     const txRef = `del_${Date.now()}_${tgId}`;
     await fetch(`${SUPABASE_REST(env)}/audit_kupon_padam`, {
       method: 'POST',
@@ -131,7 +161,12 @@ async function deleteCouponCore(env: Env, chatId: number, tgId: number, kod: str
   try {
     // Phase 34: Rollback buffer - snapshot dulu sebelum DELETE.
     await snapshotCouponForAudit(env, tgId, kod);
-    const url = `${SUPABASE_REST(env)}/kupon_kedai?kod=eq.${encodeURIComponent(kod)}&merchant_telegram_id=eq.${tgId}`;
+    const kedaiId = await getKedaiId(env, tgId);
+    if (!kedaiId) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai tidak dijumpai.'));
+      return;
+    }
+    const url = `${SUPABASE_REST(env)}/kempen_diskaun?kod_kupon=eq.${encodeURIComponent(kod)}&kedai_id=eq.${encodeURIComponent(kedaiId)}`;
     const res = await fetch(url, { method: 'DELETE', headers: svcHeaders(env) });
     if (!res.ok) {
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal padam kupon.'));
@@ -161,7 +196,7 @@ export async function handleDeleteCoupon(
 /**
  * handleDeleteCouponInline - terima callback 'del_coupon:<KOD>' terus dari inline button.
  * Process inline text request dan prepare backend cleanup bersih tanpa orphan reference
- * (Fasal 7 Strategy 1: isolate merchant_telegram_id).
+ * (Fasal 7 Strategy 1: isolate merchant_telegram_id -> kedai_id).
  */
 export async function handleDeleteCouponInline(
   env: Env,
@@ -174,7 +209,7 @@ export async function handleDeleteCouponInline(
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kod kupon tidak sah.'));
     return;
   }
-  // Backend cleanup: tiada cache JSONB kupon setempat; DELETE terus terikat merchant.
+  // Backend cleanup: tiada cache JSONB kupon setempat; DELETE terus terikat kedai.
   await deleteCouponCore(env, chatId, tgId, clean);
 }
-// End: Phase 32 - Marketing Coupon Handlers
+// End: Phase 49 - Marketing Coupon Handlers (Unified kempen_diskaun)

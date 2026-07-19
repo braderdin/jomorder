@@ -84,24 +84,32 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
 
   if (isMerchant) {
     const text =
-      escapeMarkdownV2('💼 SELAMAT DATANG KE PAPAN PEMERINTAH PERNIAGAAN\\n\\n') +
-      escapeMarkdownV2(`Hai ${firstName}, kedai anda telah dikesan secara selamat\\. Gunakan butang di bawah untuk mengurus operasi:\\n`) +
-      escapeMarkdownV2('• 🟢 Buka/Tutup Kedai\\n') +
-      escapeMarkdownV2('• 📦 Semak Pesanan\\n') +
-      escapeMarkdownV2('• 📊 Laporan Jualan\\n') +
-      escapeMarkdownV2('• 💡 Taip /urus untuk buka papan pemerintah penuh\\.');
+      escapeMarkdownV2('╔══════════════════════╗\\n') +
+      escapeMarkdownV2('   💼 JomOrder Modern-Siber\\n') +
+      escapeMarkdownV2('╚══════════════════════╝\\n\\n') +
+      escapeMarkdownV2(`🤝 Hai ${firstName}, papan pemerintah kedai anda sedia!\\n`) +
+      escapeMarkdownV2('Urus niaga F&B dengan pantas:\\n\\n') +
+      escapeMarkdownV2('🟢 *Buka/Tutup* kedai sepantas 1 tap\\n') +
+      escapeMarkdownV2('📦 *Semak* pesanan masuk\\n') +
+      escapeMarkdownV2('📊 *Laporan* jualan + CSV\\n') +
+      escapeMarkdownV2('🎟️ *Cipta* kupon diskaun\\n\\n') +
+      escapeMarkdownV2('Taip /urus untuk buka papan penuh\\. Selamat berniaga! 🇲🇾');
     await sendMessage(env, chatId, text, merchantMenuKeyboard());
     return;
   }
 
   // Default: Customer interface
   const text =
-    escapeMarkdownV2('🍔 SELAMAT DATANG KE JomOrder\\n\\n') +
-    escapeMarkdownV2(`Hai ${firstName}, cari kedai makanan berdekatan dan buat pesanan dengan pantas\\. Gunakan butang di bawah:\\n`) +
-    escapeMarkdownV2('• 🍔 Lihat Menu\\n') +
-    escapeMarkdownV2('• 🛒 Troli\\n') +
-    escapeMarkdownV2('• 📍 Kedai Berdekatan\\n') +
-    escapeMarkdownV2('• ❓ Taip /help untuk panduan penuh\\.');
+    escapeMarkdownV2('╔══════════════════════╗\\n') +
+    escapeMarkdownV2('   🍔 JomOrder Modern-Siber\\n') +
+    escapeMarkdownV2('╚════════════════════╝\\n\\n') +
+    escapeMarkdownV2(`👋 Hai ${firstName}, selamat datang ke keluarga JomOrder!\\n`) +
+    escapeMarkdownV2('Cari makanan sedap berdekatan anda:\\n\\n') +
+    escapeMarkdownV2('📍 *Kedai Berdekatan* — cari restoran berhampiran\\n') +
+    escapeMarkdownV2('🛒 *Troli* — semak pesanan anda\\n') +
+    escapeMarkdownV2('🎟️ *Kupon* — guna kod diskaun\\n') +
+    escapeMarkdownV2('📖 *Sejarah* — lihat pesanan lampau\\n\\n') +
+    escapeMarkdownV2('Tekan butang di bawah untuk mula. Selamat menjamu selera! 🇲🇾');
   await sendMessage(env, chatId, text, startQuickActionKeyboard());
 }
 

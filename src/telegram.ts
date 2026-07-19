@@ -81,6 +81,25 @@ export function inlineKeyboard(buttons: Array<Array<{ text: string; callback_dat
   return { inline_keyboard: buttons };
 }
 
+// Start: Phase 50 - Merchant Dashboard V2 Grid Helper (Fasal 6 mobile-optimized)
+/**
+ * merchantDashboardKeyboardV2
+ * Papan pemerintah peniaga versi 2 dengan grid 2-3 butang sebaris,
+ * termasuk butang Muat Naik QR DuitNow (Fasal 8 R2 storage hint).
+ * Konsisten dengan Fasal 6 (mobile screen optimized).
+ */
+export function merchantDashboardKeyboardV2() {
+  return {
+    inline_keyboard: [
+      [{ text: '🟢 Buka/Tutup', callback_data: 'toggle_status' }, { text: '📊 Laporan', callback_data: 'merchant_report' }],
+      [{ text: '📦 Pesanan', callback_data: 'merchant_orders' }, { text: '⚙️ Tetapan', callback_data: 'merchant_settings' }],
+      [{ text: '➕ Menu', callback_data: 'merchant_menu' }, { text: '📈 Analitik', callback_data: 'merchant_analytics' }],
+      [{ text: '📤 Muat Naik QR', callback_data: 'upload_qr' }],
+    ],
+  };
+}
+// End: Phase 50 - Merchant Dashboard V2 Grid Helper
+
 /** Parse incoming webhook payload (Fasal 7 Strategy 4 soft-fail safe) */
 export function parseUpdate(body: string): TelegramUpdate | null {
   try {

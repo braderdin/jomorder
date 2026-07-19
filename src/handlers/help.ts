@@ -139,12 +139,29 @@ export async function handleHelpCategory(
         'Akses terhad kepada Chip Besar sahaja.';
     }
   }
+  const otherLocale = locale === 'en' ? 'ms' : 'en';
+  const toggleLabel = locale === 'en' ? '🌐 BM' : '🌐 EN';
   const inline = {
     inline_keyboard: [
+      [{ text: toggleLabel, callback_data: `help_locale:${category}:${otherLocale}` }],
       [{ text: '🔙 Kembali', callback_data: 'help_menu' }],
     ],
   };
   await sendHtmlMessage(env, chatId, html, inline);
+}
+
+/**
+ * handleHelpLocaleToggle
+ * Terima callback help_locale:<category>:<locale> -> re-render kategori
+ * dalam locale baharu (BM <-> EN) tanpa regression (default 'ms').
+ */
+export async function handleHelpLocaleToggle(
+  env: Env,
+  chatId: number,
+  category: 'peniaga' | 'pelanggan' | 'pentadbir',
+  locale: 'ms' | 'en'
+): Promise<void> {
+  await handleHelpCategory(env, chatId, category, locale);
 }
 // End: Phase 47 - Category-Specific Help Deep-Link Router
 
