@@ -163,4 +163,24 @@ export async function checkRateLimit(
 // untuk kesinambungan perniagaan. Default fail-closed kekal untuk strict mode.
 // End: Phase 21 - Fail-Open Rate Limit Toggle
 
+// Start: Phase 57 - mergeState (atomic field merge, elak overwrite lain)
+// Ganti setState kasar dengan merge separa: baca -> merge -> tulis balik
+// dengan TTL 1 jam. Pastikan field seperti duitnow_qr_url / minigame_state
+// tak hilang bila caller update field lain (Fasal 7 Strategy 2 isolation).
+export async function mergeState(
+  env: Env,
+  telegramId: number,
+  patch: Partial<MerchantState>
+): Promise<void> {
+  const current = await getState(env, telegramId);
+  const merged = {
+    ...(current as object),
+    ...patch,
+    merchant_telegram_id: telegramId,
+    last_active: new Date().toISOString(),
+  } as MerchantState;
+  await setState(env, merged);
+}
+// End: Phase 57 - mergeState
+
 // End: JomOrder Fasa 4 - Upstash Redis State & Cart Engine (Fail 2)

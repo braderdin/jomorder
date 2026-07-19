@@ -122,8 +122,17 @@ export interface MerchantState {
   shop_name?: string;
   step: MerchantStep;
   cart_buffer?: Record<string, unknown>; // Fasal 7 Strategy 3 JSONB
+  minigame?: MinigameState; // Phase 57: spin-wheel state (persist tanpa overwrite)
   last_active: string; // ISO timestamp untuk 1-hour timeout
 }
+
+// Start: Phase 57 - Minigame State (persisted in MerchantState.minigame)
+export interface MinigameState {
+  last_spin_at?: string; // ISO timestamp pusingan terakhir
+  free_spins?: number; // baki pusingan percuma
+  total_spins?: number; // kiraan kumulatif
+}
+// End: Phase 57 - Minigame State
 
 /** Telegram API Response wrapper */
 export interface TelegramApiResponse {

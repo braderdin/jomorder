@@ -2,6 +2,7 @@
 // Fasal 8: Hard 2MB cap, raw image byte-signature validation, WebP-only intake.
 
 import { Env } from '../types';
+import { checkQuota, addUsage, MAX_BYTES_PER_ACCOUNT } from './storage_quota';
 
 const MAX_BYTES = 2_000_000; // Fasal 8: individual asset hard cap 2MB
 
@@ -61,8 +62,16 @@ export async function uploadMerchantAsset(
   if (!check.ok) return { success: false, error: check.reason };
   if (!env.R2_BUCKET) return { success: false, error: 'R2_BUCKET tiada binding' };
 
+  // Phase 57: Enforce 20MB per-account quota sebelum commit ke R2.
+  const quotaOk = await checkQuota(env, merchantTgId, data.byteLength);
+  if (!quotaOk) {
+    return { success: false, error: `Storan penuh (max ${Math.round(MAX_BYTES_PER_ACCOUNT / 1_000_000)}MB per akaun)` };
+  }
+
   const key = customKey ?? `${merchantTgId}/${assetType}_${Date.now()}.webp`;
   await env.R2_BUCKET.put(key, data as unknown as BodyInit);
+  // Track usage selepas upload berjaya.
+  await addUsage(env, merchantTgId, data.byteLength);
   // Fasa 10: bina URL mutlak dari prefix R2_PUBLIC_URL (buang trailing slash).
   const base = env.R2_PUBLIC_URL.replace(/\/$/, '');
   const url = `${base}/${key}`;

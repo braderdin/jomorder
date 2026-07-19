@@ -4,6 +4,8 @@
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, inlineKeyboard, navGrid } from '../telegram';
 import { getState, setState } from '../redis';
+import { uploadMerchantAsset } from '../services/storage';
+import { validateOptimizedSize } from '../services/image_optimize';
 
 /**
  * handleTetapan
@@ -90,4 +92,33 @@ export async function handleTetapanCallback(
   await handleTetapan(env, cbChatId, tgId);
   return true;
 }
+// Start: Phase 57 - QR DuitNow Upload ke R2
+// Bila user hantar photo dgn step='awaiting_qr_upload', fetch bytes,
+// validate <150KB, upload ke R2, simpan URL ke state. BM error messages.
+export async function handleUploadQr(
+  env: Env,
+  chatId: number,
+  tgId: number,
+  fileBytes: Uint8Array
+): Promise<void> {
+  const sizeCheck = validateOptimizedSize(fileBytes);
+  if (!sizeCheck.ok) {
+    await sendMessage(env, chatId, `⚠️ ${sizeCheck.reason}. Sila compress gambar ke <150KB (format WebP).`, undefined);
+    return;
+  }
+  const res = await uploadMerchantAsset(env, tgId, 'duitnow_qr', fileBytes);
+  if (!res.success || !res.url) {
+    const msg = res.error ? `⚠️ Gagal muat naik: ${res.error}` : '⚠️ Gagal muat naik QR.';
+    await sendMessage(env, chatId, msg, undefined);
+    return;
+  }
+  // Simpan URL ke state (merge, bukan overwrite).
+  const st = await getState(env, tgId);
+  const next = { ...st, merchant_telegram_id: tgId, duitnow_qr_url: res.url, last_active: new Date().toISOString() } as never;
+  await setState(env, next);
+  const kb = inlineKeyboard([[ { text: '⬅️ Kembali', callback_data: 'nav:main' } ]]);
+  await sendMessage(env, chatId, `✅ QR DuitNow berjaya dimuat naik!\n\nURL: ${res.url}`, kb);
+}
+// End: Phase 57 - QR DuitNow Upload ke R2
+
 // End: Phase 51 - /tetapan Command Controller

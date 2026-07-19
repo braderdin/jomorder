@@ -327,4 +327,32 @@ export async function exportMerchantSalesCsv(
 }
 // End: Phase 48 - Merchant Sales CSV Export (data layer)
 
+// Start: Phase 57 - Minigame Engagement Metric (public-safe)
+
+/**
+ * trackMinigameMetric
+ * Increment engagement counter di Redis (ringan) untuk papar di analytics.
+ * Tiada PII, hanya aggregate kiraan pusingan per pengguna.
+ */
+async function mgMetricInc(env: Env, tgId: number): Promise<void> {
+  try {
+    await fetch(env.UPSTASH_REDIS_REST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+      },
+      body: JSON.stringify([['HINCRBY', 'jo:mg:plays', String(tgId), 1]]),
+    });
+  } catch {
+    // swallow
+  }
+}
+
+/** Wrapper dipanggil dari minigame handler selepas setiap pusingan. */
+export async function trackMinigameMetric(env: Env, tgId: number): Promise<void> {
+  await mgMetricInc(env, tgId);
+}
+// End: Phase 57 - Minigame Engagement Metric
+
 // End: JomOrder Fasa 13 - SaaS Analytics Data Layer (File 2)

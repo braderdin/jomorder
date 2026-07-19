@@ -222,6 +222,25 @@ async function init() {
 
 document.addEventListener("DOMContentLoaded", init);
 
+// Start: Phase 57 - Showcase "Buka Menu" Scroll Handler
+// Klik butang 🍔 Buka Menu -> smooth scroll ke #menu-grid (Section C2).
+function initBukaMenu() {
+  const btn = document.getElementById("buka-menu-btn");
+  const target = document.getElementById("menu-grid");
+  if (!btn || !target) return;
+  btn.addEventListener("click", () => {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+// Hook ke init()
+const _origInitShowcase = init;
+init = async function () {
+  await _origInitShowcase();
+  initGuiNav();
+  initBukaMenu();
+};
+// End: Phase 57 - Showcase "Buka Menu" Scroll Handler
+
 // Start: Phase 55 - GUI Nav Button reveal (Modern-Siber glow entry)
 function initGuiNav() {
   const nav = document.querySelector('.gui-nav');

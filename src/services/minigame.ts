@@ -14,14 +14,15 @@ export interface MinigameState {
   last_catch: string;
 }
 
-/** Mula game baharu. Reset score. */
+/** Mula game baharu. Reset score. Merge state (elak overwrite nav_stage). */
 export async function startMinigame(env: Env, tgId: number): Promise<MinigameState> {
+  const prev = await getState(env, tgId);
   const s: MinigameState = { score: 0, round: 1, active: true, last_catch: '' };
-  await setState(env, { merchant_telegram_id: tgId, minigame: s, last_active: new Date().toISOString() } as never);
+  await setState(env, { ...prev, merchant_telegram_id: tgId, minigame: s, last_active: new Date().toISOString() } as never);
   return s;
 }
 
-/** Tekan butang tangkap - score +1, pilih emoji rawak jatuh. */
+/** Tekan butang tangkap - score +1, pilih emoji rawak jatuh. Merge state. */
 export async function pressCatch(env: Env, tgId: number): Promise<MinigameState | null> {
   const raw = await getState(env, tgId);
   const s = (raw as { minigame?: MinigameState })?.minigame;
@@ -30,17 +31,17 @@ export async function pressCatch(env: Env, tgId: number): Promise<MinigameState 
   s.score += 1;
   s.round += 1;
   s.last_catch = caught;
-  await setState(env, { merchant_telegram_id: tgId, minigame: s, last_active: new Date().toISOString() } as never);
+  await setState(env, { ...raw, merchant_telegram_id: tgId, minigame: s, last_active: new Date().toISOString() } as never);
   return s;
 }
 
-/** Tamat game. */
+/** Tamat game. Merge state. */
 export async function endMinigame(env: Env, tgId: number): Promise<MinigameState | null> {
   const raw = await getState(env, tgId);
   const s = (raw as { minigame?: MinigameState })?.minigame;
   if (!s) return null;
   s.active = false;
-  await setState(env, { merchant_telegram_id: tgId, minigame: s, last_active: new Date().toISOString() } as never);
+  await setState(env, { ...raw, merchant_telegram_id: tgId, minigame: s, last_active: new Date().toISOString() } as never);
   return s;
 }
 

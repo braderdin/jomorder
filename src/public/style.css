@@ -178,3 +178,37 @@ section .rounded-2xl {
   transform: translateY(-1px) scale(0.99);
 }
 /* End: Phase 55 - GUI Nav Button Grid Glow */
+
+/* Start: Phase 57 - Showcase "Buka Menu" Glow Button */
+.showcase-btn {
+  display: inline-block;
+  padding: 1rem 3rem;
+  border-radius: 9999px;
+  border: 2px solid var(--cyber-gold);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(124, 58, 237, 0.15));
+  color: var(--cyber-gold);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: showcaseGlow 2s ease-in-out infinite;
+}
+.showcase-btn:hover {
+  transform: translateY(-4px) scale(1.05);
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 10px 40px rgba(251, 191, 36, 0.5);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(124, 58, 237, 0.3));
+}
+.showcase-btn:active {
+  transform: translateY(-1px) scale(0.98);
+}
+@keyframes showcaseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); }
+  50% { box-shadow: 0 0 22px 6px rgba(251, 191, 36, 0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-btn { animation: none; }
+}
+/* End: Phase 57 - Showcase "Buka Menu" Glow Button */

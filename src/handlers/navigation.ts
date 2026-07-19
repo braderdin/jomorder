@@ -1,7 +1,7 @@
 // Start: Phase 55 - Navigation Layer (BACK button + breadcrumb)
 // Fasal 6 (mobile max 2-3 btn/row) + Fasal 7 S2 (Redis state).
 import { Env } from '../types';
-import { getState, setState } from '../redis';
+import { getState, mergeState } from '../redis';
 
 export type NavStage = 'idle' | 'customer_main' | 'merchant_main' | 'admin_main' | 'customer_browse' | 'customer_cart' | 'merchant_menu' | 'merchant_orders' | 'merchant_coupons' | 'merchant_settings';
 
@@ -9,8 +9,7 @@ const NAV_PREFIX = 'jo:nav:';
 
 /** Simpan breadcrumb navigation penguna (disimpan dalam MerchantState.nav_stage). */
 export async function setNav(env: Env, tgId: number, stage: NavStage): Promise<void> {
-  const s = await getState(env, tgId);
-  await setState(env, { ...(s as object), merchant_telegram_id: tgId, nav_stage: stage, last_active: new Date().toISOString() } as never);
+  await mergeState(env, tgId, { nav_stage: stage } as never);
 }
 
 /** Baca breadcrumb semasa. */

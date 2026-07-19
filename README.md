@@ -88,4 +88,17 @@ MIT © JomOrder — Projek MDEC GLOW.
 
 ---
 
+# Start: Phase 57 - Minigame + R2 Storage + Landing Page Upgrade
+- Minigame spin-wheel "Pusing Roda Makanan" (hiburan, tanpa kupon): src/services/minigame.ts + src/handlers/minigame_gui.ts
+- Landing page "🍔 Buka Menu" glow button + scroll ke #menu-grid (index.html + style.css + script.js)
+- R2 Storage quota enforcer (20MB/akaun) + image optimize guard (<150KB WebP)
+- QR DuitNow upload ke R2 melalui /tetapan -> Muat Naik QR (settings.ts)
+- Redis mergeState (atomic field merge, elak overwrite field lain)
+- Minigame analytics lightweight counter (session_cache.ts + analytics.ts)
+- Customer GUI richer grid (Bayar / Nilai) + Merchant GUI QR DuitNow button
+- Router: open_pay + open_review + upload_qr routed
+- Vercel rewrite /api/menu-showcase -> worker
+- Manual action: TIADA (semua DDL automatik via postgres MCP)
+# End: Phase 57 - Minigame + R2 Storage + Landing Page Upgrade
+
 <p align="center">Dibuat dengan 🇲🇾 untuk peniaga tempatan.</p>

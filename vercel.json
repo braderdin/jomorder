@@ -17,6 +17,10 @@
     {
       "source": "/api/health",
       "destination": "https://jomorder-worker.braderdin006.workers.dev/health"
+    },
+    {
+      "source": "/api/menu-showcase",
+      "destination": "https://jomorder-worker.braderdin006.workers.dev/api/menu-showcase"
     }
   ],
   "redirects": [

@@ -202,6 +202,16 @@ export async function routeCallbackQuery(
       await handleCustomerProfileGui(env, cbChatId, cb.from.id);
       return true;
     }
+    if (data === 'open_pay') {
+      await answerCallbackQuery(env, cb.id);
+      await handleViewCart(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'open_review') {
+      await answerCallbackQuery(env, cb.id);
+      await handleFeedbackGui(env, cbChatId, cb.from.id, 0);
+      return true;
+    }
     if (data === 'customer_gui') {
       await answerCallbackQuery(env, cb.id);
       await handleCustomerGui(env, cbChatId, cb.from.id);
