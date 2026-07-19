@@ -58,4 +58,34 @@ export function minigameButton() {
   return { text: '🎮 Main', callback_data: 'open_minigame' };
 }
 /** End: Phase 56 - Minigame button helper */
+
+// Start: Phase 58 - Nested BACK Chain (parentOf map)
+// Setiap stage ada parent. Butang BACK nested kembali ke parent yang betul,
+// bukan lompat terus ke nav:main (UX lebih mesra).
+export const NAV_PARENT: Record<NavStage, NavStage> = {
+  idle: 'idle',
+  customer_main: 'idle',
+  merchant_main: 'idle',
+  admin_main: 'idle',
+  customer_browse: 'customer_main',
+  customer_cart: 'customer_main',
+  merchant_menu: 'merchant_main',
+  merchant_orders: 'merchant_main',
+  merchant_coupons: 'merchant_main',
+  merchant_settings: 'merchant_main',
+};
+
+/** Dapatkan parent stage untuk nested BACK. */
+export function parentOf(stage: NavStage): NavStage {
+  return NAV_PARENT[stage] || 'idle';
+}
+
+/** Callback data untuk BACK dari stage semasa. */
+export function backToStage(stage: NavStage): string {
+  const p = parentOf(stage);
+  if (p === 'customer_main') return 'customer_gui';
+  if (p === 'merchant_main') return 'merchant_gui';
+  return 'nav:main';
+}
+// End: Phase 58 - Nested BACK Chain
 // End: Phase 55 - Navigation Layer

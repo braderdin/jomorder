@@ -101,4 +101,16 @@ MIT © JomOrder — Projek MDEC GLOW.
 - Manual action: TIADA (semua DDL automatik via postgres MCP)
 # End: Phase 57 - Minigame + R2 Storage + Landing Page Upgrade
 
+# Start: Phase 58 - GUI Elevation & UX Polish
+- Persistent reply keyboard pelanggan (`customerReplyKeyboard`) & peniaga (`merchantReplyKeyboard`) pada semua skrin utama.
+- Auto-role detect di `/start` -> route terus ke Customer GUI atau Merchant Papan (tiada taip /command).
+- Nested BACK chain: `back:customer`, `back:merchant`, `back:cart`, `back:shop` + smart parent return.
+- Empty-state mesra: troli kosong & tiada pesanan aktif papar CTA "Cari Kedai" + promo.
+- Order progress bar emoji (DITERIMA 🟡 / MEMASAK 🟢 / DIHANTAR 🔵 / SIAP 🟣) pada `handlePesananSaya`.
+- Rich menu item card helper (`buildMenuItemCaption`, `menuItemAddKeyboard`) di `ui_helpers.ts`.
+- Quick Reorder: snapshot cart ke state + `reorderKeyboard` 1-tap pesan semula.
+- Landing page deep-link `?start=menu` scroll terus ke #menu-grid + butang "🍔 Buka Menu Terus".
+- Minigame polish: persistent keyboard + glow style (`.showcase-btn`).
+# End: Phase 58 - GUI Elevation & UX Polish
+
 <p align="center">Dibuat dengan 🇲🇾 untuk peniaga tempatan.</p>

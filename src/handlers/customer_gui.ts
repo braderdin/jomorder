@@ -2,7 +2,7 @@
 // Papar menu utama pelanggan tanpa perlu taip /command. Setiap sub-menu
 // disertakan butang BACK (nav:main). Integrasi dengan navigation.ts state.
 import { Env, TelegramUser } from '../types';
-import { sendMessage, escapeMarkdownV2, navGrid } from '../telegram';
+import { sendMessage, escapeMarkdownV2, navGrid, customerReplyKeyboard } from '../telegram';
 import { setNav, minigameButton } from './navigation';
 
 /** Papar papan pemerintah pelanggan (GUI). */
@@ -26,7 +26,7 @@ export async function handleCustomerGui(env: Env, chatId: number, tgId: number):
       [minigameButton(), { text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
-  await sendMessage(env, chatId, text, kb);
+  await sendMessage(env, chatId, text, kb, customerReplyKeyboard());
 }
 
 /** Papar sub-menu kedai berdekatan (stub -> delegate ke customer nearby). */

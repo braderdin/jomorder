@@ -17,12 +17,15 @@ export function escapeMarkdownV2(text: string): string {
   return escaped;
 }
 
-/** Hantar mesej teks ke chat dengan parse_mode MarkdownV2 */
+/** Hantar mesej teks ke chat dengan parse_mode MarkdownV2.
+ * @param replyMarkup inline keyboard (optional)
+ * @param extraReplyKeyboard persistent reply keyboard (optional, Phase 58) */
 export async function sendMessage(
   env: Env,
   chatId: number,
   text: string,
-  replyMarkup?: object
+  replyMarkup?: object,
+  extraReplyKeyboard?: object
 ): Promise<TelegramApiResponse> {
   const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/sendMessage`;
   const payload: Record<string, unknown> = {
@@ -31,6 +34,7 @@ export async function sendMessage(
     parse_mode: 'MarkdownV2',
   };
   if (replyMarkup) payload.reply_markup = replyMarkup;
+  else if (extraReplyKeyboard) payload.reply_markup = extraReplyKeyboard;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -103,6 +107,55 @@ export function customerCommandGrid() {
   };
 }
 // End: Phase 53 - Customer Command Grid
+
+// Start: Phase 58 - Persistent Reply Keyboard (Zero-Command UX)
+// Keyboard utama yang SENTIASA attach pada mesej (bukan inline).
+// User tekan butang sahaja, tak perlu taip /command (MDEC GLOW mesra).
+/** Persistent main menu keyboard (3 kolum mobile-optimized). */
+export function mainReplyKeyboard() {
+  return {
+    keyboard: [
+      [{ text: '🛒 Pelanggan' }, { text: '🏪 Peniaga' }],
+      [{ text: '❓ Bantuan' }, { text: '🌐 BM/EN' }],
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+}
+
+/** Persistent customer keyboard (role-aware, always visible). */
+export function customerReplyKeyboard() {
+  return {
+    keyboard: [
+      [{ text: '🍔 Lihat Menu' }, { text: '🛒 Troli' }],
+      [{ text: '📍 Kedai Berdekatan' }, { text: '🎟️ Promo' }],
+      [{ text: '📖 Sejarah' }, { text: '👤 Profil' }],
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+}
+
+/** Persistent merchant keyboard (role-aware, always visible). */
+export function merchantReplyKeyboard() {
+  return {
+    keyboard: [
+      [{ text: '🟢 Buka/Tutup' }, { text: '📋 Menu' }],
+      [{ text: '📦 Pesanan' }, { text: '📊 Laporan' }],
+      [{ text: '🎟️ Kupon' }, { text: '⚙️ Tetapan' }],
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+}
+
+/** Remove persistent keyboard (balik ke inline-only). */
+export function removeKeyboard() {
+  return {
+    remove_keyboard: true,
+  };
+}
+// End: Phase 58 - Persistent Reply Keyboard
 
 // Start: Phase 45 - Rich Dashboard Inline Helper (Fasal 6)
 /** Inline keyboard papan pemerintah peniaga kaya (max 2 btn/row). */

@@ -3,8 +3,9 @@
 // handleViewCart: parse JSONB cart buffer dari Upstash, kira total, papar breakdown mobile.
 // Phase 39: guarantee answerCallbackQuery triggered in milliseconds for ALL cart triggers.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, customerCommandGrid, inlineKeyboard, answerCallbackQuery } from '../telegram';
+import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, customerCommandGrid, inlineKeyboard, answerCallbackQuery, customerReplyKeyboard } from '../telegram';
 import { getState, setState } from '../redis';
+import { reorderKeyboard } from '../services/ui_helpers';
 
 /**
  * dismissSpinnerFast
@@ -65,11 +66,14 @@ export async function handleViewCart(
     await sendMessage(
       env,
       chatId,
-      escapeMarkdownV2('🛒 Troli anda kosong. Sila pilih menu kedai dulu.'),
+      escapeMarkdownV2('🛒 Troli anda kosong.\\n\\n') +
+      escapeMarkdownV2('Jom makan dulu? Pilih kedai berdekatan dan tambah menu ke troli! 🍔'),
       inlineKeyboard([
         [{ text: '🏪 Cari Kedai', callback_data: 'open_nearby' }],
+        [{ text: '🎟️ Promo', callback_data: 'open_promo' }],
         [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
-      ])
+      ]),
+      customerReplyKeyboard()
     );
     return true;
   }
@@ -114,6 +118,15 @@ export async function handleViewCart(
     ]);
   }
   // End: Phase 38 - Cart Checkout Lock
+
+  // Start: Phase 58 - Quick Reorder hint (pelanggan boleh pesan sama lagi)
+  // Simpan cart snapshot ke state untuk reorder pantas (1-tap).
+  if (state) {
+    try {
+      await setState(env, { ...state, last_cart_snapshot: buffer } as never);
+    } catch { /* soft-fail */ }
+  }
+  // End: Phase 58 - Quick Reorder hint
 
   await sendMessage(env, chatId, header, keyboard);
   return true;

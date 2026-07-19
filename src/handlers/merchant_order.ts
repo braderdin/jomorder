@@ -2,7 +2,7 @@
 // Fasal 7 Strategy 1 (RLS multi-tenant) + Fasal 6 (interactive callback buttons)
 // Fasal 4 (SOA) - controller khusus untuk callback 'accept_order:', 'ready_order:', 'reject_order:'
 import { Env, OrderStatus, TelegramCallbackQuery } from '../types';
-import { answerCallbackQuery, sendMessage, escapeMarkdownV2, merchantMenuKeyboard, navGrid } from '../telegram';
+import { answerCallbackQuery, sendMessage, escapeMarkdownV2, merchantMenuKeyboard, navGrid, merchantReplyKeyboard } from '../telegram';
 import { sendCustomerStatusAlert } from '../services/telegram_notify';
 
 /** Status mapping untuk inline button lifecycle. */
@@ -142,7 +142,7 @@ export async function handleMerchantOrderQueue(
   try {
     const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
     if (!res.ok) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai pesanan.'), navGrid());
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai pesanan.'), merchantReplyKeyboard());
       return true;
     }
     const rows = (await res.json()) as Array<{
@@ -151,7 +151,7 @@ export async function handleMerchantOrderQueue(
       jumlah_harga?: number;
     }>;
     if (!Array.isArray(rows) || rows.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada pesanan aktif dalam queue.'), navGrid());
+      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada pesanan aktif dalam queue.'), merchantReplyKeyboard());
       return true;
     }
     const lines = rows

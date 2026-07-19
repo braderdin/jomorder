@@ -1,7 +1,7 @@
 // Start: Phase 55 - Merchant Onboarding GUI (Fasal 6 mobile grid + BACK)
 // Pandu peniaga daftar kedai tanpa /command. Setiap step ada BACK.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2 } from '../telegram';
+import { sendMessage, escapeMarkdownV2, merchantReplyKeyboard } from '../telegram';
 import { setNav } from './navigation';
 
 /** Papar langkah pendaftaran kedai (GUI). */
@@ -26,6 +26,6 @@ export async function handleMerchantOnboardGui(
       [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
-  await sendMessage(env, chatId, text, kb);
+  await sendMessage(env, chatId, text, kb, merchantReplyKeyboard());
 }
 // End: Phase 55 - Merchant Onboarding GUI

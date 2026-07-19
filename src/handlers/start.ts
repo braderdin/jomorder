@@ -3,11 +3,13 @@
 // Arahan: kenal pasti identiti user (customer vs merchant) lalu render interface sesuai.
 // Phase 38: deep-link payload slicing isolation (ref=xxx) -> Redis state bind.
 import { Env, TelegramUser } from '../types';
-import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboard, navGrid } from '../telegram';
+import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboard, navGrid, merchantReplyKeyboard, customerReplyKeyboard } from '../telegram';
 import { checkMerchantExists } from '../db';
 import { setState } from '../redis';
 import { handleHelpCategory } from './help';
 import { setNav } from './navigation';
+import { handleCustomerGui } from './customer_gui';
+import { handleMerchantGui } from './merchant_gui';
 
 // Start: Phase 55 - Main Menu Navigation Grid (3-col + BACK + BM/EN)
 function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
@@ -67,39 +69,14 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
   }
 
   if (isMerchant) {
-    const text =
-      escapeMarkdownV2('╔═══════════════════════════╗\\n') +
-      escapeMarkdownV2('   💼 JomOrder Modern-Siber\\n') +
-      escapeMarkdownV2('╚═══════════════════════════╝\\n\\n') +
-      escapeMarkdownV2('🤝 Hai ' + firstName + ', papan pemerintah kedai anda sedia!\\n\\n') +
-      escapeMarkdownV2('Urus niaga F&B dengan pantas:\\n\\n') +
-      escapeMarkdownV2('🟢 *Buka/Tutup* kedai sepantas 1 tap\\n') +
-      escapeMarkdownV2('📋 *Menu Kedai* — /menu_kedai\\n') +
-      escapeMarkdownV2('📦 *Semak* pesanan masuk\\n') +
-      escapeMarkdownV2('📊 *Laporan* jualan + CSV\\n') +
-      escapeMarkdownV2('🎟️ *Cipta* kupon diskaun\\n') +
-      escapeMarkdownV2('⚙️ *Tetapan* — /tetapan (muat naik QR)\\n\\n') +
-      escapeMarkdownV2('Taip /urus untuk buka papan penuh\\. Selamat berniaga! 🇲🇾');
     if (typeof tgId === 'number') await setNav(env, tgId, 'merchant_main');
-    await sendMessage(env, chatId, text, merchantMenuKeyboard());
+    await handleMerchantGui(env, chatId, tgId as number);
     return;
   }
 
   // Default: Customer interface
-  const text =
-    escapeMarkdownV2('╔═══════════════════════════╗\\n') +
-    escapeMarkdownV2('   🍔 JomOrder Modern-Siber\\n') +
-    escapeMarkdownV2('╚═══════════════════════════╝\\n\\n') +
-    escapeMarkdownV2('👋 Hai ' + firstName + ', selamat datang ke keluarga JomOrder!\\n\\n') +
-    escapeMarkdownV2('Cari makanan sedap berdekatan anda:\\n\\n') +
-    escapeMarkdownV2('📍 *Kedai Berdekatan* — /cari_makan\\n') +
-    escapeMarkdownV2('🏪 *Menu Kedai* — /menu_kedai\\n') +
-    escapeMarkdownV2('🛒 *Troli* — /troli semak pesanan\\n') +
-    escapeMarkdownV2('🎟️ *Promo* — /promo kupon aktif\\n') +
-    escapeMarkdownV2('📖 *Sejarah* — /sejarah_pesanan\\n\\n') +
-    escapeMarkdownV2('Tekan butang di bawah untuk mula. Selamat menjamu selera! 🇲🇾');
   if (typeof tgId === 'number') await setNav(env, tgId, 'customer_main');
-  await sendMessage(env, chatId, text, startQuickActionKeyboard());
+  await handleCustomerGui(env, chatId, tgId as number);
 }
 
 // Start: Phase 51 - Adaptive Welcome Card (role + time-aware greeting)

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Start: Phase 58 - Add /api/menu-showcase endpoint smoke check
 # Start: Phase 36 LOOP 1 - Deployment Smoke Test (Active Endpoint Verifier)
 # Guna: ./bin/smoke-test.sh [BASE_URL]
 # Default BASE_URL=http://localhost:8787 (wrangler dev port 8787)

@@ -1,7 +1,7 @@
 // Start: Phase 55 - Merchant GUI Menu (Fasal 6 mobile grid + BACK)
 // Papar papan pemerintah peniaga tanpa /command. Setiap sub-menu ada BACK.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2 } from '../telegram';
+import { sendMessage, escapeMarkdownV2, merchantReplyKeyboard } from '../telegram';
 import { setNav } from './navigation';
 
 /** Papar papan pemerintah peniaga (GUI). */
@@ -26,6 +26,6 @@ export async function handleMerchantGui(env: Env, chatId: number, tgId: number):
       [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
-  await sendMessage(env, chatId, text, kb);
+  await sendMessage(env, chatId, text, kb, merchantReplyKeyboard());
 }
 // End: Phase 55 - Merchant GUI Menu

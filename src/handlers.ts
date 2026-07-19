@@ -13,7 +13,9 @@ import { fetchSaasMetrics, fetchPublicStats } from './services/analytics';
 import { sendMessage, escapeMarkdownV2, answerCallbackQuery } from './telegram';
 import { handleMerchantInvoiceText, handleInvoiceCallback } from './handlers/merchant_invoice';
 import { handleMerchantOrderCallback } from './handlers/merchant_order';
-import { handleStart } from './handlers/start';
+import { handleStart, handleAdaptiveWelcome } from './handlers/start';
+import { handleCustomerGui } from './handlers/customer_gui';
+import { handleMerchantGui } from './handlers/merchant_gui';
 import { handleHelp, handleHelpLocaleToggle } from './handlers/help';
 import { handleShopMenu, handleMenuKedai } from './handlers/shop_menu';
 import { handleTetapan, handleTetapanCallback } from './handlers/settings';
@@ -179,7 +181,17 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Deep-link: /start dengan payload ?startapp=kedai_id=XXX.
   if (cmd.startsWith('/start')) {
     const payload = cmd.includes(' ') ? cmd.split(/\s+/)[1] : undefined;
-    await withCommandGuard(env, chatId, '/start', () => handleStartDeepLink(env, chatId, msg.from, payload));
+    if (payload && payload.startsWith('menu')) {
+      // Phase 58: deep-link ?start=menu -> terus ke GUI pelanggan (menu showcase).
+      await handleCustomerGui(env, chatId, tgId);
+      return;
+    }
+    if (payload && payload.startsWith('app')) {
+      await withCommandGuard(env, chatId, '/start', () => handleStartDeepLink(env, chatId, msg.from, payload));
+      return;
+    }
+    // Default /start -> auto-detect role & papar GUI (Phase 58 auto-role).
+    await handleStart(env, chatId, msg.from);
     return;
   }
   // Marketing coupon commands (merchant).

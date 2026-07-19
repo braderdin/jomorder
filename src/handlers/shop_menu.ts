@@ -2,7 +2,7 @@
 // Fasal 4 (SOA) + Fasal 6 (inline carousel) + Fasal 7 Strategy 1 (RLS binding)
 // Arahan: tarik entiti restoran AKTIF dari DB dan kompil ke butang inline carousel.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
+import { sendMessage, escapeMarkdownV2, inlineKeyboard, customerReplyKeyboard } from '../telegram';
 
 /** Entiti kedai minimum untuk paparan carousel. */
 interface KedaiAktif {
@@ -75,7 +75,7 @@ export async function handleShopMenu(env: Env, chatId: number): Promise<void> {
 
   rows.push([{ text: '⬅️ Kembali', callback_data: 'nav:main' }]);
   const text = escapeMarkdownV2('📋 SENARAI KEDAI AKTIF\\n\\nPilih kedai untuk lihat menu:\\n');
-  await sendMessage(env, chatId, text, inlineKeyboard(rows));
+  await sendMessage(env, chatId, text, inlineKeyboard(rows), customerReplyKeyboard());
 }
 
 // End: Phase 31 - /menu Command Controller

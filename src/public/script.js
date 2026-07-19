@@ -264,4 +264,26 @@ init = async function () {
 };
 // End: Phase 55 - GUI Nav Button reveal
 
+// Start: Phase 58 - Deep-Link ?start=menu scroll handler
+// Bila landing page dibuka dari t.me/...?start=menu, scroll terus ke #menu-grid.
+function initDeepLinkScroll() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const start = params.get('start');
+    if (start === 'menu') {
+      const grid = document.getElementById('menu-grid');
+      if (grid) {
+        setTimeout(() => grid.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+      }
+    }
+  } catch { /* ignore deep-link parse error */ }
+}
+// Hook ke init()
+const _origInit58 = init;
+init = async function () {
+  await _origInit58();
+  initDeepLinkScroll();
+};
+// End: Phase 58 - Deep-Link ?start=menu scroll handler
+
 // End: JomOrder Portal Live Metrics Fetch (Phase 27 + Phase 45 UI)

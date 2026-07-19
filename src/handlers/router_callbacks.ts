@@ -255,6 +255,29 @@ export async function routeCallbackQuery(
     }
     // End: Phase 56 - Minigame routes
 
+    // Start: Phase 58 - Nested BACK Chain (smart parent return)
+    if (data === 'back:customer') {
+      await answerCallbackQuery(env, cb.id);
+      await handleCustomerGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'back:merchant') {
+      await answerCallbackQuery(env, cb.id);
+      await handleMerchantGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'back:cart') {
+      await answerCallbackQuery(env, cb.id);
+      await handleViewCart(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'back:shop') {
+      await answerCallbackQuery(env, cb.id);
+      await handleCustomerShopsGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    // End: Phase 58 - Nested BACK Chain
+
     // Spinner dismissal untuk callback tak dikenali (Fasal 7 S4)
     await answerCallbackQuery(env, cb.id, 'OK');
     return true;

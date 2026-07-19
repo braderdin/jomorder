@@ -46,4 +46,66 @@ export function starRatingKeyboard(orderId: number) {
   }));
   return { inline_keyboard: [row] };
 }
+
+// Start: Phase 58 - Rich Menu Item Card Helper
+/** Bina card item menu dengan emoji + harga RM + butang Add. */
+export interface MenuItemView {
+  id: string;
+  nama: string;
+  harga: number;
+  gambarUrl?: string | null;
+ kedaiId: string;
+}
+
+/** Caption MarkdownV2 untuk item menu (dengan harga RM). */
+export function buildMenuItemCaption(item: MenuItemView): string {
+  return (
+    md(`🍴 ${item.nama}`) + '\n' +
+    md(`Harga: ${fmtRm(item.harga)}`) + '\n' +
+    md('Tekan ➕ untuk masukkan ke troli.')
+  );
+}
+
+/** Inline keyboard dengan butang Add untuk item menu. */
+export function menuItemAddKeyboard(item: MenuItemView) {
+  return {
+    inline_keyboard: [
+      [{ text: '➕ Tambah', callback_data: `add_to_cart:${item.id}:${item.kedaiId}` }],
+      [{ text: '⬅️ Kembali', callback_data: 'open_shops' }],
+    ],
+  };
+}
+
+/** Progress bar emoji untuk status pesanan. */
+export function progressBar(stage: 'DITERIMA' | 'MEMASAK' | 'DIHANTAR' | 'SIAP'): string {
+  const steps: Array<[string, string]> = [
+    ['DITERIMA', '🟡'],
+    ['MEMASAK', '🟢'],
+    ['DIHANTAR', '🔵'],
+    ['SIAP', '🟣'],
+  ];
+  const idx = steps.findIndex((s) => s[0] === stage);
+  return steps.map((s, i) => (i <= idx ? s[1] : '⚪')).join(' ');
+}
+
+/** Empty-state card mesra (tiada item). */
+export function emptyStateCard(title: string, hint: string, actionLabel: string, actionCb: string) {
+  return {
+    inline_keyboard: [
+      [{ text: actionLabel, callback_data: actionCb }],
+      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+    ],
+  };
+}
+
+/** Quick Reorder keyboard - 1-tap pesan semula troli lepas. */
+export function reorderKeyboard(orderId: number, kedaiId: string) {
+  return {
+    inline_keyboard: [
+      [{ text: '🔁 Pesan Lagi', callback_data: `reorder:${orderId}:${kedaiId}` }],
+      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+    ],
+  };
+}
+// End: Phase 58 - Rich Menu Item Card Helper
 // End: Phase 55 - UI Helpers

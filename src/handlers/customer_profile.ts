@@ -1,7 +1,7 @@
 // Start: Phase 55 - Customer Profile GUI (Fasal 6 mobile grid + BACK)
 // Papar profil pelanggan + langganan tanpa /command. Setiap sub-menu ada BACK.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2 } from '../telegram';
+import { sendMessage, escapeMarkdownV2, customerReplyKeyboard } from '../telegram';
 import { getSubscriptionStatus } from '../subscription';
 import { setNav } from './navigation';
 
@@ -26,6 +26,6 @@ export async function handleCustomerProfileGui(
       [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
-  await sendMessage(env, chatId, text, kb);
+  await sendMessage(env, chatId, text, kb, customerReplyKeyboard());
 }
 // End: Phase 55 - Customer Profile GUI
