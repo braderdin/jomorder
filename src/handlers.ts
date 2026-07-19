@@ -20,6 +20,8 @@ import { handleTetapan, handleTetapanCallback } from './handlers/settings';
 import { handleCartKosong } from './handlers/customer_cart';
 import { handleBantuanLokasi } from './handlers/help';
 import { handleMerchantDashboard, handleLaporanJualan, handleExportSalesCsv } from './handlers/merchant_dashboard';
+// Start: Phase 53 - Remove duplicate stub (use handleLaporanJualan from merchant_dashboard)
+// End: Phase 53 - Remove duplicate stub
 // Start: Phase 32 - Commerce/Marketing/Admin sub-handler imports
 import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon, handleDeleteCouponInline, handlePromo } from './handlers/marketing_coupon';
 import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handlers/customer_commerce';
@@ -37,27 +39,11 @@ import { withCommandGuard } from './services/command_error_interceptor';
 import { daftarKedaiPermulaan } from './db';
 import { handleTambahMenu } from './handlers/merchant';
 // End: Phase 41 - 22 Command BM Activation imports
-
-/** Handler /laporan_jualan - agregat jualan kedai sendiri (merchant-scoped). */
-async function handleMerchantSalesSummary(env: Env, chatId: number, tgId: number): Promise<void> {
-  const data = await fetchMerchantSalesSummary(env, tgId);
-  if (!data) {
-    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan jualan kedai.'));
-    return;
-  }
-  const text =
-    escapeMarkdownV2('📊 LAPORAN JUALAN KEDAI:\\n\\n') +
-    escapeMarkdownV2(`Jumlah Pesanan: ${data.total_orders}\\n`) +
-    escapeMarkdownV2(`Pesanan Dibayar: ${data.paid_orders}\\n`) +
-    escapeMarkdownV2(`Pendapatan: RM${data.total_earnings_rm.toFixed(2)}`);
-  await sendMessage(env, chatId, text);
-}
 // End: Phase 37 - New 22-Command handler imports
 
-// Start: Phase 36 - Sealed 16-Command Distributor Routing Matrix (zero dead-code)
-// Satu sumber benar memetakan kesemua 16 arahan natif ke handler aktif.
-// Digunakan sebagai kontrak pengesahan supaya tiada arahan terbiar (dead-code).
-// Start: Phase 44 - 22-Command BM Distributor Matrix (1:1 Chip Besar list)
+// Start: Phase 53 - 30-Command Distributor Routing Matrix (1:1 NATIVE_COMMAND_LIST)
+// Satu sumber benar memetakan kesemua 30 arahan natif ke handler aktif.
+// Selari dengan types.ts NATIVE_COMMAND_LIST + telegram_setup.ts BOT_COMMANDS.
 export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
   command: string;
   handler: string;
@@ -65,7 +51,8 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
 }> = [
   { command: '/start', handler: 'handleStartDeepLink', active: true },
   { command: '/bantuan', handler: 'handleHelp', active: true },
-  { command: '/urus', handler: 'handleMerchantDashboard', active: true },
+  { command: '/menu', handler: 'handleShopMenu', active: true },
+  { command: '/menu_kedai', handler: 'handleMenuKedai', active: true },
   { command: '/urus_kedai', handler: 'handleMerchantDashboard', active: true },
   { command: '/daftar', handler: 'handleMerchantMessage', active: true },
   { command: '/tambah_menu', handler: 'handleTambahMenu', active: true },
@@ -77,21 +64,24 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
   { command: '/cipta_kupon', handler: 'handleCreateCoupon', active: true },
   { command: '/senarai_kupon', handler: 'handleListCoupons', active: true },
   { command: '/padam_kupon', handler: 'handleDeleteCoupon', active: true },
-  { command: '/laporan_jualan', handler: 'handleMerchantSalesSummary', active: true },
+  { command: '/promo', handler: 'handlePromo', active: true },
+  { command: '/invois', handler: 'handleMerchantInvoiceText', active: true },
+  { command: '/laporan_jualan', handler: 'handleLaporanJualan', active: true },
+  { command: '/tetapan', handler: 'handleTetapan', active: true },
   { command: '/set_lokasi', handler: 'handleSetLokasi', active: true },
   { command: '/sejarah_pesanan', handler: 'handleSejarahPesanan', active: true },
   { command: '/batalkan_pesanan', handler: 'handleBatalkanPesanan', active: true },
   { command: '/profil', handler: 'handleProfil', active: true },
   { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true },
+  { command: '/zon_operasi', handler: 'handleMerchantMessage', active: true },
+  { command: '/cart_kosong', handler: 'handleCartKosong', active: true },
+  { command: '/bantuan_lokasi', handler: 'handleBantuanLokasi', active: true },
   { command: '/admin_stats', handler: 'handleAdminStats', active: true },
   { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true },
   { command: '/pengumuman', handler: 'handlePengumumanBroadcast', active: true },
   { command: '/status', handler: 'handleStatus', active: true },
 ];
-// End: Phase 44 - 22-Command BM Distributor Matrix (1:1 Chip Besar list)
-// Phase 45: Matrix disahkan 22/22 padan NATIVE_COMMAND_LIST (types.ts).
-// Note: /laporan_jualan diubah dari fetchSaasMetrics (platform) ke handleMerchantSalesSummary (merchant-scoped)
-// di atas; baris asal di bawah dijadikan alias platform (tidak aktif double-count).
+// End: Phase 53 - 30-Command Distributor Routing Matrix
 
 // Start: Phase 39 - Command Username Sanitizer Overhaul (DISTRIBUTOR_COMMAND_MAP parser)
 // Telegram hantar arahan dengan suffix@BotName (contoh: '/start@JomOrderBot').

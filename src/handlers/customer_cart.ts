@@ -3,7 +3,7 @@
 // handleViewCart: parse JSONB cart buffer dari Upstash, kira total, papar breakdown mobile.
 // Phase 39: guarantee answerCallbackQuery triggered in milliseconds for ALL cart triggers.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, inlineKeyboard, answerCallbackQuery } from '../telegram';
+import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, customerCommandGrid, inlineKeyboard, answerCallbackQuery } from '../telegram';
 import { getState, setState } from '../redis';
 
 /**
@@ -164,7 +164,7 @@ export async function handleCartKosong(env: Env, chatId: number, tgId: number): 
     chatId,
     escapeMarkdownV2('🧹 Troli anda telah dikosongkan.\\n\\n') +
       escapeMarkdownV2('Nak pesan lagi? Tekan butang di bawah. 🍔'),
-    customerMenuKeyboard()
+    customerCommandGrid()
   );
 }
 // End: Phase 52 - /cart_kosong

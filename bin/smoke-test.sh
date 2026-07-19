@@ -246,27 +246,27 @@ fi
 # End: Phase 47 - Help Deep-Link + Landing UI Assertion
 
  echo "--------------------------------------------------"
-echo "--- Phase 52: New 4-Command Activation + 27-Total Assert ---"
-# Suntik HTTP POST frames untuk 4 command baharu (menu_kedai, tetapan, cart_kosong, promo, bantuan_lokasi).
-for cmd in "/menu_kedai" "/tetapan" "/cart_kosong" "/promo" "/bantuan_lokasi"; do
-  check_post "PH52:${cmd%% *}" "$cmd"
+  echo "--- Phase 53: 30-Command Activation + 30-Total Assert ---"
+# Suntik HTTP POST frames untuk 8 command baharu matrix (menu, menu_kedai, tetapan, invois, zon_operasi, cart_kosong, promo, bantuan_lokasi).
+for cmd in "/menu" "/menu_kedai" "/tetapan" "/invois" "/zon_operasi" "/cart_kosong" "/promo" "/bantuan_lokasi"; do
+  check_post "PH53:${cmd%% *}" "$cmd"
 done
-# Assert jumlah command natif = 27 (22 asal + 5 baharu Phase 52).
-EXPECTED_TOTAL=27
+# Assert jumlah command natif = 30 (1:1 NATIVE_COMMAND_LIST types.ts).
+EXPECTED_TOTAL=30
 # Kira dari fail types.ts NATIVE_COMMAND_LIST (grep command: field).
 if [[ -f "src/types.ts" ]]; then
   COUNT=$(grep -cE "^\s*\{ command: '/" src/types.ts || true)
   if [[ "$COUNT" -ge "$EXPECTED_TOTAL" ]]; then
-    echo "[PASS] Phase 52: NATIVE_COMMAND_LIST count=${COUNT} (>= ${EXPECTED_TOTAL} expected)"
+    echo "[PASS] Phase 53: NATIVE_COMMAND_LIST count=${COUNT} (>= ${EXPECTED_TOTAL} expected)"
     PASS_COUNT=$((PASS_COUNT + 1))
   else
-    echo "[FAIL] Phase 52: NATIVE_COMMAND_LIST count=${COUNT} (< ${EXPECTED_TOTAL} expected)"
+    echo "[FAIL] Phase 53: NATIVE_COMMAND_LIST count=${COUNT} (< ${EXPECTED_TOTAL} expected)"
     FAIL_COUNT=$((FAIL_COUNT + 1))
   fi
 else
-  echo "[WARN] Phase 52: src/types.ts not found, skip count"
+  echo "[WARN] Phase 53: src/types.ts not found, skip count"
 fi
-# End: Phase 52 - New 4-Command Activation + 27-Total Assert
+# End: Phase 53 - 30-Command Activation + 30-Total Assert
 
  echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"

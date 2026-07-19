@@ -43,6 +43,27 @@ JomOrder membantu peniaga F&B Malaysia menerima pesanan secara digital tanpa kos
 
 ---
 
+## 📋 Matriks Perintah Native (30)
+
+| Kategori | Perintah |
+|----------|----------|
+| Pelanggan | /start · /bantuan · /menu · /menu_kedai · /cari_makan · /troli · /cart_kosong · /pesanan_saya · /senarai_pesanan · /sejarah_pesanan · /profil · /promo · /bantuan_lokasi · /batalkan_pesanan |
+| Peniaga | /daftar · /tambah_menu · /senarai_menu · /urus · /urus_kedai · /laporan_jualan · /cipta_kupon · /senarai_kupon · /padam_kupon · /invois · /tetapan · /set_lokasi · /zon_operasi · /naiktaraf |
+| Pentadbir | /admin_stats · /senarai_pendaftaran · /pengumuman · /status |
+
+Semua perintah diselaraskan antara `NATIVE_COMMAND_LIST` (types.ts), `BOT_COMMANDS` (telegram_setup.ts), `DISTRIBUTOR_COMMAND_MAP` (handlers.ts), dan `setMyCommands` (bin/force-webhook-register.sh).
+
+---
+
+## 🗂️ Skema Supabase (Migrasi 019)
+
+- `kempen_diskaun` — enjin kupon diskaun berpusat (RLS service_role)
+- `webhook_error_logs` — telemetry ralat webhook
+- `menu_makanan.gambar_url` — foto menu WebP (Fasal 8)
+- Index `idx_kempen_kedai_aktif`, `idx_kempen_kod`, `idx_menu_gambar` — laju sweep
+
+---
+
 ## 🧱 Teknologi
 
 Dibina sebagai *serverless-first SaaS* menggunakan edge compute, managed database dan cache layer — tanpa pelayan untuk diurus.

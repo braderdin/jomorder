@@ -41,13 +41,12 @@ async function sendHtmlMessage(
  */
 export async function handleHelp(env: Env, chatId: number, _user: TelegramUser | undefined): Promise<void> {
   const html =
-    '<b>📖 PANDUAN JomOrder</b>\n\n' +
-    'Guna arahan berikut untuk navigasi pantas:\n\n' +
-    '• <b>/start</b> — Mula & pilih peranan (Peniaga/Pelanggan)\n' +
-    '• <b>/menu</b> — Lihat senarai kedai aktif berdekatan\n' +
-    '• <b>/urus</b> — Papan pemerintah peniaga (buka/tutup kedai)\n' +
-    '• <b>/help</b> — Papar panduan ini lagi\n\n' +
-    'Untuk buat pesanan: tekan <b>📍 Kedai Berdekatan</b> → pilih kedai → tambah ke troli → <b>💳 Bayar Sekarang</b>.\n\n' +
+    '<b>📖 PANDUAN JomOrder Modern-Siber</b>\n\n' +
+    'Pilih peranan anda untuk panduan lengkap:\\n\\n' +
+    '👨‍🍳 <b>Peniaga:</b> /daftar · /tambah_menu · /senarai_menu · /urus_kedai · /laporan_jualan · /cipta_kupon · /senarai_kupon · /padam_kupon · /invois · /tetapan · /set_lokasi · /zon_operasi · /naiktaraf\n\n' +
+    '🛒 <b>Pelanggan:</b> /cari_makan · /menu · /menu_kedai · /troli · /cart_kosong · /pesanan_saya · /sejarah_pesanan · /promo · /profil · /batalkan_pesanan · /bantuan_lokasi\n\n' +
+    '⚙️ <b>Pentadbir:</b> /admin_stats · /senarai_pendaftaran · /pengumuman · /status\n\n' +
+    '🚀 <b>Cara buat pesanan:</b> tekan 📍 Kedai Berdekatan → pilih kedai → tambah ke troli → 💳 Bayar Sekarang.\n\n' +
     'Ada masalah? Hubungi barisan operator kami di bawah 👇';
 
   const inline = {

@@ -40,6 +40,10 @@ export async function handleTetapan(env: Env, chatId: number, tgId: number): Pro
     ],
     [
       { text: '📤 Muat Naik QR DuitNow', callback_data: 'upload_qr' },
+      { text: '📍 Zon Operasi', callback_data: 'merchant_zon' },
+    ],
+    [
+      { text: '🏪 Menu Kedai', callback_data: 'merchant_menu' },
     ],
   ]);
 

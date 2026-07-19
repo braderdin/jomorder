@@ -5,14 +5,14 @@ import { Env, NATIVE_COMMAND_LIST } from '../types';
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 
-/** 22 arahan kanonikal BM dipaparkan di menu natif Telegram (deskripsi BM). */
-// Start: Phase 41 - 22 Command BM Activation (sync 1:1 NATIVE_COMMAND_LIST)
-// Kemaskini ke 22 command BM supaya BotFather menu padan dengan router handlers.ts.
+/** 30 arahan kanonikal BM dipaparkan di menu natif Telegram (deskripsi BM). */
+// Start: Phase 53 - 30 Command Master Sync (1:1 NATIVE_COMMAND_LIST)
+// Padan tepat 30 command BM supaya BotFather menu selari router handlers.ts.
 const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: '/start', description: 'Mula & pilih peranan' },
   { command: '/bantuan', description: 'Panduan interaktif bot' },
   { command: '/menu', description: 'Senarai kedai aktif' },
-  { command: '/urus', description: 'Papan pemerintah peniaga' },
+  { command: '/menu_kedai', description: 'Lihat menu kedai' },
   { command: '/urus_kedai', description: 'Urus kedai saya' },
   { command: '/daftar', description: 'Daftar kedai baharu' },
   { command: '/tambah_menu', description: 'Tambah item menu' },
@@ -24,26 +24,26 @@ const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: '/cipta_kupon', description: 'Cipta kupon diskaun' },
   { command: '/senarai_kupon', description: 'Senarai kupon aktif' },
   { command: '/padam_kupon', description: 'Padam kupon diskaun' },
+  { command: '/promo', description: 'Lihat promosi aktif' },
   { command: '/invois', description: 'Jana invois digital' },
   { command: '/laporan_jualan', description: 'Laporan jualan kedai' },
+  { command: '/tetapan', description: 'Tetapan akaun peniaga' },
   { command: '/set_lokasi', description: 'Tetapkan koordinat kedai' },
   { command: '/sejarah_pesanan', description: 'Sejarah pesanan saya' },
   { command: '/batalkan_pesanan', description: 'Batal pesanan tertunda' },
   { command: '/profil', description: 'Profil & langganan saya' },
   { command: '/naiktaraf', description: 'Naik taraf pelan premium' },
-  { command: '/zon_operasi', description: 'Zon operasi perkhidmatan' },
+  { command: '/zon_operasi', description: 'Senarai zon operasi' },
+  { command: '/cart_kosong', description: 'Kosongkan troli pesanan' },
+  { command: '/bantuan_lokasi', description: 'Panduan ikut lokasi' },
   { command: '/admin_stats', description: 'Statistik pentadbir' },
   { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
   { command: '/pengumuman', description: 'Pengumuman pentadbir' },
   { command: '/status', description: 'Semak status bot & akaun' },
-  // Start: Phase 52 - Bonus native commands (27 total)
-  { command: '/menu_kedai', description: 'Lihat menu kedai' },
-  { command: '/tetapan', description: 'Tetapan akaun peniaga' },
-  // End: Phase 52 - Bonus native commands
 ];
 
 /**
- * Daftarkan kesemua 27 arahan bot ke menu natif Telegram pengguna.
+ * Daftarkan kesemua 30 arahan bot ke menu natif Telegram pengguna.
  * Memanggil Telegram setMyCommands API. Soft-fail: return false tanpa throw.
  */
 export async function registerBotCommands(env: Env): Promise<boolean> {

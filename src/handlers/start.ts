@@ -98,8 +98,8 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
     escapeMarkdownV2('Cari makanan sedap berdekatan anda:\\n\\n') +
     escapeMarkdownV2('📍 *Kedai Berdekatan* — /cari_makan\\n') +
     escapeMarkdownV2('🏪 *Menu Kedai* — /menu_kedai\\n') +
-    escapeMarkdownV2('🛒 *Troli* — semak pesanan anda\\n') +
-    escapeMarkdownV2('🎟️ *Kupon* — guna kod diskaun\\n') +
+    escapeMarkdownV2('🛒 *Troli* — /troli semak pesanan\\n') +
+    escapeMarkdownV2('🎟️ *Promo* — /promo kupon aktif\\n') +
     escapeMarkdownV2('📖 *Sejarah* — /sejarah_pesanan\\n\\n') +
     escapeMarkdownV2('Tekan butang di bawah untuk mula. Selamat menjamu selera! 🇲🇾');
   await sendMessage(env, chatId, text, startQuickActionKeyboard());

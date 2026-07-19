@@ -63,7 +63,7 @@ export async function handleCreateCoupon(
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai tidak dijumpai. Daftar kedai dulu.'));
       return;
     }
-    const tamatPano = tamatHari > 0
+    const tarikhTamat = tamatHari > 0
       ? new Date(Date.now() + tamatHari * 86_400_000).toISOString()
       : null;
     const res = await fetch(`${SUPABASE_REST(env)}/kempen_diskaun`, {
@@ -72,9 +72,9 @@ export async function handleCreateCoupon(
       body: JSON.stringify({
         kedai_id: kedaiId,
         kod_kupon: kod,
-        jenis_diskaun: 'PERCENT',
+        jenis_diskaun: 'PERATUS',
         nilai_diskaun: diskaun,
-        tamat_pano: tamatPano,
+        tarikh_tamat: tarikhTamat,
         status_aktif: true,
       }),
     });
@@ -222,8 +222,8 @@ export async function handleDeleteCouponInline(
 export async function handlePromo(env: Env, chatId: number): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const url =
-    `${SUPABASE_REST(env)}/kempen_diskaun?status_aktif=eq.AKTIF&tamat_pada=gte.${today}T00:00:00.000Z` +
-    `&select=kod_kupon,peratus_diskaun,min_pesanan_rm,kedai_id&limit=20`;
+    `${SUPABASE_REST(env)}/kempen_diskaun?status_aktif=eq.true&tamat_tamat=or(is.null,gte.${today}T00:00:00.000Z)` +
+    `&select=kod_kupon,nilai_diskaun,kedai_id&limit=20`;
   try {
     const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });
     if (!res.ok) {
@@ -232,18 +232,14 @@ export async function handlePromo(env: Env, chatId: number): Promise<void> {
     }
     const rows = (await res.json()) as Array<{
       kod_kupon: string;
-      peratus_diskaun: number;
-      min_pesanan_rm?: number;
+      nilai_diskaun: number;
     }>;
     if (!Array.isArray(rows) || rows.length === 0) {
       await sendMessage(env, chatId, escapeMarkdownV2('🎟️ Tiada promosi aktif buat masa ini. Lawat lagi nanti!'));
       return;
     }
     const lines = rows
-      .map((r) => {
-        const min = r.min_pesanan_rm ? ` (min RM${r.min_pesanan_rm})` : '';
-        return `🎟️ ${escapeMarkdownV2(r.kod_kupon)} — ${r.peratus_diskaun}%${min}`;
-      })
+      .map((r) => `🎟️ ${escapeMarkdownV2(r.kod_kupon)} — ${r.nilai_diskaun}% diskaun`)
       .join('\n');
     const text =
       escapeMarkdownV2('🔥 PROMOSI AKTIF\\n\\n') +

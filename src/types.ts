@@ -233,46 +233,43 @@ export interface CachedCommandSession {
 /** Peranan command untuk panduan menu natif (customer/merchant/admin). */
 export type CommandRole = 'customer' | 'merchant' | 'admin' | 'both';
 
-/** Registry 22-command natif BM (satu sumber benar untuk telegram_setup.ts). */
-// Start: Phase 41 - 22 Command BM Activation (bug fix duplikat + alias BM)
-// Buang duplikat /laporan_jualan, tambah /daftar, /tambah_menu, /urus_kedai,
-// /senarai_pesanan, /bantuan, /profil supaya padan 1:1 dengan router handlers.ts.
+/** Registry 30-command natif BM (satu sumber benar untuk telegram_setup.ts). */
+// Start: Phase 53 - 30 Command Master Sync (Fasal 4 SOA single source of truth)
+// Exact 30 UNIQUE commands, 1:1 with DISTRIBUTOR_COMMAND_MAP + BOT_COMMANDS.
 export const NATIVE_COMMAND_LIST: TelegramBotCommand[] = [
   { command: '/start', description: 'Mula & pilih peranan' },
-  { command: '/admin_stats', description: 'Statistik pentadbir' },
-  { command: '/naiktaraf', description: 'Naik taraf pelan premium' },
-  { command: '/cipta_kupon', description: 'Cipta kupon diskaun' },
-  { command: '/senarai_kupon', description: 'Senarai kupon aktif' },
-  { command: '/cari_makan', description: 'Cari kedai berdekatan' },
+  { command: '/bantuan', description: 'Panduan interaktif bot' },
+  { command: '/menu', description: 'Senarai kedai aktif' },
+  { command: '/menu_kedai', description: 'Lihat menu kedai' },
+  { command: '/urus_kedai', description: 'Urus kedai saya' },
   { command: '/daftar', description: 'Daftar kedai baharu' },
   { command: '/tambah_menu', description: 'Tambah item menu' },
-  { command: '/urus_kedai', description: 'Urus kedai saya' },
+  { command: '/senarai_menu', description: 'Senarai menu kedai' },
+  { command: '/cari_makan', description: 'Cari kedai berdekatan' },
+  { command: '/troli', description: 'Lihat troli pesanan' },
   { command: '/pesanan_saya', description: 'Senarai pesanan aktif' },
   { command: '/senarai_pesanan', description: 'Senarai pesanan saya' },
-  { command: '/troli', description: 'Lihat troli pesanan' },
-  { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
-  { command: '/bantuan', description: 'Panduan interaktif bot' },
-  { command: '/profil', description: 'Profil & langganan saya' },
+  { command: '/cipta_kupon', description: 'Cipta kupon diskaun' },
+  { command: '/senarai_kupon', description: 'Senarai kupon aktif' },
   { command: '/padam_kupon', description: 'Padam kupon diskaun' },
-  { command: '/senarai_menu', description: 'Senarai menu kedai' },
+  { command: '/promo', description: 'Lihat promosi aktif' },
+  { command: '/invois', description: 'Jana invois digital' },
   { command: '/laporan_jualan', description: 'Laporan jualan kedai' },
+  { command: '/tetapan', description: 'Tetapan akaun peniaga' },
   { command: '/set_lokasi', description: 'Tetapkan koordinat kedai' },
   { command: '/sejarah_pesanan', description: 'Sejarah pesanan saya' },
   { command: '/batalkan_pesanan', description: 'Batal pesanan tertunda' },
-  { command: '/pengumuman', description: 'Pengumuman pentadbir' },
-  { command: '/status', description: 'Semak status bot & akaun' },
-  // Start: Phase 52 - Bonus native commands sync (27 total)
-  { command: '/menu', description: 'Senarai kedai aktif' },
-  { command: '/menu_kedai', description: 'Lihat menu kedai' },
-  { command: '/tetapan', description: 'Tetapan akaun peniaga' },
-  { command: '/invois', description: 'Jana invois digital' },
+  { command: '/profil', description: 'Profil & langganan saya' },
+  { command: '/naiktaraf', description: 'Naik taraf pelan premium' },
   { command: '/zon_operasi', description: 'Senarai zon operasi' },
   { command: '/cart_kosong', description: 'Kosongkan troli pesanan' },
-  { command: '/promo', description: 'Lihat promosi & kupon aktif' },
-  { command: '/bantuan_lokasi', description: 'Panduan ikut lokasi kedai' },
-  // End: Phase 52 - Bonus native commands sync
+  { command: '/bantuan_lokasi', description: 'Panduan ikut lokasi' },
+  { command: '/admin_stats', description: 'Statistik pentadbir' },
+  { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
+  { command: '/pengumuman', description: 'Pengumuman pentadbir' },
+  { command: '/status', description: 'Semak status bot & akaun' },
 ];
-// End: Phase 44 - 22 Command BM Activation (BotFather sync + /status)
+// End: Phase 53 - 30 Command Master Sync
 
 // Start: Phase 33 - Coupon Inline Callback Type Specs (Fasal 6 interactive grid)
 /** Prefix callback natif untuk tindakan interaktif (router handlers.ts). */

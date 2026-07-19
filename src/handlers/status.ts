@@ -60,7 +60,7 @@ export async function handleStatus(env: Env, chatId: number, tgId: number): Prom
     escapeMarkdownV2(`⭐ Pelan: ${escapeMarkdownV2(tier)}\\n`) +
     escapeMarkdownV2(`🏷️ Versi: ${escapeMarkdownV2(WORKER_VERSION)}\\n`) +
     escapeMarkdownV2(`⏱️ Masa Jalan: ${escapeMarkdownV2(uptimeLabel)}\\n`) +
-    escapeMarkdownV2(`🤖 Arahan Aktif: 22/22\\n`) +
+    escapeMarkdownV2(`🤖 Arahan Aktif: 30/30\\n`) +
     escapeMarkdownV2(`🕒 Masa: ${escapeMarkdownV2(ts)}`);
   // End: Phase 46 - Status Card Elevation
 

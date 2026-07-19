@@ -88,6 +88,22 @@ export function customerMenuKeyboard() {
   };
 }
 
+// Start: Phase 53 - Customer Command Grid (30-command surfacing)
+/** Custom keyboard pelanggan yang paparkan arahan natif utama (max 2 btn/row). */
+export function customerCommandGrid() {
+  return {
+    keyboard: [
+      [{ text: '📍 Cari Makan' }, { text: '🏪 Menu Kedai' }],
+      [{ text: '🛒 Troli' }, { text: '🎟️ Promo' }],
+      [{ text: '📖 Sejarah' }, { text: '👤 Profil' }],
+      [{ text: '❓ Bantuan' }, { text: '📍 Bantuan Lokasi' }],
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+}
+// End: Phase 53 - Customer Command Grid
+
 // Start: Phase 45 - Rich Dashboard Inline Helper (Fasal 6)
 /** Inline keyboard papan pemerintah peniaga kaya (max 2 btn/row). */
 export function merchantDashboardKeyboard(kedaiId: string, isBuka: boolean) {

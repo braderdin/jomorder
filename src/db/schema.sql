@@ -202,3 +202,69 @@ CREATE POLICY status_command_log_service_all
 CREATE INDEX IF NOT EXISTS idx_status_log_tg
     ON status_command_log (tg_id, created_at DESC);
 -- End: Phase 44 - status_command_log DDL
+
+-- ============================================================
+-- Jadual 17: kempen_diskaun (Phase 2 - Campaign Discount Engine)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS kempen_diskaun (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    kedai_id UUID REFERENCES senarai_kedai(id) ON DELETE CASCADE,
+    kod_kupon TEXT NOT NULL,
+    jenis_diskaun TEXT NOT NULL DEFAULT 'PERATUS',
+    nilai_diskaun NUMERIC(10,2) NOT NULL DEFAULT 0,
+    had_penggunaan INTEGER DEFAULT 0,
+    digunakan INTEGER DEFAULT 0,
+    tarikh_mula TIMESTAMPTZ DEFAULT NOW(),
+    tarikh_tamat TIMESTAMPTZ,
+    status_aktif BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE kempen_diskaun ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS kempen_diskaun_service_all ON kempen_diskaun;
+CREATE POLICY kempen_diskaun_service_all
+    ON kempen_diskaun
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS kempen_diskaun_merchant_read ON kempen_diskaun;
+CREATE POLICY kempen_diskaun_merchant_read
+    ON kempen_diskaun
+    FOR SELECT
+    USING (true);
+-- End: Phase 2 - kempen_diskaun DDL
+
+-- ============================================================
+-- Jadual 18: webhook_error_logs (Phase 13 - Webhook Error Telemetry)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS webhook_error_logs (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    tg_id BIGINT,
+    chat_id BIGINT,
+    endpoint TEXT,
+    error_message TEXT,
+    stack_trace TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE webhook_error_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS webhook_error_logs_service_all ON webhook_error_logs;
+CREATE POLICY webhook_error_logs_service_all
+    ON webhook_error_logs
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+-- Start: Phase 53 - Indexes from migration 017/018 (sync master)
+CREATE INDEX IF NOT EXISTS idx_kempen_kedai_aktif
+    ON kempen_diskaun (kedai_id, status_aktif);
+CREATE INDEX IF NOT EXISTS idx_kempen_kod
+    ON kempen_diskaun (kod_kupon);
+CREATE INDEX IF NOT EXISTS idx_menu_gambar
+    ON menu_makanan (kedai_id) WHERE gambar_url IS NOT NULL;
+-- End: Phase 53 - Indexes from migration 017/018
