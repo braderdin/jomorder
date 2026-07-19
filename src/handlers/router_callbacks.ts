@@ -9,7 +9,7 @@ import { handleInvoiceCallback } from './merchant_invoice';
 import { handleMerchantOrderCallback } from './merchant_order';
 import { handlePayNow } from './customer';
 import { handleSenaraiMenu, handleSetLokasi } from './merchant';
-import { handleLaporanJualan } from './merchant_dashboard';
+import { handleLaporanJualan, handleDashboardQuickAction } from './merchant_dashboard';
 import { handleSejarahPesanan } from './customer';
 import { handleExportSalesCsv } from './merchant_dashboard';
 import { handleHelpLocaleToggle } from './help';
@@ -52,15 +52,18 @@ export async function routeCallbackQuery(
       const kedaiId = data.slice('toggle_status:'.length);
       return await handleDashboardToggleViaCb(env, cb, cbChatId, kedaiId);
     }
-    // Dashboard quick actions
+    // Dashboard quick actions (delegate to real handler in merchant_dashboard.ts)
     if (
       data === 'merchant_report' ||
       data === 'merchant_orders' ||
       data === 'merchant_settings' ||
       data === 'open_nearby' ||
-      data === 'open_cart'
+      data === 'open_cart' ||
+      data === 'open_promo' ||
+      data === 'merchant_zon' ||
+      data === 'upload_qr'
     ) {
-      return await handleDashboardQuickActionCb(env, cb, cbChatId, data, cb.from.id);
+      return await handleDashboardQuickAction(env, cb, cbChatId, data, cb.from.id);
     }
     // Dead callback repair: merchant_menu / merchant_analytics
     if (data === 'merchant_menu') {
@@ -122,8 +125,13 @@ export async function routeCallbackQuery(
       await handleDeleteCouponInline(env, cbChatId, cb.from.id, kod);
       return true;
     }
-    // Settings callback (locale / notif)
-    if (data.startsWith('set_locale:') || data === 'set_notif') {
+    // Settings callback (locale / notif / qr / zon)
+    if (
+      data.startsWith('set_locale:') ||
+      data === 'set_notif' ||
+      data === 'upload_qr' ||
+      data === 'merchant_zon'
+    ) {
       await answerCallbackQuery(env, cb.id, 'Menyimpan...');
       if (await handleTetapanCallback(env, cbChatId, cb.from.id, data)) return true;
     }

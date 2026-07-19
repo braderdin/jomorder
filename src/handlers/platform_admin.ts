@@ -75,7 +75,7 @@ export async function handleSenaraiPendaftaran(env: Env, chatId: number, tgId: n
     }
     const lines = list
       .map((r) => {
-        const name = escapeMarkdownV2(r.nama_kedai || 'TANANama');
+        const name = escapeMarkdownV2(r.nama_kedai || 'TANPA NAMA');
         const status = escapeMarkdownV2(r.status_kedai || 'TIDAK_DIKETAHUI');
         const id = r.merchant_telegram_id ?? 0;
         return `🏪 ${name} \\- ${status} \\(ID:${id}\\)`;
@@ -133,4 +133,45 @@ export async function handleNaikTaraf(env: Env, chatId: number, tgId: number): P
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem. Cuba sebentar lagi.'));
   }
 }
+/** /pengumuman <TEKS> - broadcast mesej ke semua peniaga berdaftar (admin sahaja). */
+export async function handlePengumuman(env: Env, chatId: number, tgId: number, text: string): Promise<void> {
+  if (!isAdmin(env, tgId)) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⛔ Akses ditolak.'));
+    return;
+  }
+  const payload = text.replace(/^\/pengumuman\s*/, '').trim();
+  if (!payload) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Format: /pengumuman <teks>'));
+    return;
+  }
+  try {
+    const url = `${SUPABASE_REST(env)}/senarai_kedai?select=merchant_telegram_id`;
+    const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });
+    if (!res.ok) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai peniaga.'));
+      return;
+    }
+    const rows = (await res.json()) as Array<{ merchant_telegram_id?: number }>;
+    const ids = Array.from(new Set(rows.map((r) => r.merchant_telegram_id).filter((n): n is number => typeof n === 'number')));
+    let sent = 0;
+    for (const id of ids) {
+      try {
+        await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: id,
+            text: `📢 PENGUMUMAN PLATFORM\\n\\n${payload}`,
+            parse_mode: 'MarkdownV2',
+          }),
+        });
+        sent++;
+      } catch { /* soft-fail per recipient */ }
+    }
+    await sendMessage(env, chatId, escapeMarkdownV2(`✅ Pengumuman dihantar ke ${sent} peniaga.`));
+  } catch {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem. Cuba sebentar lagi.'));
+  }
+}
+
 // End: Phase 32 - Platform Admin Controller

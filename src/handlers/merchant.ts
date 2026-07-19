@@ -279,7 +279,7 @@ export async function handleMerchantMessage(
         return;
       }
       const senaraiKupon = kupon.map((k, i) => {
-        const val = k.jenis_diskaun === 'PERCENT' ? `${k.nilai_diskaun}%` : `RM${k.nilai_diskaun}`;
+        const val = k.jenis_diskaun === 'PERATUS' ? `${k.nilai_diskaun}%` : `RM${k.nilai_diskaun}`;
         const stat = k.status_aktif ? '✅' : '⛔';
         return `${i + 1}\\. ${escapeMarkdownV2(k.kod_kupon)} \\- ${val} ${stat}`;
       }).join('\n');
@@ -294,19 +294,19 @@ export async function handleMerchantMessage(
     }
     const kod = parts[1].toUpperCase();
     const nilai = Number(parts[2]);
-    let jenis: 'PERCENT' | 'AMOUNT' = 'PERCENT';
-    if (parts[3] && parts[3].toUpperCase() === 'RM') jenis = 'AMOUNT';
+    let jenis: 'PERATUS' | 'TANAH' = 'PERATUS';
+    if (parts[3] && parts[3].toUpperCase() === 'RM') jenis = 'TANAH';
     if (isNaN(nilai) || nilai <= 0) {
       await sendMessage(env, chatId, escapeMarkdownV2('Nilai diskaun mesti nombor positif.'), merchantMenuKeyboard());
       return;
     }
-    if (jenis === 'PERCENT' && nilai > 100) {
+    if (jenis === 'PERATUS' && nilai > 100) {
       await sendMessage(env, chatId, escapeMarkdownV2('Peratus diskaun tidak boleh melebihi 100%.'), merchantMenuKeyboard());
       return;
     }
     const ok = await createCoupon(env, tgId, kod, jenis, nilai);
     if (ok) {
-      const valTxt = jenis === 'PERCENT' ? `${nilai}%` : `RM${nilai}`;
+      const valTxt = jenis === 'PERATUS' ? `${nilai}%` : `RM${nilai}`;
       await sendMessage(env, chatId, escapeMarkdownV2(`🎟️ Kupon ${escapeMarkdownV2(kod)} berjaya diwujudkan! Diskaun: ${valTxt}`), merchantMenuKeyboard());
     } else {
       await sendMessage(env, chatId, escapeMarkdownV2('❌ Gagal cipta kupon. Kod mungkin sudah wujud atau kedai tidak dijumpai.'), merchantMenuKeyboard());

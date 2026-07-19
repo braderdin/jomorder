@@ -13,6 +13,7 @@ function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: stri
   return {
     inline_keyboard: [
       [{ text: '🍜 Cari Makan', callback_data: 'open_nearby' }, { text: '🛒 Troli', callback_data: 'open_cart' }],
+      [{ text: '🎟️ Promo', callback_data: 'open_promo' }],
       [{ text: '🏪 Daftar Kedai', callback_data: 'merchant_settings' }, { text: '📊 Status', callback_data: 'merchant_report' }],
       [{ text: '❓ Bantuan', callback_data: 'help_menu' }],
     ],

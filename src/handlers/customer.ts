@@ -25,7 +25,7 @@ interface CartBuffer {
   total: number;
   deliveryLat: number;
   deliveryLng: number;
-  appliedCoupon?: { kod: string; jenis: 'PERCENT' | 'AMOUNT'; nilai: number };
+  appliedCoupon?: { kod: string; jenis: 'PERATUS' | 'TANAH'; nilai: number };
   discountedTotal?: number;
 }
 
@@ -186,7 +186,7 @@ export async function handleApplyCoupon(
   const finalTotal = applyDiscount(kupon, buffer.total);
   const nextBuffer: CartBuffer = {
     ...buffer,
-    appliedCoupon: { kod: kupon.kod_kupon, jenis: kupon.jenis_diskaun, nilai: kupon.nilai_diskaun },
+      appliedCoupon: { kod: kupon.kod_kupon, jenis: kupon.jenis_diskaun as 'PERATUS' | 'TANAH', nilai: kupon.nilai_diskaun },
     discountedTotal: finalTotal,
   };
   await setState(env, { ...state, cart_buffer: nextBuffer } as never);
@@ -226,7 +226,7 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
     .join('\n');
   let verifyHeader = escapeMarkdownV2('🧾 SEMAKAN PESANAN:\\n') + verifyLines;
   if (appliedCoupon) {
-    const diskaunTxt = appliedCoupon.jenis_diskaun === 'PERCENT' ? `${appliedCoupon.nilai_diskaun}%` : `RM${appliedCoupon.nilai_diskaun}`;
+    const diskaunTxt = appliedCoupon.jenis_diskaun === 'PERATUS' ? `${appliedCoupon.nilai_diskaun}%` : `RM${appliedCoupon.nilai_diskaun}`;
     verifyHeader += escapeMarkdownV2(`\\nKupon ${appliedCoupon.kod_kupon} \\(-${diskaunTxt}\\)`);
   }
   verifyHeader += escapeMarkdownV2(`\\nJUMLAH: RM${finalTotal.toFixed(2)}`);

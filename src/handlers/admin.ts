@@ -5,6 +5,7 @@ import { Env } from '../types';
 import { escapeMarkdownV2, sendMessage } from '../telegram';
 import { fetchSaasMetrics } from '../services/analytics';
 import { broadcastAnnouncementSlots } from '../services/admin';
+import { handlePengumuman } from './platform_admin';
 
 /** Format angka RM dengan 2 titik perpuluhan + pemisah ribu. */
 function fmtRm(value: number): string {
@@ -32,6 +33,10 @@ export async function handleAdminMessage(
   const cmd = text.trim();
   if (cmd === '/admin' || cmd === '/admin_stats') {
     await sendAdminStats(env, chatId);
+    return true;
+  }
+  if (cmd.startsWith('/pengumuman')) {
+    await handlePengumuman(env, chatId, tgId, text);
     return true;
   }
   return false; // bukan arahan admin, router teruskan ke laluan lain

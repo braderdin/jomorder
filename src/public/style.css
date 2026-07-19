@@ -136,3 +136,15 @@ section .rounded-2xl {
   cursor: pointer;
 }
 /* End: Phase 52 - Order Tracker Step States */
+
+/* Start: Phase 53 - 30 Command Matrix Grid Glow */
+.grid .rounded-xl[class*="font-mono"] {
+  transition: all 0.25s ease;
+}
+.grid .rounded-xl[class*="font-mono"]:hover {
+  border-color: var(--cyber-neon);
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.25);
+  background: rgba(0, 240, 255, 0.06);
+}
+/* End: Phase 53 - 30 Command Matrix Grid Glow */

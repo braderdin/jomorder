@@ -106,6 +106,7 @@ export async function handleViewCart(
     keyboard = inlineKeyboard([
       [{ text: '💳 Bayar Sekarang', callback_data: 'checkout_now' }],
       [{ text: '🍔 Tambah Lagi', callback_data: 'browse_more' }],
+      [{ text: '🧹 Kosongkan', callback_data: 'cart_clear' }],
     ]);
   }
   // End: Phase 38 - Cart Checkout Lock

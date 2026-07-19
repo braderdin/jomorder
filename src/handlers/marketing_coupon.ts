@@ -46,16 +46,16 @@ export async function handleCreateCoupon(
       await sendMessage(
         env,
         chatId,
-        escapeMarkdownV2('⚠️ Format: /cipta_kupon <KOD> <DISKAUN%> [TAMAT_HARI] [MIN_RM]\nContoh: /cipta_kupon JOM10 10 30')
+        escapeMarkdownV2('⚠️ Format: /cipta_kupon <KOD> <NILAI> [RM] [TAMAT_HARI]\nContoh: /cipta_kupon JOM10 10  (10%)\nContoh: /cipta_kupon POTONG5 5 RM  (RM5 tetap)')
       );
       return;
     }
     const kod = parts[1].toUpperCase();
     const diskaun = Number(parts[2]);
-    const tamatHari = parts[3] ? Number(parts[3]) : 0;
-    const minRm = parts[4] ? Number(parts[4]) : 0;
-    if (!kod || Number.isNaN(diskaun) || diskaun <= 0 || diskaun > 100) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Diskaun mesti nombor 1-100. Sila cuba lagi.'));
+    const jenisDiskaun = parts[3] && parts[3].toUpperCase() === 'RM' ? 'TANAH' : 'PERATUS';
+    const tamatHari = jenisDiskaun === 'TANAH' ? (parts[4] ? Number(parts[4]) : 0) : (parts[3] ? Number(parts[3]) : 0);
+    if (!kod || Number.isNaN(diskaun) || diskaun <= 0 || (jenisDiskaun === 'PERATUS' && diskaun > 100)) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Nilai diskaun mesti nombor positif (1-100 untuk %).'));
       return;
     }
     const kedaiId = await getKedaiId(env, tgId);
@@ -72,7 +72,7 @@ export async function handleCreateCoupon(
       body: JSON.stringify({
         kedai_id: kedaiId,
         kod_kupon: kod,
-        jenis_diskaun: 'PERATUS',
+        jenis_diskaun: jenisDiskaun,
         nilai_diskaun: diskaun,
         tarikh_tamat: tarikhTamat,
         status_aktif: true,
@@ -82,10 +82,11 @@ export async function handleCreateCoupon(
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal cipta kupon. Kod mungkin wujud.'));
       return;
     }
+    const diskaunTxt = jenisDiskaun === 'PERATUS' ? `${diskaun}%` : `RM${diskaun}`;
     await sendMessage(
       env,
       chatId,
-      escapeMarkdownV2(`✅ Kupon ${kod} dicipta!\\nDiskaun: ${diskaun}%\\nTamat: ${tamatHari > 0 ? tamatHari + ' hari' : 'Tiada'}`)
+      escapeMarkdownV2(`✅ Kupon ${kod} dicipta!\\nDiskaun: ${diskaunTxt}\\nTamat: ${tamatHari > 0 ? tamatHari + ' hari' : 'Tiada'}`)
     );
   } catch {
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem. Cuba sebentar lagi.'));
@@ -222,7 +223,7 @@ export async function handleDeleteCouponInline(
 export async function handlePromo(env: Env, chatId: number): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const url =
-    `${SUPABASE_REST(env)}/kempen_diskaun?status_aktif=eq.true&tamat_tamat=or(is.null,gte.${today}T00:00:00.000Z)` +
+    `${SUPABASE_REST(env)}/kempen_diskaun?status_aktif=eq.true&tarikh_tamat=or(is.null,gte.${today}T00:00:00.000Z)` +
     `&select=kod_kupon,nilai_diskaun,kedai_id&limit=20`;
   try {
     const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });

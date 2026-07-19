@@ -43,9 +43,10 @@ export async function handleHelp(env: Env, chatId: number, _user: TelegramUser |
   const html =
     '<b>📖 PANDUAN JomOrder Modern-Siber</b>\n\n' +
     'Pilih peranan anda untuk panduan lengkap:\\n\\n' +
-    '👨‍🍳 <b>Peniaga:</b> /daftar · /tambah_menu · /senarai_menu · /urus_kedai · /laporan_jualan · /cipta_kupon · /senarai_kupon · /padam_kupon · /invois · /tetapan · /set_lokasi · /zon_operasi · /naiktaraf\n\n' +
-    '🛒 <b>Pelanggan:</b> /cari_makan · /menu · /menu_kedai · /troli · /cart_kosong · /pesanan_saya · /sejarah_pesanan · /promo · /profil · /batalkan_pesanan · /bantuan_lokasi\n\n' +
-    '⚙️ <b>Pentadbir:</b> /admin_stats · /senarai_pendaftaran · /pengumuman · /status\n\n' +
+    '👨‍🍳 <b>Peniaga (13):</b> /daftar · /tambah_menu · /senarai_menu · /urus_kedai · /laporan_jualan · /cipta_kupon · /senarai_kupon · /padam_kupon · /invois · /tetapan · /set_lokasi · /zon_operasi · /naiktaraf\n\n' +
+    '🛒 <b>Pelanggan (11):</b> /cari_makan · /menu · /menu_kedai · /troli · /cart_kosong · /pesanan_saya · /senarai_pesanan · /sejarah_pesanan · /promo · /profil · /batalkan_pesanan · /bantuan_lokasi\n\n' +
+    '⚙️ <b>Pentadbir (6):</b> /admin_stats · /senarai_pendaftaran · /pengumuman · /status · /bantuan · /start\n\n' +
+    '✅ <b>JUMLAH 30 ARAHAN AKTIF</b>\n\n' +
     '🚀 <b>Cara buat pesanan:</b> tekan 📍 Kedai Berdekatan → pilih kedai → tambah ke troli → 💳 Bayar Sekarang.\n\n' +
     'Ada masalah? Hubungi barisan operator kami di bawah 👇';
 

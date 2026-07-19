@@ -2,7 +2,7 @@
 // Papar kad status ringkas: kesihatan bot, peranan user, tier langganan.
 // Rujuk checkDatabaseHealth (sentinel), checkMerchantExists (db),
 // getSubscriptionStatus (subscription). Soft-fail: jika DB gagal, anggap degraded.
-import { Env } from '../types';
+import { Env, NATIVE_COMMAND_LIST } from '../types';
 import { sendMessage, escapeMarkdownV2 } from '../telegram';
 import { checkMerchantExists } from '../db';
 import { getStatusSnapshot } from '../services/sentinel';
@@ -60,7 +60,7 @@ export async function handleStatus(env: Env, chatId: number, tgId: number): Prom
     escapeMarkdownV2(`⭐ Pelan: ${escapeMarkdownV2(tier)}\\n`) +
     escapeMarkdownV2(`🏷️ Versi: ${escapeMarkdownV2(WORKER_VERSION)}\\n`) +
     escapeMarkdownV2(`⏱️ Masa Jalan: ${escapeMarkdownV2(uptimeLabel)}\\n`) +
-    escapeMarkdownV2(`🤖 Arahan Aktif: 30/30\\n`) +
+    escapeMarkdownV2(`🤖 Arahan Aktif: ${NATIVE_COMMAND_LIST.length}/${NATIVE_COMMAND_LIST.length}\\n`) +
     escapeMarkdownV2(`🕒 Masa: ${escapeMarkdownV2(ts)}`);
   // End: Phase 46 - Status Card Elevation
 

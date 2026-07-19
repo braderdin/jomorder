@@ -17,7 +17,7 @@ interface KedaiAktif {
  */
 async function fetchKedaiAktif(env: Env): Promise<KedaiAktif[]> {
   // Phase 34: Hanya kedai AKTIF (drop TUTUP), dan buang node tamat langganan.
-  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?status_kedai=eq.AKTIF&select=id,nama_kedai,tamat_langganan_pada&order=nama_kedai.asc&limit=20`;
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?status_kedai=in.(AKTIF,BUKA)&select=id,nama_kedai,tamat_langganan_pada&order=nama_kedai.asc&limit=20`;
   try {
     const res = await fetch(url, {
       method: 'GET',

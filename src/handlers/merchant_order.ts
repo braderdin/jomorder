@@ -124,7 +124,8 @@ export async function handleMerchantOrderCallback(
 const QUEUE_NEXT: Record<string, string> = {
   PENDING: 'PREPARING',
   PREPARING: 'DELIVERED',
-  DELIVERED: 'DELIVERED',
+  DELIVERED: 'COMPLETED',
+  COMPLETED: 'COMPLETED',
 };
 
 export async function handleMerchantOrderQueue(
@@ -135,7 +136,7 @@ export async function handleMerchantOrderQueue(
   const url =
     `${env.SUPABASE_URL}/rest/v1/rekod_pesanan` +
     `?kedai_id=eq.${merchantTgId}` +
-    `&status_penghantaran=in.(PENDING,PREPARING)` +
+    `&status_penghantaran=in.(PENDING,PREPARING,DELIVERED)` +
     `&select=id,status_penghantaran,jumlah_harga,pelanggan_telegram_id` +
     `&order=created_at.asc&limit=20`;
   try {

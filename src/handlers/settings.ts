@@ -61,7 +61,7 @@ export async function handleTetapanCallback(
   tgId: number,
   action: string
 ): Promise<boolean> {
-  if (!action.startsWith('set_locale:') && action !== 'set_notif') return false;
+  if (!action.startsWith('set_locale:') && action !== 'set_notif' && action !== 'upload_qr' && action !== 'merchant_zon') return false;
 
   try {
     const st = await getState(env, tgId);
@@ -72,6 +72,12 @@ export async function handleTetapanCallback(
     } else if (action === 'set_notif') {
       const cur = (st as unknown as { notif_pesanan?: boolean }).notif_pesanan !== false;
       next.notif_pesanan = !cur;
+    } else if (action === 'upload_qr') {
+      // Route ke flow muat naik QR (handleUploadQr di telegram_setup/merchant).
+      // Fail-open: set flag step supaya router_callback tahu.
+      next.step = 'awaiting_qr_upload';
+    } else if (action === 'merchant_zon') {
+      next.step = 'awaiting_zon_operasi';
     }
     await setState(env, next as never);
   } catch {

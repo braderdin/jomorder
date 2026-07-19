@@ -248,9 +248,9 @@ fi
  echo "--------------------------------------------------"
   echo "--- Phase 53: 30-Command Activation + 30-Total Assert ---"
 # Suntik HTTP POST frames untuk 8 command baharu matrix (menu, menu_kedai, tetapan, invois, zon_operasi, cart_kosong, promo, bantuan_lokasi).
-for cmd in "/menu" "/menu_kedai" "/tetapan" "/invois" "/zon_operasi" "/cart_kosong" "/promo" "/bantuan_lokasi"; do
-  check_post "PH53:${cmd%% *}" "$cmd"
-done
+  for cmd in "/menu" "/menu_kedai" "/tetapan" "/invois" "/zon_operasi" "/cart_kosong" "/promo" "/bantuan_lokasi" "/pengumuman Sistem diselenggara" "/admin_stats" "/cari_makan" "/pesanan_saya" "/urus_kedai" "/profil" "/status"; do
+    check_post "PH53:${cmd%% *}" "$cmd"
+  done
 # Assert jumlah command natif = 30 (1:1 NATIVE_COMMAND_LIST types.ts).
 EXPECTED_TOTAL=30
 # Kira dari fail types.ts NATIVE_COMMAND_LIST (grep command: field).

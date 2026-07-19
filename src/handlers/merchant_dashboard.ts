@@ -165,6 +165,26 @@ export async function handleDashboardQuickAction(
       await handleViewCart(env, chatId, tgId);
       return true;
     }
+    case 'open_promo': {
+      const { handlePromo } = await import('./marketing_coupon');
+      await handlePromo(env, chatId);
+      return true;
+    }
+    case 'merchant_zon': {
+      await setState(env, {
+        merchant_telegram_id: tgId,
+        step: 'awaiting_zon_operasi',
+        last_active: new Date().toISOString(),
+      } as never);
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('📍 ZON OPERASI\\n\\n') +
+          escapeMarkdownV2('Taip /zon_operasi <radius_km> untuk set radius penghantaran\\.') +
+          escapeMarkdownV2('\\nContoh: /zon_operasi 10')
+      );
+      return true;
+    }
     case 'upload_qr': {
       // Start: Phase 51 - Set QR upload state (capture next photo)
       await setState(env, {

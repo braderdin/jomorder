@@ -10,10 +10,10 @@ export interface CampaignDiscount {
   id: number;
   kedai_id: string;
   kod_kupon: string;
-  jenis_diskaun: 'PERCENT' | 'AMOUNT';
+  jenis_diskaun: 'PERATUS' | 'TANAH';
   nilai_diskaun: number;
   status_aktif: boolean;
-  tamat_pada: string | null;
+  tarikh_tamat: string | null;
   created_at: string;
 }
 
@@ -56,7 +56,7 @@ export async function createCoupon(
   env: Env,
   merchantTgId: number,
   kodKupon: string,
-  jenis: 'PERCENT' | 'AMOUNT',
+  jenis: 'PERATUS' | 'TANAH',
   nilai: number
 ): Promise<boolean> {
   const kedaiId = await getKedaiIdByTgId(env, merchantTgId);
@@ -117,8 +117,8 @@ export async function validateCoupon(
     if (!Array.isArray(rows) || rows.length === 0) return null;
     const kupon = rows[0];
     // Semak tarikh luput (jika di-set)
-    if (kupon.tamat_pada) {
-      const tamat = new Date(kupon.tamat_pada).getTime();
+    if (kupon.tarikh_tamat) {
+      const tamat = new Date(kupon.tarikh_tamat).getTime();
       if (!isNaN(tamat) && Date.now() > tamat) return null; // Tamat tempoh
     }
     return kupon;
@@ -135,9 +135,9 @@ export async function validateCoupon(
 export function applyDiscount(coupon: CampaignDiscount, subtotal: number): number {
   if (!coupon || subtotal <= 0) return subtotal;
   let final = subtotal;
-  if (coupon.jenis_diskaun === 'PERCENT') {
+  if (coupon.jenis_diskaun === 'PERATUS') {
     final = subtotal * (1 - coupon.nilai_diskaun / 100);
-  } else if (coupon.jenis_diskaun === 'AMOUNT') {
+  } else if (coupon.jenis_diskaun === 'TANAH') {
     final = subtotal - coupon.nilai_diskaun;
   }
   // Jangan benar harga negatif
@@ -160,8 +160,8 @@ export async function sweepExpiredCoupons(env: Env): Promise<number> {
     // 1. Ambil kupon tamat tempoh yang masih aktif (join senarai_kedai untuk tgId).
     const selectUrl =
       `${env.SUPABASE_URL}/rest/v1/kempen_diskaun` +
-      `?select=id,kod_kupon,tamat_pada,kedai_id(senarai_kedai(merchant_telegram_id))` +
-      `&tamat_pada=lte.${new Date().toISOString()}` +
+      `?select=id,kod_kupon,tarikh_tamat,kedai_id(senarai_kedai(merchant_telegram_id))` +
+      `&tarikh_tamat=lte.${new Date().toISOString()}` +
       `&status_aktif=eq.true`;
     const selRes = await fetch(selectUrl, { method: 'GET', headers: supabaseHeaders(env) });
     if (!selRes.ok) return 0;
