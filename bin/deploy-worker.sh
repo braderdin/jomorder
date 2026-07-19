@@ -55,6 +55,13 @@ for SECRET_NAME in "${SECRETS[@]}"; do
 done
 # End: Phase 42 - 4-Secret Provisioning Matrix
 
+# Start: Phase 60 - Apply latest migration before deploy (DDL 025 founder shop)
+if [[ -f "${PROJECT_ROOT}/src/db/migrations/025_founder_demo_shop.sql" ]]; then
+  echo "[INFO] Phase60: Apply migration 025 (founder demo shop)..."
+  bash "${PROJECT_ROOT}/bin/db-query.sh" < "${PROJECT_ROOT}/src/db/migrations/025_founder_demo_shop.sql" || echo "[WARN] 025 apply gagal (mungkin sudah wujud - idempoten)"
+fi
+# End: Phase 60 - Apply latest migration before deploy
+
 # Deploy worker ke Cloudflare.
 # Fasal 11 (Wrangler Deployment Mandate): map CLOUDFLARE_DEPLOY_TOKEN -> CLOUDFLARE_API_TOKEN.
 # Fallback: jika CLOUDFLARE_DEPLOY_TOKEN (cfut_...) tiada permission, guna

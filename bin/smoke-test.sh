@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+# Start: Phase 60 - Add /api/founder-showcase endpoint smoke check
 # Start: Phase 58 - Add /api/menu-showcase endpoint smoke check
 # Start: Phase 36 LOOP 1 - Deployment Smoke Test (Active Endpoint Verifier)
 # Guna: ./bin/smoke-test.sh [BASE_URL]
 # Default BASE_URL=http://localhost:8787 (wrangler dev port 8787)
-# Verify GET /health, /smoke, /api/public-stats HTTP status codes.
+# Verify GET /health, /smoke, /api/public-stats, /api/founder-showcase HTTP status codes.
 # Fasal 10: HTTP 405/403 pada GET smoke ping dianggap PASS (active endpoint), bukan crash.
 set -uo pipefail
 
@@ -37,6 +38,10 @@ check_status() {
 check_status "/health" "GET /health (DB sentinel heartbeat)"
 check_status "/smoke" "GET /smoke (live smoke report)"
 check_status "/api/public-stats" "GET /api/public-stats (public analytics)"
+
+# Start: Phase 60 - Founder Demo Shop endpoint assertion
+check_status "/api/founder-showcase" "GET /api/founder-showcase (founder demo shop)"
+# End: Phase 60 - Founder Demo Shop endpoint assertion
 
 # Start: Phase 37 - SaaS Pulse Cron + Public Stats assertions
 # POST /cron/saas-pulse TANPA secret -> 403 Forbidden (guard aktif = PASS).

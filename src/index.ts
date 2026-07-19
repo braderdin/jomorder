@@ -10,6 +10,7 @@ import { dispatchSubscriptionAlerts, triggerSaasPulseReport, runDailyCouponSweep
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { captureRawWebhookFrame } from './services/telegram_webhook_diagnostics';
 import { captureRetryFailure } from './services/webhook_retry_manager';
+import { getFounderShop, getFounderMenu } from './db';
 
 // Start: Phase 32 - Bot Command Menu Bootstrap (lifecycle onboarding)
 // Daftarkan 16 arahan natif ke menu Telegram sekali sahaja per cold-start worker.
@@ -219,6 +220,32 @@ export default {
       }
     }
     // End: Phase 51 - Menu Showcase Public Route
+
+    // Start: Phase 60 - Founder Demo Shop Showcase Route (/api/founder-showcase)
+    // Papar kedai contoh pengasas + menu dummy untuk portal "wow" (marketing MDEC).
+    // Public-safe: tiada PII, guna service_role helper (RLS bypass untuk demo).
+    if (request.method === 'GET' && url.pathname.endsWith('/api/founder-showcase')) {
+      try {
+        const shop = await getFounderShop(env);
+        const menu = await getFounderMenu(env);
+        return new Response(
+          JSON.stringify({ shop, menu }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=30',
+            },
+          }
+        );
+      } catch {
+        return new Response(JSON.stringify({ shop: null, menu: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    // End: Phase 60 - Founder Demo Shop Showcase Route
 
     // End: Phase 27 - Public Stats Aggregate Route
 

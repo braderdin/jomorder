@@ -43,10 +43,11 @@ jobs:
 
       # 5. Deploy ke Cloudflare Workers (wrangler-action)
       #    CLOUDFLARE_API_TOKEN di-set sebagai GitHub Secret (Settings > Secrets)
+      #    Map CLOUDFLARE_DEPLOY_TOKEN -> CLOUDFLARE_API_TOKEN (Fasal 11/16).
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          apiToken: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --minify
         env:
@@ -76,15 +77,29 @@ jobs:
             src/db/migrations/001_security_hardening.sql \
             src/db/migrations/002_campaign_discounts.sql \
             src/db/migrations/003_premium_check_constraint.sql \
+            src/db/migrations/025_founder_demo_shop.sql \
             src/db/analytics.sql \
             src/db/seed.sql ; do
             echo "Applying $f (pgbouncer=false forced) ..."
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
 
-      # 7. Smoke test pasca-deploy (Fasal 10 harmonized 405/403 = PASS)
+      # 7. Force Webhook Register pasca-deploy (Phase 60 automation)
+      #    Zero manual step: daftar webhook + sync 30 command natif terus.
+      #    Baca token dari GitHub Secrets (tiada hardcode ke repo).
+      - name: Force Webhook Register
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          X_TELEGRAM_BOT_API_SECRET_TOKEN: ${{ secrets.X_TELEGRAM_BOT_API_SECRET_TOKEN }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+        run: |
+          set -u
+          bash bin/force-webhook-register.sh
+
+      # 8. Smoke test pasca-deploy (Fasal 10 harmonized 405/403 = PASS)
       - name: Post-Deploy Smoke Ping
         run: |
           echo "Triggering harmonized smoke check..."
-          curl -s -o /dev/null -w "GET / (expect 200/405): %{http_code}\n" https://jomorder-bot.workers.dev/ || true
+          curl -s -o /dev/null -w "GET / (expect 200/405): %{http_code}\n" https://jomorder-worker.braderdin006.workers.dev/ || true
 # End: Fasa 12 - Production CI/CD Core

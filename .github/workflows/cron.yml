@@ -47,4 +47,46 @@ jobs:
             exit 1
           fi
           echo "CRON_DISPATCH_OK"
+
+      # Phase 60: Auto coupon-sweep (tiada notifikasi ke admin, ikut permintaan).
+      - name: POST /cron/coupon-sweep ke Worker
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          SECRET_TOKEN: ${{ secrets.X_TELEGRAM_BOT_API_SECRET_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/cron_coupon.txt -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Telegram-Bot-Api-Secret-Token: ${SECRET_TOKEN}" \
+            --max-time 25 \
+            "${WORKER_URL}/cron/coupon-sweep" \
+            -d '{"source":"github-actions","cycle":"4h"}' || echo "000")
+          echo "COUPON_SWEEP_STATUS=${RESPONSE}"
+          cat /tmp/cron_coupon.txt 2>/dev/null | head -c 400
+          if [ "$RESPONSE" = "000" ]; then
+            echo "CRON_TARGET_UNREACHABLE"
+            exit 1
+          fi
+          echo "COUPON_SWEEP_OK"
+
+      # Phase 60: Auto daily-digest (tiada notifikasi ke admin, ikut permintaan).
+      - name: POST /cron/daily-digest ke Worker
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          SECRET_TOKEN: ${{ secrets.X_TELEGRAM_BOT_API_SECRET_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/cron_digest.txt -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Telegram-Bot-Api-Secret-Token: ${SECRET_TOKEN}" \
+            --max-time 25 \
+            "${WORKER_URL}/cron/daily-digest" \
+            -d '{"source":"github-actions","cycle":"4h"}' || echo "000")
+          echo "DAILY_DIGEST_STATUS=${RESPONSE}"
+          cat /tmp/cron_digest.txt 2>/dev/null | head -c 400
+          if [ "$RESPONSE" = "000" ]; then
+            echo "CRON_TARGET_UNREACHABLE"
+            exit 1
+          fi
+          echo "DAILY_DIGEST_OK"
 # End: Phase 26 - GitHub Cron Scheduler Execution

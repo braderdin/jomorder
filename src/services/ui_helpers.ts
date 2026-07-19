@@ -127,4 +127,27 @@ export function buildShopCaption(args: {
 }
 // End: Phase 59 - Shop Photo Card Caption
 
+// Start: Phase 60 - Founder Demo Shop Caption helper
+/**
+ * buildFounderCaption
+ * Bina caption untuk paparan kedai contoh pengasas (dummy, MDEC GLOW).
+ */
+export function buildFounderCaption(args: {
+  namaKedai: string;
+  status: string;
+  jumlahItem: number;
+  lang?: Lang;
+}): string {
+  const L = args.lang || 'BM';
+  const tag = L === 'EN' ? 'FOUNDER DEMO SHOP' : 'KEDAI CONTOH PENGASAS';
+  const itemLine = L === 'EN'
+    ? `${args.jumlahItem} demo dishes`
+    : `${args.jumlahItem} hidangan demo`;
+  const line1 = `🏆 *${tag}*`;
+  const line2 = `🍴 *${args.namaKedai}* (${args.status})`;
+  const line3 = `📋 ${itemLine}`;
+  return `${line1}\n${line2}\n${line3}`;
+}
+// End: Phase 60 - Founder Demo Shop Caption helper
+
 // End: Phase 55 - UI Helpers

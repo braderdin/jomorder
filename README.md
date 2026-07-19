@@ -124,4 +124,16 @@ MIT © JomOrder — Projek MDEC GLOW.
 - Manual action: TIADA (semua DDL automatik via postgres MCP).
 # End: Phase 59 - Webhook Resilience, i18n & Photo Cards
 
+# Start: Phase 60 - Founder Demo Shop, CI/CD Auto & MDEC GLOW Ready
+- Kedai contoh pengasas (fixed UUID 00000000-0000-0000-0000-000000000001) + 8 menu dummy di `src/db/migrations/025_founder_demo_shop.sql` (idempoten, auto-apply CI + postgres MCP).
+- Public API `/api/founder-showcase` (index.ts) + helper `getFounderShop` / `getFounderMenu` (db.ts, service_role soft-fail).
+- Landing page Section C3 "Kedai Contoh Pengasas" dengan grid menu live (index.html + script.js `fetchFounderShop`, glow style.css `.menu-card`/`.founder-badge`).
+- GitHub Actions `deploy.yml`: auto apply migration 025 + auto `force-webhook-register.sh` (zero manual) pasca-deploy; `cron.yml`: auto `coupon-sweep` + `daily-digest` (tiada notifikasi ke admin, ikut permintaan).
+- start.ts welcome message + router_callbacks `founder_view` (lihat kedai contoh terus dari bot).
+- customer_gui featured pin kedai pengasas + ui_helpers caption; i18n expansion (founderShop/founderTagline) + customer_cart EN toggle.
+- sentinel version bump ke "v9.1.0-phase60" + smoke-test assertion `/api/founder-showcase`.
+- e2e-regression + deploy-worker sync; README docs + session-tracker Phase 60.
+- Manual action: TIADA. Projek sedia untuk pendaftaran MDEC GLOW.
+# End: Phase 60 - Founder Demo Shop, CI/CD Auto & MDEC GLOW Ready
+
 <p align="center">Dibuat dengan 🇲🇾 untuk peniaga tempatan.</p>

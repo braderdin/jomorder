@@ -226,3 +226,25 @@ section .rounded-2xl {
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 /* End: Phase 59 - Menu Photo Card Glow */
+
+/* Start: Phase 60 - Founder Demo Shop glow + menu-card (MDEC wow) */
+.menu-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.menu-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--cyber-gold);
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
+}
+.founder-badge {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0.4rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--cyber-gold);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+}
+/* End: Phase 60 - Founder Demo Shop glow + menu-card */

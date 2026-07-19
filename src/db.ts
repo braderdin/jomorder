@@ -636,4 +636,50 @@ export async function updateOrderStatusAtomic(
 }
 // End: Phase 40 - Atomic Order Mutation Wrapper
 
+// Start: Phase 60 - Founder Demo Shop Public Helpers (marketing MDEC GLOW)
+/**
+ * getFounderShop
+ * Fetch kedai contoh pengasas (fixed UUID) guna service_role (RLS bypass).
+ * Return objek typed atau null. Soft-fail: null jika gagal.
+ */
+export async function getFounderShop(
+  env: Env
+): Promise<{ id: string; nama_kedai: string; status_kedai: string; latitude_kedai: number; longitude_kedai: number } | null> {
+  const url = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.00000000-0000-0000-0000-000000000001&select=id,nama_kedai,status_kedai,latitude_kedai,longitude_kedai&limit=1`;
+  try {
+    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!res.ok) return null;
+    const rows = safeRows<{ id: string; nama_kedai: string; status_kedai: string; latitude_kedai: number; longitude_kedai: number }>(await res.json());
+    return rows.length > 0 ? rows[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * getFounderMenu
+ * Fetch menu tersedia untuk kedai pengasas (fixed UUID).
+ * Return array kosong jika gagal. Soft-fail.
+ */
+export async function getFounderMenu(
+  env: Env
+): Promise<Array<{ id: number; nama_hidangan: string; harga: number; gambar_url: string }>> {
+  const url = `${env.SUPABASE_URL}/rest/v1/menu_makanan?kedai_id=eq.00000000-0000-0000-0000-000000000001&status_tersedia=eq.true&select=id,nama_hidangan,harga,gambar_url&order=nama_hidangan.asc`;
+  try {
+    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!res.ok) return [];
+    const rows = (await res.json()) as Array<{ id: number; nama_hidangan: string; harga: number; gambar_url: string }>;
+    if (!Array.isArray(rows)) return [];
+    return rows.map((r) => ({
+      id: r.id,
+      nama_hidangan: r.nama_hidangan,
+      harga: typeof r.harga === 'number' ? r.harga : Number(r.harga) || 0,
+      gambar_url: r.gambar_url || '',
+    }));
+  } catch {
+    return [];
+  }
+}
+// End: Phase 60 - Founder Demo Shop Public Helpers
+
 // End: JomOrder Fasa 4 - Supabase Data Layer (Fail 1)

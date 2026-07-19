@@ -11,6 +11,8 @@ import { setNav } from './navigation';
 import { handleCustomerGui } from './customer_gui';
 import { handleMerchantGui } from './merchant_gui';
 import { i18n } from '../services/i18n';
+import { sendPhoto } from '../telegram';
+import { getFounderShop, getFounderMenu } from '../db';
 
 // Start: Phase 55 - Main Menu Navigation Grid (3-col + BACK + BM/EN)
 function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
@@ -116,5 +118,52 @@ export async function handleAdaptiveWelcome(env: Env, chatId: number, user: Tele
   }
 }
 // End: Phase 51 - Adaptive Welcome Card
+
+// Start: Phase 60 - Founder Demo Shop View (MDEC GLOW wow, lihat dari bot)
+function founderViewKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> } {
+  return {
+    inline_keyboard: [
+      [{ text: '🌐 Lihat Portal Demo', url: 'https://jomorder-portal.vercel.app/' }],
+      [
+        { text: '⬅️ Kembali', callback_data: 'nav:customer' },
+      ],
+    ],
+  };
+}
+
+/**
+ * Papar kedai contoh pengasas terus dalam bot (dummy, tiada order sebenar).
+ * Soft-fail: jika DB gagal, hantar mesej fallback.
+ */
+export async function handleFounderView(env: Env, chatId: number): Promise<void> {
+  try {
+    const shop = await getFounderShop(env);
+    const menu = await getFounderMenu(env);
+    if (!shop) {
+      await sendMessage(env, chatId, '⚠️ Kedai contoh sedang disediakan. Sila cuba sebentar lagi.', founderViewKeyboard());
+      return;
+    }
+    const lines: string[] = [];
+    lines.push('🏆 *KEDAI CONTOH PENGASAS*');
+    lines.push('');
+    lines.push('🍴 *' + shop.nama_kedai + '*');
+    lines.push('Status: ' + (shop.status_kedai === 'DILULUSKAN' ? '✅ Diluluskan' : shop.status_kedai));
+    lines.push('');
+    lines.push('📋 *Menu Demo:*');
+    if (menu.length === 0) {
+      lines.push('  (menu dimuatkan tidak lama lagi)');
+    } else {
+      menu.slice(0, 8).forEach((m) => {
+        lines.push('  • ' + m.nama_hidangan + ' — RM ' + Number(m.harga).toFixed(2));
+      });
+    }
+    lines.push('');
+    lines.push('Ini kedai demo untuk pendaftar MDEC GLOW. Daftar kedai anda sendiri dengan /daftar!');
+    await sendMessage(env, chatId, escapeMarkdownV2(lines.join('\n')), founderViewKeyboard());
+  } catch {
+    await sendMessage(env, chatId, '⚠️ Kedai contoh tidak tersedia buat sementara.', founderViewKeyboard());
+  }
+}
+// End: Phase 60 - Founder Demo Shop View
 
 // End: Phase 31 - /start & /mula Command Controller

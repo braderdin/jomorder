@@ -57,6 +57,7 @@ export async function handleViewCart(
 
   const state = await getState(env, tgId);
   const buffer = (state?.cart_buffer ?? null) as CartBuffer | null;
+  const locale = (state?.locale === 'EN' ? 'EN' : 'BM') as 'BM' | 'EN';
 
   // Start: Phase 39 - Dismiss spinner redundan selamat (idempotent guard)
   // Panggilan kedua tidak berbahaya; pastikan spinner pasti tertutup.
@@ -67,7 +68,7 @@ export async function handleViewCart(
     await sendMessage(
       env,
       chatId,
-      escapeMarkdownV2(i18n('cart_empty', 'BM') + '\\n\\n') +
+      escapeMarkdownV2(i18n('cart_empty', locale) + '\\n\\n') +
       escapeMarkdownV2('Jom makan dulu? Pilih kedai berdekatan dan tambah menu ke troli! 🍔'),
       inlineKeyboard([
         [{ text: '🏪 Cari Kedai', callback_data: 'open_nearby' }],

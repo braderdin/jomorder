@@ -180,6 +180,57 @@ async function fetchMenuGrid() {
 }
 // End: Phase 51 - Live Menu Photo Grid Fetcher
 
+// Start: Phase 60 - Founder Demo Shop Fetcher (MDEC GLOW wow section)
+async function fetchFounderShop() {
+  const grid = document.getElementById("founder-menu");
+  if (!grid) return;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch("/api/founder-showcase", { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const shop = data.shop || null;
+    const items = Array.isArray(data.menu) ? data.menu : [];
+    let html = "";
+    if (shop) {
+      const approved = shop.status_kedai === "DILULUSKAN";
+      html += `<div class="col-span-full mb-2 text-center"><span class="px-3 py-1 rounded-full bg-cyber-gold/10 text-cyber-gold text-xs font-mono">${escapeHtml(shop.nama_kedai)}${approved ? " ✔️" : ""}</span></div>`;
+    }
+    if (items.length === 0) {
+      html += `<div class="col-span-full text-gray-500 text-sm">Menu demo sedang dimuatkan...</div>`;
+    } else {
+      items.forEach((m) => {
+        const harga = Number(m.harga || 0).toFixed(2);
+        html += `<div class="menu-card rounded-2xl border border-cyber-gold/30 bg-cyber-bg overflow-hidden">
+          <div class="h-28 bg-gradient-to-br from-cyber-accent/30 to-cyber-neon/10 flex items-center justify-center text-4xl">🍽️</div>
+          <div class="p-3">
+            <div class="text-sm font-semibold text-gray-100 truncate">${escapeHtml(m.nama_hidangan)}</div>
+            <div class="text-cyber-gold text-sm font-bold mt-1">RM ${harga}</div>
+          </div>
+        </div>`;
+      });
+    }
+    grid.innerHTML = html;
+  } catch {
+    grid.innerHTML = `<div class="col-span-full text-gray-500 text-sm">Demo kedai tidak tersedia buat sementara.</div>`;
+  }
+}
+function escapeHtml(str) {
+  const amp = String.fromCharCode(38) + "amp;";
+  const lt = String.fromCharCode(60) + "lt;";
+  const gt = String.fromCharCode(62) + "gt;";
+  const quot = String.fromCharCode(34) + "quot;";
+  return String(str == null ? "" : str)
+    .replace(/&/g, amp)
+    .replace(/</g, lt)
+    .replace(/>/g, gt)
+    .replace(/"/g, quot)
+    .replace(/'/g, "&#39;");
+}
+// End: Phase 60 - Founder Demo Shop Fetcher
+
 // Start: Phase 52 - Live Order Tracker Simulation (UI Demo)
 // Simulasikan aliran pesanan 4 langkah: terima -> sediakan -> serah -> selesai.
 function initOrderSim() {
@@ -296,5 +347,13 @@ init = async function () {
   initDeepLinkScroll();
 };
 // End: Phase 58 - Deep-Link ?start=menu scroll handler
+
+// Start: Phase 60 - Founder Demo Shop loader hook
+const _origInit60 = init;
+init = async function () {
+  await _origInit60();
+  await fetchFounderShop();
+};
+// End: Phase 60 - Founder Demo Shop loader hook
 
 // End: JomOrder Portal Live Metrics Fetch (Phase 27 + Phase 45 UI)

@@ -19,7 +19,7 @@ import { handleDeleteCouponInline, handlePromo } from './marketing_coupon';
 import { handleTetapanCallback } from './settings';
 import { withCommandGuard } from '../services/command_error_interceptor';
 import { setNav } from './navigation';
-import { handleStart } from './start';
+import { handleStart, handleFounderView } from './start';
 import { handleCustomerGui, handleCustomerShopsGui } from './customer_gui';
 import { handleCustomerProfileGui } from './customer_profile';
 import { handleMerchantGui } from './merchant_gui';
@@ -254,6 +254,14 @@ export async function routeCallbackQuery(
       return true;
     }
     // End: Phase 56 - Minigame routes
+
+    // Start: Phase 60 - Founder Demo Shop View route (lihat dari bot)
+    if (data === 'founder_view') {
+      await answerCallbackQuery(env, cb.id, 'Memuatkan kedai contoh...');
+      await handleFounderView(env, cbChatId);
+      return true;
+    }
+    // End: Phase 60 - Founder Demo Shop View route
 
     // Start: Phase 58 - Nested BACK Chain (smart parent return)
     if (data === 'back:customer') {

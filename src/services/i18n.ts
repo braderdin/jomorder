@@ -10,7 +10,9 @@ type MsgKey =
   | 'shop_list'
   | 'cart_empty'
   | 'order_placed'
-  | 'back';
+  | 'back'
+  | 'founderShop'
+  | 'founderTagline';
 
 const MESSAGES: Record<MsgKey, Record<Lang, string>> = {
   welcome: {
@@ -36,6 +38,14 @@ const MESSAGES: Record<MsgKey, Record<Lang, string>> = {
   back: {
     BM: '⬅️ Kembali',
     EN: '⬅️ Back',
+  },
+  founderShop: {
+    BM: '🏆 Kedai Contoh Pengasas',
+    EN: '🏆 Founder Demo Shop',
+  },
+  founderTagline: {
+    BM: 'Contoh kedai untuk pendaftar MDEC GLOW. Daftar kedai anda sendiri dengan /daftar!',
+    EN: 'Sample shop for MDEC GLOW registrants. Register your own with /daftar!',
   },
 };
 

@@ -28,6 +28,8 @@ fi
 
 export DB_URL
 export NODE_OPTIONS="--dns-result-order=ipv4first"
+# Resolve pg dari node_modules projek (Fasal 11: script compile ke /tmp but module di root)
+export NODE_PATH="$ROOT/node_modules"
 
 if [ "$#" -ge 1 ]; then
   # Argumen langsung = SQL string

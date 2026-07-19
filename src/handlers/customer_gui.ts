@@ -23,7 +23,7 @@ export async function handleCustomerGui(env: Env, chatId: number, tgId: number):
       [{ text: '🛒 Troli', callback_data: 'open_cart' }, { text: '🎟️ Promo', callback_data: 'open_promo' }],
       [{ text: '📖 Sejarah', callback_data: 'open_history' }, { text: '👤 Profil', callback_data: 'open_profile' }],
       [{ text: '💳 Bayar', callback_data: 'open_pay' }, { text: '⭐ Nilai', callback_data: 'open_review' }],
-      [minigameButton(), { text: '⬅️ Kembali', callback_data: 'nav:main' }],
+      [{ text: '🏆 Kedai Contoh', callback_data: 'founder_view' }, { text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
   await sendMessage(env, chatId, text, kb, customerReplyKeyboard());

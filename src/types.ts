@@ -123,6 +123,7 @@ export interface MerchantState {
   step: MerchantStep;
   cart_buffer?: Record<string, unknown>; // Fasal 7 Strategy 3 JSONB
   minigame?: MinigameState; // Phase 57: spin-wheel state (persist tanpa overwrite)
+  locale?: 'BM' | 'EN'; // Phase 60: user language preference (i18n)
   last_active: string; // ISO timestamp untuk 1-hour timeout
 }
 

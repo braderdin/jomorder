@@ -69,7 +69,7 @@ for cb in "nav:main" "nav:customer" "nav:merchant" "nav:admin" "nav:lang" "nav:h
   "back:merchant" "back:cart" "back:shop" "rate:1:5" "toggle_menu:1" "toggle_status:abc" \
   "add_to_cart:item:shop" "view_cart:abc" "view_shop:shop" "pay_now:1:shop:111000111" \
   "accept_order:1" "ready_order:1" "del_coupon:JOM10" "merchant_menu" "merchant_analytics" \
-  "status_refresh" "merchant_orders" "merchant_settings" "merchant_report"; do
+  "status_refresh" "merchant_orders" "merchant_settings" "merchant_report" "founder_view"; do
   check_cb "CB:${cb%%:*}" "$cb"
 done
 
