@@ -47,7 +47,7 @@ export async function handleCustomerLocation(
     return true;
   }
   const senarai = kedai
-    .map((k, i) => `${i + 1}\\. ${escapeMarkdownV2(k.nama_kedai)} \\(${k.jarak_km.toFixed(1)}km\\)`)
+    .map((k: { nama_kedai: string; jarak_km: number }, i: number) => `${i + 1}\\. ${escapeMarkdownV2(k.nama_kedai)} \\(${k.jarak_km.toFixed(1)}km\\)`)
     .join('\n');
   await sendMessage(env, chatId, escapeMarkdownV2('📍 Kedai Berdekatan:\\n') + senarai, navGrid());
   return true;

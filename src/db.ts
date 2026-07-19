@@ -17,13 +17,8 @@ function supabaseHeaders(env: Env): Record<string, string> {
   };
 }
 
-export interface KedaiBerhampiran {
-  id: string;
-  nama_kedai: string;
-  latitude_kedai: number;
-  longitude_kedai: number;
-  jarak_km: number;
-}
+// Start: Phase 56 - KedaiBerhampiran type re-export dari geo (elak duplicate)
+// End: Phase 56
 
 // Start: Phase 38 - Null-Shield DB Lookup Guard (anti Edge crash)
 /**
@@ -184,6 +179,15 @@ export async function dbFetch(
 }
 // End: Phase 36 - Telemetry Audit Wiring
 
+// Start: Phase 56 - Geo + onboarding helpers (inline; modular file blocked by TS Bundler cycle)
+export interface KedaiBerhampiran {
+  id: string;
+  nama_kedai: string;
+  latitude_kedai: number;
+  longitude_kedai: number;
+  jarak_km: number;
+}
+
 /**
  * Trigger Fasa 2 RPC: ambil_kedai_berhampiran (Haversine geo-query).
  * Selamat: dibalut try/catch, return [] jika gagal (Fasal 7 Strategy 4 soft-fail).
@@ -216,7 +220,6 @@ export async function ambilKedaiBerhampiran(
 /**
  * Semak sama ada Telegram ID peniaga wujud dalam senarai_kedai.
  * RLS di bypass melalui service_role; query diikat ke merchant_telegram_id (Fasal 7 Strategy 1).
- * NOTE: Kolum merchant_telegram_id ditambah ke schema.sql (migration Fasa 4).
  */
 export async function checkMerchantExists(
   env: Env,
@@ -233,9 +236,7 @@ export async function checkMerchantExists(
   }
 }
 
-/** Rekod permulaan peniaga baharu ke senarai_kedai (onboarding Langkah A).
- * Lat/long diambil dari native Telegram location semasa Langkah B (Fasal 7 Strategy 2).
- * Optional: jika tiada, default 0 (fallback soft-fail). */
+/** Rekod permulaan peniaga baharu ke senarai_kedai (onboarding Langkah A). */
 export async function daftarKedaiPermulaan(
   env: Env,
   telegramId: number,
@@ -264,6 +265,7 @@ export async function daftarKedaiPermulaan(
     return false;
   }
 }
+// End: Phase 56 - Geo + onboarding helpers
 
 // Start: Fasa 5 - Subscription Cache + Order Lifecycle Persistence
 // Fasal 7 Strategy 1 (RLS) + Strategy 2 (Redis fast-path shield).

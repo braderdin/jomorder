@@ -52,4 +52,11 @@ export function backWith(actions: Array<{ text: string; cb: string }>, back = 'n
     ],
   };
 }
+
+/** Start: Phase 56 - Minigame button helper */
+/** Butang buka minigame untuk disisip dalam grid pelanggan. */
+export function minigameButton() {
+  return { text: '🎮 Main', callback_data: 'open_minigame' };
+}
+/** End: Phase 56 - Minigame button helper */
 // End: Phase 55 - Navigation Layer

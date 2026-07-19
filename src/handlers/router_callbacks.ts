@@ -25,6 +25,7 @@ import { handleCustomerProfileGui } from './customer_profile';
 import { handleMerchantGui } from './merchant_gui';
 import { handleMerchantOnboardGui } from './merchant_onboard';
 import { handleFeedbackGui } from './feedback_gui';
+import { handleMinigameCallback, showMinigame } from './minigame_gui';
 
 /**
  * Route semua callback_query (inline button) ke handler khusus.
@@ -225,6 +226,24 @@ export async function routeCallbackQuery(
       return true;
     }
     // End: Phase 55 - Navigation Grid Callbacks
+
+    // Start: Phase 56 - Minigame routes
+    if (data === 'nav:minigame') {
+      await answerCallbackQuery(env, cb.id);
+      await showMinigame(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'open_minigame') {
+      await answerCallbackQuery(env, cb.id);
+      await showMinigame(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data.startsWith('mg:')) {
+      await answerCallbackQuery(env, cb.id);
+      await handleMinigameCallback(env, cbChatId, cb.from.id, data);
+      return true;
+    }
+    // End: Phase 56 - Minigame routes
 
     // Spinner dismissal untuk callback tak dikenali (Fasal 7 S4)
     await answerCallbackQuery(env, cb.id, 'OK');

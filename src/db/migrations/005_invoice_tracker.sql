@@ -18,9 +18,4 @@ CREATE INDEX IF NOT EXISTS idx_rekod_pesanan_status_bayar
     ON rekod_pesanan (status_pembayaran)
     WHERE status_pembayaran = 'UNPAID';
 
--- Catat migration ke log schema (idempoten).
-INSERT INTO schema_migrations (nama_migration, diaplik_pada)
-VALUES ('005_invoice_tracker', NOW())
-ON CONFLICT (nama_migration) DO NOTHING;
-
 -- End: Phase 29 Migration 005

@@ -266,5 +266,12 @@ CREATE INDEX IF NOT EXISTS idx_kempen_kedai_aktif
 CREATE INDEX IF NOT EXISTS idx_kempen_kod
     ON kempen_diskaun (kod_kupon);
 CREATE INDEX IF NOT EXISTS idx_menu_gambar
-    ON menu_makanan (kedai_id) WHERE gambar_url IS NOT NULL;
+     ON menu_makanan (kedai_id) WHERE gambar_url IS NOT NULL;
 -- End: Phase 53 - Indexes from migration 017/018
+
+-- Start: Phase 56 - Safe Consolidated DDL Reference
+-- FAIL 023_final_safe_consolidated.sql ialah master idempoten yang menggabung
+-- semua DDL selamat (001+004+005+017+021+rls_policies) TANPA schema_migrations
+-- INSERT dan TANPA auth.uid()::text::bigint cast (RLS TEXT fix). Jalankan 023 di
+-- Supabase SQL Editor sebagai ganti manual 022. Idempoten - selamat berulang.
+-- End: Phase 56 - Safe Consolidated DDL Reference

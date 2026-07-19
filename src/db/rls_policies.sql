@@ -26,8 +26,8 @@ CREATE POLICY "merchant_manage_own_shop"
   ON senarai_kedai
   FOR ALL
   TO authenticated
-  USING (merchant_telegram_id = auth.uid()::text::bigint)
-  WITH CHECK (merchant_telegram_id = auth.uid()::text::bigint);
+  USING (merchant_telegram_id = auth.uid()::text)
+  WITH CHECK (merchant_telegram_id = auth.uid()::text);
 
 -- ============================================================
 -- TABLE: rekod_pesanan (Customer order log)
@@ -53,12 +53,12 @@ CREATE POLICY "merchant_own_orders"
   TO authenticated
   USING (
     kedai_id IN (
-      SELECT id FROM senarai_kedai WHERE merchant_telegram_id = auth.uid()::text::bigint
+      SELECT id FROM senarai_kedai WHERE merchant_telegram_id = auth.uid()::text
     )
   )
   WITH CHECK (
     kedai_id IN (
-      SELECT id FROM senarai_kedai WHERE merchant_telegram_id = auth.uid()::text::bigint
+      SELECT id FROM senarai_kedai WHERE merchant_telegram_id = auth.uid()::text
     )
   );
 

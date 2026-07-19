@@ -16,9 +16,4 @@ CREATE INDEX IF NOT EXISTS idx_kempen_diskaun_sweep
 -- Index untuk lookup kod_kupon + kedai_id (apply/resolve hot path)
 CREATE INDEX IF NOT EXISTS idx_kempen_diskaun_kod_kedai
   ON kempen_diskaun (kedai_id, kod_kupon);
-
--- Catat migrasi ke jadual audit (jika wujud)
-INSERT INTO schema_migrations (version, name, applied_at)
-  VALUES (17, '017_coupon_sweep_index', NOW())
-  ON CONFLICT (version) DO NOTHING;
 -- End: Migration 017

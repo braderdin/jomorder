@@ -3,7 +3,7 @@
 // disertakan butang BACK (nav:main). Integrasi dengan navigation.ts state.
 import { Env, TelegramUser } from '../types';
 import { sendMessage, escapeMarkdownV2, navGrid } from '../telegram';
-import { setNav } from './navigation';
+import { setNav, minigameButton } from './navigation';
 
 /** Papar papan pemerintah pelanggan (GUI). */
 export async function handleCustomerGui(env: Env, chatId: number, tgId: number): Promise<void> {
@@ -22,7 +22,7 @@ export async function handleCustomerGui(env: Env, chatId: number, tgId: number):
       [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🏪 Menu Kedai', callback_data: 'open_shops' }],
       [{ text: '🛒 Troli', callback_data: 'open_cart' }, { text: '🎟️ Promo', callback_data: 'open_promo' }],
       [{ text: '📖 Sejarah', callback_data: 'open_history' }, { text: '👤 Profil', callback_data: 'open_profile' }],
-      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+      [minigameButton(), { text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
   await sendMessage(env, chatId, text, kb);
