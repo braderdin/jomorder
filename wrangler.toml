@@ -47,6 +47,19 @@ bucket_name = "jomorder-assets"
 # id = "REPLACE-WITH-KV-ID"
 # End: Phase 41 Deploy Blocker Fix
 
+# Start: Phase 51 - Cron Triggers (Fasal 10 secret guard endpoints)
+# Timer harian tembak endpoint POST dengan header X-Telegram-Bot-Api-Secret-Token.
+# - coupon-sweep: matikan kupon tamat + notify peniaga (tengah malam UTC)
+# - daily-digest: ringkasan harian peniaga 9PG MYT = 1AM UTC
+# - maintenance: sentinel self-heal drift recovery (setiap 15 minit)
+[triggers]
+crons = [
+  "0 0 * * *",
+  "0 1 * * *",
+  "*/15 * * * *"
+]
+# End: Phase 51 - Cron Triggers
+
 # Observability
 [observability]
 enabled = true
