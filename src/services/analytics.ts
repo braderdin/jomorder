@@ -264,4 +264,67 @@ export async function getMerchantScopedSummarySafe(
 }
 // End: Phase 47 - Merchant Scoped Safe Wrapper
 
+// Start: Phase 48 - Merchant Sales CSV Export (data layer)
+/**
+ * exportMerchantSalesCsv
+ * Kumpul rekod_pesanan milik kedai (ikat kedai_id dari merchant_telegram_id,
+ * RLS isolation Fasal 7 Strategy 1) dan bina string CSV.
+ * Kolum: id,created_at,jumlah_harga,status_pembayaran,status_penghantaran
+ * Escape: double-quote wrap + ganda quote dalam (RFC 4180).
+ * Soft-fail: return string kosong '' jika gagal (Fasal 7 Strategy 4).
+ * @returns string CSV (header + rows) atau '' jika tiada data/gagal
+ */
+export async function exportMerchantSalesCsv(
+  env: Env,
+  merchantId: number
+): Promise<string> {
+  try {
+    // 1. Dapatkan kedai_id (RLS bind)
+    const shopRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/senarai_kedai?merchant_telegram_id=eq.${merchantId}&select=id&limit=1`,
+      { method: 'GET', headers: supabaseHeaders(env) }
+    );
+    if (!shopRes.ok) return '';
+    const shopRows = (await shopRes.json()) as Array<{ id: string }>;
+    if (!Array.isArray(shopRows) || shopRows.length === 0) return '';
+    const kedaiId = shopRows[0].id;
+
+    // 2. Ambil pesanan kedai
+    const ordRes = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?kedai_id=eq.${encodeURIComponent(kedaiId)}` +
+        `&select=id,created_at,jumlah_harga,status_pembayaran,status_penghantaran` +
+        `&order=created_at.desc`,
+      { method: 'GET', headers: supabaseHeaders(env) }
+    );
+    if (!ordRes.ok) return '';
+    const orders = (await ordRes.json()) as Array<{
+      id: number;
+      created_at?: string;
+      jumlah_harga?: number;
+      status_pembayaran?: string;
+      status_penghantaran?: string;
+    }>;
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return 'id,created_at,jumlah_harga,status_pembayaran,status_penghantaran\n';
+    }
+
+    // 3. Bina CSV (escape RFC 4180)
+    const esc = (v: unknown): string => {
+      const s = v === null || v === undefined ? '' : String(v);
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    };
+    const header = 'id,created_at,jumlah_harga,status_pembayaran,status_penghantaran';
+    const lines = orders.map((o) =>
+      [o.id, o.created_at ?? '', o.jumlah_harga ?? '', o.status_pembayaran ?? '', o.status_penghantaran ?? '']
+        .map(esc)
+        .join(',')
+    );
+    return header + '\n' + lines.join('\n') + '\n';
+  } catch {
+    return ''; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Phase 48 - Merchant Sales CSV Export (data layer)
+
 // End: JomOrder Fasa 13 - SaaS Analytics Data Layer (File 2)

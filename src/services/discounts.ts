@@ -145,4 +145,67 @@ export function applyDiscount(coupon: CampaignDiscount, subtotal: number): numbe
   return Math.round(final * 100) / 100;
 }
 
+// Start: Coupon Expiry Auto-Notify Sweep (Phase 48)
+/**
+ * sweepExpiredCoupons
+ * Imbas semua kupon yang TELAH melepasi tamat_pano tetapi masih status_aktif = true.
+ * Untuk setiap kupon: tutup (status_aktif = false) dan hantar notifikasi amaran
+ * ke peniaga melalui sendMessage (JomOrder Modern-Siber tone, BM formal).
+ * Dipanggil oleh scheduler cron bagi memastikan kupon tamat tak kekal aktif.
+ * Soft-fail: swallow error setiap baris (Fasal 7 Strategy 4).
+ * @returns bilangan kupon yang berjaya ditutup
+ */
+export async function sweepExpiredCoupons(env: Env): Promise<number> {
+  try {
+    // 1. Ambil kupon tamat tempoh yang masih aktif (join senarai_kedai untuk tgId).
+    const selectUrl =
+      `${env.SUPABASE_URL}/rest/v1/kempen_diskaun` +
+      `?select=id,kod_kupon,tamat_pano,kedai_id(senarai_kedai(merchant_telegram_id))` +
+      `&tamat_pano=lte.${new Date().toISOString()}` +
+      `&status_aktif=eq.true`;
+    const selRes = await fetch(selectUrl, { method: 'GET', headers: supabaseHeaders(env) });
+    if (!selRes.ok) return 0;
+    const expired = (await selRes.json()) as Array<{
+      id: number;
+      kod_kupon: string;
+      kedai_id: { senarai_kedai: { merchant_telegram_id: number } } | null;
+    }>;
+    if (!Array.isArray(expired) || expired.length === 0) return 0;
+
+    // Import dinamik elak cycle: sendMessage dari telegram.ts
+    const { sendMessage } = await import('../telegram');
+
+    let closed = 0;
+    for (const k of expired) {
+      try {
+        // 2. Tutup kupon (status_aktif = false)
+        const patchUrl = `${env.SUPABASE_URL}/rest/v1/kempen_diskaun?id=eq.${k.id}`;
+        const patchRes = await fetch(patchUrl, {
+          method: 'PATCH',
+          headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
+          body: JSON.stringify({ status_aktif: false }),
+        });
+        if (!patchRes.ok) continue;
+
+        // 3. Notify peniaga
+        const tgId = k.kedai_id?.senarai_kedai?.merchant_telegram_id;
+        if (tgId) {
+          await sendMessage(
+            env,
+            tgId,
+            `🔔 Kupon *${k.kod_kupon}* telah tamat tempoh dan dimatikan secara automatik.\n\nSila cipta kupon baharu jika anda mahu terus tawar diskaun. 🎟️`
+          );
+        }
+        closed++;
+      } catch {
+        // skip baris ini, terus ke seterusnya
+      }
+    }
+    return closed;
+  } catch {
+    return 0; // Soft-fail (Fasal 7 Strategy 4)
+  }
+}
+// End: Coupon Expiry Auto-Notify Sweep (Phase 48)
+
 // End: JomOrder Fasa 14 - Dynamic Discount Engine (File 2)

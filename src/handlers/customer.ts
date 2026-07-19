@@ -402,15 +402,20 @@ export async function handleAddToCart(
 export async function handleSejarahPesanan(
   env: Env,
   chatId: number,
-  tgId: number
+  tgId: number,
+  page = 1
 ): Promise<void> {
   try {
+    // Start: Phase 48 - Pagination (10 per page, offset = (page-1)*10)
+    const PAGE_SIZE = 10;
+    const offset = (page - 1) * PAGE_SIZE;
+    // End: Phase 48 - Pagination
     const url =
       `${env.SUPABASE_URL}/rest/v1/rekod_pesanan` +
       `?pelanggan_telegram_id=eq.${tgId}` +
       `&status_penghantaran=in.(COMPLETED,REJECTED)` +
       `&select=id,jumlah_harga,status_pembayaran,status_penghantaran,created_at` +
-      `&order=created_at.desc&limit=10`;
+      `&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
     const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
     if (!res.ok) {
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil sejarah pesanan.'), customerMenuKeyboard());
@@ -424,7 +429,7 @@ export async function handleSejarahPesanan(
       created_at?: string;
     }>;
     if (!Array.isArray(rows) || rows.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
+      await sendMessage(env, chatId, escapeMarkdownV2(page > 1 ? '📭 Tiada lagi sejarah pesanan.' : '📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
       return;
     }
     // Start: Phase 38 - Restrict archive view to TERMINAL states only (completed/rejected)
@@ -433,7 +438,7 @@ export async function handleSejarahPesanan(
       return s === 'COMPLETED' || s === 'REJECTED';
     });
     if (filtered.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
+      await sendMessage(env, chatId, escapeMarkdownV2(page > 1 ? '📭 Tiada lagi sejarah pesanan.' : '📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
       return;
     }
     const lines = filtered
@@ -443,7 +448,18 @@ export async function handleSejarahPesanan(
       })
       .join('\n');
     // End: Phase 38 - Restrict archive view
-    await sendMessage(env, chatId, escapeMarkdownV2('📜 SEJARAH PESANAN:\\n') + lines, customerMenuKeyboard());
+
+    // Start: Phase 48 - Next page inline button (if full page returned)
+    const replyMarkup = filtered.length >= PAGE_SIZE
+      ? { inline_keyboard: [[{ text: '➡️ Laman Seterusnya', callback_data: `sejarah_page:${page + 1}` }]] }
+      : undefined;
+    // End: Phase 48 - Next page inline button
+    await sendMessage(
+      env,
+      chatId,
+      escapeMarkdownV2(`📜 SEJARAH PESANAN \\(Laman ${page}\\):\\n`) + lines,
+      replyMarkup ?? customerMenuKeyboard()
+    );
   } catch {
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat baca sejarah pesanan.'), customerMenuKeyboard());
   }
