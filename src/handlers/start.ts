@@ -3,23 +3,17 @@
 // Arahan: kenal pasti identiti user (customer vs merchant) lalu render interface sesuai.
 // Phase 38: deep-link payload slicing isolation (ref=xxx) -> Redis state bind.
 import { Env, TelegramUser } from '../types';
-import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboard } from '../telegram';
+import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboard, navGrid } from '../telegram';
 import { checkMerchantExists } from '../db';
 import { setState } from '../redis';
 import { handleHelpCategory } from './help';
+import { setNav } from './navigation';
 
-// Start: Phase 45 - Rich Start Inline Keyboard (Fasal 6 mobile 2-3 btn/row)
+// Start: Phase 55 - Main Menu Navigation Grid (3-col + BACK + BM/EN)
 function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-  return {
-    inline_keyboard: [
-      [{ text: '🍜 Cari Makan', callback_data: 'open_nearby' }, { text: '🛒 Troli', callback_data: 'open_cart' }],
-      [{ text: '🎟️ Promo', callback_data: 'open_promo' }],
-      [{ text: '🏪 Daftar Kedai', callback_data: 'merchant_settings' }, { text: '📊 Status', callback_data: 'merchant_report' }],
-      [{ text: '❓ Bantuan', callback_data: 'help_menu' }],
-    ],
-  };
+  return navGrid();
 }
-// End: Phase 45 - Rich Start Inline Keyboard
+// End: Phase 55 - Main Menu Navigation Grid
 
 /**
  * Controller untuk arahan '/start' dan '/mula'.
@@ -86,6 +80,7 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
       escapeMarkdownV2('🎟️ *Cipta* kupon diskaun\\n') +
       escapeMarkdownV2('⚙️ *Tetapan* — /tetapan (muat naik QR)\\n\\n') +
       escapeMarkdownV2('Taip /urus untuk buka papan penuh\\. Selamat berniaga! 🇲🇾');
+    if (typeof tgId === 'number') await setNav(env, tgId, 'merchant_main');
     await sendMessage(env, chatId, text, merchantMenuKeyboard());
     return;
   }
@@ -103,6 +98,7 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
     escapeMarkdownV2('🎟️ *Promo* — /promo kupon aktif\\n') +
     escapeMarkdownV2('📖 *Sejarah* — /sejarah_pesanan\\n\\n') +
     escapeMarkdownV2('Tekan butang di bawah untuk mula. Selamat menjamu selera! 🇲🇾');
+  if (typeof tgId === 'number') await setNav(env, tgId, 'customer_main');
   await sendMessage(env, chatId, text, startQuickActionKeyboard());
 }
 

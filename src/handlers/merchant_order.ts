@@ -2,7 +2,7 @@
 // Fasal 7 Strategy 1 (RLS multi-tenant) + Fasal 6 (interactive callback buttons)
 // Fasal 4 (SOA) - controller khusus untuk callback 'accept_order:', 'ready_order:', 'reject_order:'
 import { Env, OrderStatus, TelegramCallbackQuery } from '../types';
-import { answerCallbackQuery, sendMessage, escapeMarkdownV2, merchantMenuKeyboard } from '../telegram';
+import { answerCallbackQuery, sendMessage, escapeMarkdownV2, merchantMenuKeyboard, navGrid } from '../telegram';
 import { sendCustomerStatusAlert } from '../services/telegram_notify';
 
 /** Status mapping untuk inline button lifecycle. */
@@ -142,7 +142,7 @@ export async function handleMerchantOrderQueue(
   try {
     const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
     if (!res.ok) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai pesanan.'), merchantMenuKeyboard());
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil senarai pesanan.'), navGrid());
       return true;
     }
     const rows = (await res.json()) as Array<{
@@ -151,7 +151,7 @@ export async function handleMerchantOrderQueue(
       jumlah_harga?: number;
     }>;
     if (!Array.isArray(rows) || rows.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada pesanan aktif dalam queue.'), merchantMenuKeyboard());
+      await sendMessage(env, chatId, escapeMarkdownV2('📭 Tiada pesanan aktif dalam queue.'), navGrid());
       return true;
     }
     const lines = rows
@@ -177,7 +177,7 @@ export async function handleMerchantOrderQueue(
       { inline_keyboard: keyboard }
     );
   } catch {
-    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat baca queue pesanan.'), merchantMenuKeyboard());
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat baca queue pesanan.'), navGrid());
   }
   return true;
 }
@@ -211,7 +211,7 @@ export async function handleQueueNextCallback(
     body: JSON.stringify({ status_penghantaran: next, updated_at: new Date().toISOString() }),
   });
   if (!res.ok) {
-    await sendMessage(env, cbChatId, escapeMarkdownV2('⚠️ Gagal kemaskini queue.'), merchantMenuKeyboard());
+    await sendMessage(env, cbChatId, escapeMarkdownV2('⚠️ Gagal kemaskini queue.'), navGrid());
     return true;
   }
   // Notify pelanggan real-time (Fasal 7 Strategy 4 soft-fail).
@@ -232,7 +232,7 @@ export async function handleQueueNextCallback(
       }
     }
   } catch { /* soft-fail */ }
-  await sendMessage(env, cbChatId, escapeMarkdownV2(`📦 #${orderId} -> ${next}`), merchantMenuKeyboard());
+  await sendMessage(env, cbChatId, escapeMarkdownV2(`📦 #${orderId} -> ${next}`), navGrid());
   return true;
 }
 

@@ -9,6 +9,7 @@ import {
   merchantMenuKeyboard,
   answerCallbackQuery,
   sendPhoto,
+  navGrid,
 } from '../telegram';
 import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState, getMenuByKedaiId, getMerchantProfileSafe } from '../db';
 import { getState, setState } from '../redis';
@@ -48,7 +49,7 @@ export async function handleCustomerLocation(
   const senarai = kedai
     .map((k, i) => `${i + 1}\\. ${escapeMarkdownV2(k.nama_kedai)} \\(${k.jarak_km.toFixed(1)}km\\)`)
     .join('\n');
-  await sendMessage(env, chatId, escapeMarkdownV2('📍 Kedai Berdekatan:\\n') + senarai, customerMenuKeyboard());
+  await sendMessage(env, chatId, escapeMarkdownV2('📍 Kedai Berdekatan:\\n') + senarai, navGrid());
   return true;
 }
 

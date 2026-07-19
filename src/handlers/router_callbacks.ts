@@ -3,22 +3,28 @@
 // Modul ini mengandungi SEMUA routing inline button (Fasal 6 grid).
 // Dipanggil dari handleUpdate() di handlers.ts bagi elak duplication.
 import { Env, TelegramCallbackQuery } from '../types';
-import { answerCallbackQuery, sendMessage, escapeMarkdownV2 } from '../telegram';
+import { answerCallbackQuery, sendMessage, escapeMarkdownV2, navGrid } from '../telegram';
 import { handleMerchantCallback } from './merchant';
 import { handleInvoiceCallback } from './merchant_invoice';
 import { handleMerchantOrderCallback } from './merchant_order';
 import { handlePayNow } from './customer';
 import { handleSenaraiMenu, handleSetLokasi } from './merchant';
-import { handleLaporanJualan, handleDashboardQuickAction } from './merchant_dashboard';
+import { handleLaporanJualan, handleDashboardQuickAction, handleExportSalesCsv } from './merchant_dashboard';
 import { handleSejarahPesanan } from './customer';
-import { handleExportSalesCsv } from './merchant_dashboard';
-import { handleHelpLocaleToggle } from './help';
+import { handleHelpLocaleToggle, handleHelp } from './help';
 import { handleStatus } from './status';
 import { handleViewShopMenu, handleAddToCart } from './customer';
 import { handleViewCart } from './customer_cart';
-import { handleDeleteCouponInline } from './marketing_coupon';
+import { handleDeleteCouponInline, handlePromo } from './marketing_coupon';
 import { handleTetapanCallback } from './settings';
 import { withCommandGuard } from '../services/command_error_interceptor';
+import { setNav } from './navigation';
+import { handleStart } from './start';
+import { handleCustomerGui, handleCustomerShopsGui } from './customer_gui';
+import { handleCustomerProfileGui } from './customer_profile';
+import { handleMerchantGui } from './merchant_gui';
+import { handleMerchantOnboardGui } from './merchant_onboard';
+import { handleFeedbackGui } from './feedback_gui';
 
 /**
  * Route semua callback_query (inline button) ke handler khusus.
@@ -135,6 +141,91 @@ export async function routeCallbackQuery(
       await answerCallbackQuery(env, cb.id, 'Menyimpan...');
       if (await handleTetapanCallback(env, cbChatId, cb.from.id, data)) return true;
     }
+    // Start: Phase 55 - Navigation Grid Callbacks (BACK + BM/EN)
+    if (data === 'nav:main') {
+      await answerCallbackQuery(env, cb.id);
+      await setNav(env, cb.from.id, 'idle');
+      await sendMessage(env, cbChatId, escapeMarkdownV2('📱 Menu Utama JomOrder'), navGrid());
+      return true;
+    }
+    if (data === 'nav:customer') {
+      await answerCallbackQuery(env, cb.id);
+      await setNav(env, cb.from.id, 'customer_main');
+      await handleStart(env, cbChatId, cb.from, '/start');
+      return true;
+    }
+    if (data === 'nav:merchant') {
+      await answerCallbackQuery(env, cb.id);
+      await setNav(env, cb.from.id, 'merchant_main');
+      await handleStart(env, cbChatId, cb.from, '/start');
+      return true;
+    }
+    if (data === 'nav:admin') {
+      await answerCallbackQuery(env, cb.id);
+      await sendMessage(env, cbChatId, escapeMarkdownV2('🛡️ Pentadbir: taip /admin_stats atau /pengumuman'), navGrid());
+      return true;
+    }
+    if (data === 'nav:help') {
+      await answerCallbackQuery(env, cb.id);
+      await withCommandGuard(env, cbChatId, '/bantuan', () => handleHelp(env, cbChatId, cb.from));
+      return true;
+    }
+    if (data === 'nav:lang') {
+      await answerCallbackQuery(env, cb.id, 'BM/EN akan ditambah');
+      await sendMessage(env, cbChatId, escapeMarkdownV2('🌐 BM/EN toggle: ciri dalam pembangunan. Default BM.'), navGrid());
+      return true;
+    }
+    // GUI sub-menu routing
+    if (data === 'open_shops') {
+      await answerCallbackQuery(env, cb.id);
+      await handleCustomerShopsGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'open_cart') {
+      await answerCallbackQuery(env, cb.id);
+      await handleViewCart(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'open_promo') {
+      await answerCallbackQuery(env, cb.id);
+      await handlePromo(env, cbChatId);
+      return true;
+    }
+    if (data === 'open_history') {
+      await answerCallbackQuery(env, cb.id);
+      await handleSejarahPesanan(env, cbChatId, cb.from.id, 1);
+      return true;
+    }
+    if (data === 'open_profile') {
+      await answerCallbackQuery(env, cb.id);
+      await handleCustomerProfileGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'customer_gui') {
+      await answerCallbackQuery(env, cb.id);
+      await handleCustomerGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'merchant_gui') {
+      await answerCallbackQuery(env, cb.id);
+      await handleMerchantGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'onboard_shop') {
+      await answerCallbackQuery(env, cb.id);
+      await handleMerchantOnboardGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data.startsWith('rate:')) {
+      const parts = data.split(':');
+      const oid = Number(parts[1] || 0);
+      const stars = Number(parts[2] || 0);
+      await answerCallbackQuery(env, cb.id, `${stars} bintang diterima`);
+      await sendMessage(env, cbChatId, escapeMarkdownV2(`⭐ Terima kasih! Penilaian ${stars} bintang untuk #${oid} disimpan.`), navGrid());
+      return true;
+    }
+    // End: Phase 55 - Navigation Grid Callbacks
+
     // Spinner dismissal untuk callback tak dikenali (Fasal 7 S4)
     await answerCallbackQuery(env, cb.id, 'OK');
     return true;

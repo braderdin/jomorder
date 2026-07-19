@@ -2,7 +2,7 @@
 // Fasal 4 (SOA) + Fasal 6 (mobile grid) + Fasal 7 Strategy 2 (state isolation).
 // Papar panel tetapan akaun: tukar bahasa BM/EN, toggle notifikasi pesanan.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
+import { sendMessage, escapeMarkdownV2, inlineKeyboard, navGrid } from '../telegram';
 import { getState, setState } from '../redis';
 
 /**
@@ -44,6 +44,9 @@ export async function handleTetapan(env: Env, chatId: number, tgId: number): Pro
     ],
     [
       { text: '🏪 Menu Kedai', callback_data: 'merchant_menu' },
+    ],
+    [
+      { text: '⬅️ Kembali', callback_data: 'nav:main' },
     ],
   ]);
 

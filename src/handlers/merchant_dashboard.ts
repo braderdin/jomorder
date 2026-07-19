@@ -109,7 +109,14 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
     escapeMarkdownV2('📋 /menu_kedai · ⚙️ /tetapan · 📤 /invois\\n') +
     escapeMarkdownV2('Pilih tindakan di bawah:');
 
-  const buttons = merchantDashboardKeyboardV2(kedai.id);
+  const buttons = {
+    inline_keyboard: [
+      [{ text: '🟢 Buka/Tutup', callback_data: `toggle_status:${kedai.id}` }, { text: '📦 Pesanan', callback_data: 'merchant_orders' }],
+      [{ text: '📋 Menu', callback_data: 'merchant_menu' }, { text: '📊 Laporan', callback_data: 'merchant_report' }],
+      [{ text: '⚙️ Tetapan', callback_data: 'merchant_settings' }, { text: '📍 Zon', callback_data: 'merchant_zon' }],
+      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+    ],
+  };
 
   await sendMessage(env, chatId, text, buttons);
 }

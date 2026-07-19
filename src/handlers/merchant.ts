@@ -2,7 +2,7 @@
 // Fasal 4 (SOA) + Fasal 7 Strategy 2 (state) + Fasal 6 (escape/keyboard)
 // Pindahan dari src/handlers.ts: onboarding, dashboard, order lifecycle, admin approval.
 import { Env, MerchantState } from '../types';
-import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, sendPhoto } from '../telegram';
+import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, sendPhoto, navGrid } from '../telegram';
 import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium, getMenuByKedaiId, toggleMenuAvailability } from '../db';
 import { setState, getState, invalidateSubscriptionCache, checkRateLimit, rateLimitKey } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
@@ -412,7 +412,7 @@ export async function handleMerchantMessage(
   }
   // End: Phase 38 - /urus_kedai Onboarding Redis Harmonization
 
-  await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), merchantMenuKeyboard());
+  await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), navGrid());
 }
 
 // Start: Phase 40 - Onboarding Input Sanitizer (clean dangling params)

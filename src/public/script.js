@@ -221,4 +221,28 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
+// Start: Phase 55 - GUI Nav Button reveal (Modern-Siber glow entry)
+function initGuiNav() {
+  const nav = document.querySelector('.gui-nav');
+  if (!nav) return;
+  const btns = nav.querySelectorAll('.gui-btn');
+  btns.forEach((b, i) => {
+    b.style.opacity = '0';
+    b.style.transform = 'translateY(16px)';
+    setTimeout(() => {
+      b.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      b.style.opacity = '1';
+      b.style.transform = 'translateY(0)';
+    }, 80 * i);
+  });
+}
+// Hook ke init()
+const _origInit = init;
+init = async function () {
+  await _origInit();
+  initGuiNav();
+};
+// End: Phase 55 - GUI Nav Button reveal
+
 // End: JomOrder Portal Live Metrics Fetch (Phase 27 + Phase 45 UI)

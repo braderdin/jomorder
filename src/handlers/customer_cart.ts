@@ -66,7 +66,10 @@ export async function handleViewCart(
       env,
       chatId,
       escapeMarkdownV2('🛒 Troli anda kosong. Sila pilih menu kedai dulu.'),
-      customerMenuKeyboard()
+      inlineKeyboard([
+        [{ text: '🏪 Cari Kedai', callback_data: 'open_nearby' }],
+        [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+      ])
     );
     return true;
   }
@@ -107,6 +110,7 @@ export async function handleViewCart(
       [{ text: '💳 Bayar Sekarang', callback_data: 'checkout_now' }],
       [{ text: '🍔 Tambah Lagi', callback_data: 'browse_more' }],
       [{ text: '🧹 Kosongkan', callback_data: 'cart_clear' }],
+      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ]);
   }
   // End: Phase 38 - Cart Checkout Lock

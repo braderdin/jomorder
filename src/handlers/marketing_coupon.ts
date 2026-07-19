@@ -3,7 +3,7 @@
 // Semua kupon kini guna jadual kempen_diskaun (single source of truth, selari discounts.ts).
 // Setiap fungsi self-contained, soft-fail (Fasal 7 Strategy 4), tidak throw ke caller.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, inlineKeyboard } from '../telegram';
+import { sendMessage, escapeMarkdownV2, inlineKeyboard, navGrid } from '../telegram';
 
 const SUPABASE_REST = (env: Env) => `${env.SUPABASE_URL}/rest/v1`;
 
@@ -119,6 +119,7 @@ export async function handleListCoupons(env: Env, chatId: number, tgId: number):
       .map((r) => `🎟️ ${escapeMarkdownV2(r.kod_kupon)} \\- ${r.status_aktif ? '✅ Aktif' : '⛔ Dimatikan'}`)
       .join('\\n');
     const buttons = rows.map((r) => [{ text: `🗑️ ${r.kod_kupon}`, callback_data: `del_coupon:${r.kod_kupon}` }]);
+    buttons.push([{ text: '⬅️ Kembali', callback_data: 'nav:main' }]);
     await sendMessage(
       env,
       chatId,

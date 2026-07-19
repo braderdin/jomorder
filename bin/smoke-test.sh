@@ -266,9 +266,16 @@ if [[ -f "src/types.ts" ]]; then
 else
   echo "[WARN] Phase 53: src/types.ts not found, skip count"
 fi
-# End: Phase 53 - 30-Command Activation + 30-Total Assert
+ # End: Phase 53 - 30-Command Activation + 30-Total Assert
 
- echo "--------------------------------------------------"
+  echo "--------------------------------------------------"
+  echo "--- Phase 55: Navigation Grid (nav:main) Callback Assert ---"
+  for cb in "nav:main" "nav:customer" "nav:merchant" "open_shops" "open_cart" "open_promo" "open_history" "open_profile" "customer_gui" "merchant_gui" "onboard_shop" "rate:1:5"; do
+    check_post_cb "PH55:CB:${cb%%:*}" "$cb"
+  done
+  # End: Phase 55 - Navigation Grid Callback Assert
+
+  echo "--------------------------------------------------"
 echo " Ringkasan: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"
 echo "--------------------------------------------------"
 

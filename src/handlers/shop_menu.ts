@@ -73,6 +73,7 @@ export async function handleShopMenu(env: Env, chatId: number): Promise<void> {
     rows.push(row);
   }
 
+  rows.push([{ text: '⬅️ Kembali', callback_data: 'nav:main' }]);
   const text = escapeMarkdownV2('📋 SENARAI KEDAI AKTIF\\n\\nPilih kedai untuk lihat menu:\\n');
   await sendMessage(env, chatId, text, inlineKeyboard(rows));
 }

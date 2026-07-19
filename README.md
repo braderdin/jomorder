@@ -64,6 +64,18 @@ Semua perintah diselaraskan antara `NATIVE_COMMAND_LIST` (types.ts), `BOT_COMMAN
 
 ---
 
+## 🖱️ Navigasi GUI Tanpa Command (Phase 55 Modern-Siber)
+
+Semua menu bot boleh diakses terus dari **butang inline + keyboard**, tanpa taip `/command`. Setiap skrin ada butang **⬅️ Kembali** untuk navigasi lancar.
+
+- **Pelanggan:** `🛒 Kedai Berdekatan` · `🛍️ Troli Saya` · `🔥 Promo Aktif` · `📜 Sejarah Pesanan` · `👤 Profil Saya` · `⭐ Beri Penilaian`
+- **Peniaga:** `🏪 Papan Perniagaan` · `📋 Menu Kedai` · `📦 Pesanan` · `📊 Laporan` · `🎟️ Kupon` · `⚙️ Tetapan` · `📍 Zon Operasi`
+- **Navigasi Grid:** `nav:main` · `nav:customer` · `nav:merchant` · `nav:admin` dengan butang BACK konsisten.
+
+Portal web turut memaparkan **GUI Nav Button Grid** (glow hover Modern-Siber) di `src/public/index.html`.
+
+---
+
 ## 🧱 Teknologi
 
 Dibina sebagai *serverless-first SaaS* menggunakan edge compute, managed database dan cache layer — tanpa pelayan untuk diurus.

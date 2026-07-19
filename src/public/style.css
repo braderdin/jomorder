@@ -148,3 +148,33 @@ section .rounded-2xl {
   background: rgba(0, 240, 255, 0.06);
 }
 /* End: Phase 53 - 30 Command Matrix Grid Glow */
+
+/* Start: Phase 55 - GUI Nav Button Grid Glow (Modern-Siber) */
+.gui-nav {
+  display: grid;
+}
+.gui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: rgba(17, 24, 39, 0.7);
+  color: var(--cyber-neon);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+.gui-btn:hover {
+  border-color: var(--cyber-neon);
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 8px 26px rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.1);
+  color: #ffffff;
+}
+.gui-btn:active {
+  transform: translateY(-1px) scale(0.99);
+}
+/* End: Phase 55 - GUI Nav Button Grid Glow */

@@ -144,7 +144,7 @@ export async function handleHelpCategory(
   const inline = {
     inline_keyboard: [
       [{ text: toggleLabel, callback_data: `help_locale:${category}:${otherLocale}` }],
-      [{ text: '🔙 Kembali', callback_data: 'help_menu' }],
+      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
   await sendHtmlMessage(env, chatId, html, inline);
@@ -186,7 +186,7 @@ export async function handleBantuanLokasi(env: Env, chatId: number): Promise<voi
   const inline = {
     inline_keyboard: [
       [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🛒 Troli', callback_data: 'open_cart' }],
-      [{ text: '🔙 Bantuan', callback_data: 'help_menu' }],
+      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
     ],
   };
   await sendHtmlMessage(env, chatId, html, inline);

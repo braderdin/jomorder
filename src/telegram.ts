@@ -230,4 +230,26 @@ export function buildHelpDeepLink(category: 'peniaga' | 'pelanggan' | 'pentadbir
 }
 // End: Phase 47 - Help Deep-Link Builder
 
+/** Template Inline Keyboard - single BACK button row (Phase 55 navigation). */
+export function backKeyboard(action: string, label = '⬅️ Kembali') {
+  return { inline_keyboard: [[{ text: label, callback_data: action }]] };
+}
+
+/** Navigation grid: Main menu 3-column (Peniaga/Pelanggan/Pentadbir) + lang. */
+export function navGrid() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🛒 Pelanggan', callback_data: 'nav:customer' },
+        { text: '🏪 Peniaga', callback_data: 'nav:merchant' },
+      ],
+      [
+        { text: '🛡️ Pentadbir', callback_data: 'nav:admin' },
+        { text: '🌐 BM/EN', callback_data: 'nav:lang' },
+      ],
+      [{ text: 'ℹ️ Bantuan', callback_data: 'nav:help' }],
+    ],
+  };
+}
+
 // End: JomOrder Fasa 3 - Telegram API Utility Module
