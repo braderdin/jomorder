@@ -36,10 +36,14 @@ const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
   { command: '/pengumuman', description: 'Pengumuman pentadbir' },
   { command: '/status', description: 'Semak status bot & akaun' },
+  // Start: Phase 52 - Bonus native commands (27 total)
+  { command: '/menu_kedai', description: 'Lihat menu kedai' },
+  { command: '/tetapan', description: 'Tetapan akaun peniaga' },
+  // End: Phase 52 - Bonus native commands
 ];
 
 /**
- * Daftarkan kesemua 22 arahan bot ke menu natif Telegram pengguna.
+ * Daftarkan kesemua 27 arahan bot ke menu natif Telegram pengguna.
  * Memanggil Telegram setMyCommands API. Soft-fail: return false tanpa throw.
  */
 export async function registerBotCommands(env: Env): Promise<boolean> {

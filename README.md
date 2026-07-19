@@ -25,7 +25,7 @@ JomOrder membantu peniaga F&B Malaysia menerima pesanan secara digital tanpa kos
 - **Multi-Tenant** — setiap kedai dapat ruang sendiri, data diasingkan selamat.
 - **Interface Bahasa Malaysia** — mesra pengguna tempatan, tak perlu switch app.
 - **Zero-Ops Free Tier** — dioptimasikan untuk berjalan pada infrastruktur percuma.
-- **22 Perintah Native** — kawalan penuh kedai terus dari chat.
+- **30 Perintah Native** — kawalan penuh kedai terus dari chat (termasuk /menu, /menu_kedai, /tetapan, /invois, /zon_operasi, /cart_kosong, /promo, /bantuan_lokasi).
 
 ---
 

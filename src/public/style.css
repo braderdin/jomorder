@@ -115,3 +115,24 @@ section .rounded-2xl {
   transform: translateY(-6px) scale(1.02);
 }
 /* End: Phase 46 - CTA Pulse + Card Glow */
+
+/* Start: Phase 52 - Order Tracker Step States (Live Demo) */
+.order-step {
+  transition: all 0.35s ease;
+  border-left: 3px solid transparent;
+}
+.order-step.active {
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--cyber-neon);
+  border-left-color: var(--cyber-neon);
+  font-weight: 600;
+}
+.order-step.done {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--cyber-gold);
+  border-left-color: var(--cyber-gold);
+}
+#order-sim-btn {
+  cursor: pointer;
+}
+/* End: Phase 52 - Order Tracker Step States */

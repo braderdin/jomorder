@@ -169,11 +169,42 @@ async function fetchMenuGrid() {
 }
 // End: Phase 51 - Live Menu Photo Grid Fetcher
 
+// Start: Phase 52 - Live Order Tracker Simulation (UI Demo)
+// Simulasikan aliran pesanan 4 langkah: terima -> sediakan -> serah -> selesai.
+function initOrderSim() {
+  const btn = document.getElementById("order-sim-btn");
+  const steps = Array.from(document.querySelectorAll(".order-step"));
+  const custStatus = document.getElementById("order-status-cust");
+  if (!btn || steps.length === 0) return;
+  let running = false;
+  btn.addEventListener("click", async () => {
+    if (running) return;
+    running = true;
+    steps.forEach((s) => { s.classList.remove("active", "done"); });
+    if (custStatus) custStatus.textContent = "Status: ⏳ Menunggu Pengesahan";
+    const labels = ["Menerima Pesanan", "Menyediakan", "Siap & Serah", "Selesai"];
+    for (let i = 0; i < steps.length; i++) {
+      steps[i].classList.add("active");
+      if (custStatus) {
+        const map = ["🔔 Pesanan Dihantar", "👨‍🍳 Sedang Disediakan", "📦 Sedia Diserah", "✅ Selesai - Selamat Menikmati!"];
+        custStatus.textContent = "Status: " + map[i];
+      }
+      await new Promise((r) => setTimeout(r, 900));
+      steps[i].classList.remove("active");
+      steps[i].classList.add("done");
+    }
+    running = false;
+    btn.textContent = "▶ Simulasi Sekali Lagi";
+  });
+}
+// End: Phase 52 - Live Order Tracker Simulation
+
 // Boot
 async function init() {
   initAnalyticsStatus();
   initFaq();
   initScrollReveal();
+  initOrderSim();
   await fetchPublicStats();
   await fetchMenuGrid();
   // Start: Phase 46 - Hero Counter Fallback (pastikan beranimasi walaupun API lambat)

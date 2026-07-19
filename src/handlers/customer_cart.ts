@@ -142,6 +142,33 @@ export async function flushCustomerCart(env: Env, tgId: number): Promise<boolean
 export async function flushCustomerCartQuiet(env: Env, tgId: number): Promise<void> {
   await flushCustomerCart(env, tgId);
 }
+
+// Start: Phase 52 - /cart_kosong (Manual customer cart clear)
+/**
+ * handleCartKosong
+ * Perintah pelanggan kosongkan troli secara manual (explicit user action).
+ * Papar pengesahan ringkas + keyboard menu pelanggan. Soft-fail selamat.
+ */
+export async function handleCartKosong(env: Env, chatId: number, tgId: number): Promise<void> {
+  const ok = await flushCustomerCart(env, tgId);
+  if (!ok) {
+    await sendMessage(
+      env,
+      chatId,
+      escapeMarkdownV2('⚠️ Gagal mengosongkan troli. Cuba sebentar lagi.')
+    );
+    return;
+  }
+  await sendMessage(
+    env,
+    chatId,
+    escapeMarkdownV2('🧹 Troli anda telah dikosongkan.\\n\\n') +
+      escapeMarkdownV2('Nak pesan lagi? Tekan butang di bawah. 🍔'),
+    customerMenuKeyboard()
+  );
+}
+// End: Phase 52 - /cart_kosong
+
 // End: Phase 40 - Cart Flush on Order Termination
 
 // End: Phase 25 - Modular Cart Inspection Engine (File 5)

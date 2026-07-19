@@ -261,6 +261,16 @@ export const NATIVE_COMMAND_LIST: TelegramBotCommand[] = [
   { command: '/batalkan_pesanan', description: 'Batal pesanan tertunda' },
   { command: '/pengumuman', description: 'Pengumuman pentadbir' },
   { command: '/status', description: 'Semak status bot & akaun' },
+  // Start: Phase 52 - Bonus native commands sync (27 total)
+  { command: '/menu', description: 'Senarai kedai aktif' },
+  { command: '/menu_kedai', description: 'Lihat menu kedai' },
+  { command: '/tetapan', description: 'Tetapan akaun peniaga' },
+  { command: '/invois', description: 'Jana invois digital' },
+  { command: '/zon_operasi', description: 'Senarai zon operasi' },
+  { command: '/cart_kosong', description: 'Kosongkan troli pesanan' },
+  { command: '/promo', description: 'Lihat promosi & kupon aktif' },
+  { command: '/bantuan_lokasi', description: 'Panduan ikut lokasi kedai' },
+  // End: Phase 52 - Bonus native commands sync
 ];
 // End: Phase 44 - 22 Command BM Activation (BotFather sync + /status)
 

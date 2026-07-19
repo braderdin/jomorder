@@ -165,4 +165,32 @@ export async function handleHelpLocaleToggle(
 }
 // End: Phase 47 - Category-Specific Help Deep-Link Router
 
+// Start: Phase 52 - /bantuan_lokasi (Location Sharing Guide)
+/**
+ * handleBantuanLokasi
+ * Panduan kongsi lokasi untuk carian kedai berdekatan + set lokasi kedai.
+ * Dipanggil dari /bantuan_lokasi (pelanggan & peniaga).
+ */
+export async function handleBantuanLokasi(env: Env, chatId: number): Promise<void> {
+  const html =
+    '<b>📍 PANDUAN KONGSI LOKASI</b>\n\n' +
+    '🔎 <b>Pelanggan</b>\n' +
+    '• Tekan butang 📍 <b>Kedai Berdekatan</b> atau taip /cari_makan\n' +
+    '• Hantar lokasi anda (attachment 📎 → Location)\n' +
+    '• Kami cari restoran dalam radius 10km (Haversine)\n\n' +
+    '🏪 <b>Peniaga</b>\n' +
+    '• Taip /set_lokasi untuk buka flow koordinat\n' +
+    '• Kongsi lokasi kedai supaya pelanggan jumpa anda\n' +
+    '• Atau taip manual: /set_lokasi 3.1390 101.6869\n\n' +
+    'Lokasi disimpan selamat ikut RLS kedai anda sahaja.';
+  const inline = {
+    inline_keyboard: [
+      [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🛒 Troli', callback_data: 'open_cart' }],
+      [{ text: '🔙 Bantuan', callback_data: 'help_menu' }],
+    ],
+  };
+  await sendHtmlMessage(env, chatId, html, inline);
+}
+// End: Phase 52 - /bantuan_lokasi
+
 // End: Phase 31 - /help & /bantuan Command Controller

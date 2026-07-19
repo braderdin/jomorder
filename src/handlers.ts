@@ -17,9 +17,11 @@ import { handleStart } from './handlers/start';
 import { handleHelp, handleHelpLocaleToggle } from './handlers/help';
 import { handleShopMenu, handleMenuKedai } from './handlers/shop_menu';
 import { handleTetapan, handleTetapanCallback } from './handlers/settings';
+import { handleCartKosong } from './handlers/customer_cart';
+import { handleBantuanLokasi } from './handlers/help';
 import { handleMerchantDashboard, handleLaporanJualan, handleExportSalesCsv } from './handlers/merchant_dashboard';
 // Start: Phase 32 - Commerce/Marketing/Admin sub-handler imports
-import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon, handleDeleteCouponInline } from './handlers/marketing_coupon';
+import { handleCreateCoupon, handleListCoupons, handleDeleteCoupon, handleDeleteCouponInline, handlePromo } from './handlers/marketing_coupon';
 import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handlers/customer_commerce';
 import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './handlers/platform_admin';
 // Start: Phase 37 - New 22-Command handler imports (merchant/customer/admin modules)
@@ -27,6 +29,7 @@ import { handleSenaraiMenu, handleSetLokasi } from './handlers/merchant';
 import { handleSejarahPesanan, handleBatalkanPesanan, handleProfil } from './handlers/customer';
 import { handlePengumumanBroadcast } from './handlers/admin';
 import { handleStatus } from './handlers/status';
+import { routeCallbackQuery } from './handlers/router_callbacks';
 import { fetchMerchantSalesSummary } from './services/analytics';
 import { withCommandGuard } from './services/command_error_interceptor';
 // Start: Phase 41 - 22 Command BM Activation imports (alias + profil handler)
@@ -115,92 +118,6 @@ export function resolveCommand(raw: string): string | null {
 }
 // End: Phase 39 - Command Username Sanitizer Overhaul
 
-/** Toggle status operasi kedai (BUKA <-> TUTUP) ikut RLS merchant_telegram_id. */
-async function handleDashboardToggle(
-  env: Env,
-  cb: import('./types').TelegramCallbackQuery,
-  chatId: number,
-  kedaiId: string
-): Promise<boolean> {
-  try {
-    const getUrl = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}&select=status_kedai&limit=1`;
-    const getRes = await fetch(getUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-    });
-    if (!getRes.ok) return false;
-    const rows = (await getRes.json()) as Array<{ status_kedai?: string }>;
-    if (!Array.isArray(rows) || rows.length === 0) return false;
-    const current = rows[0].status_kedai || 'TUTUP';
-    const next = current === 'BUKA' || current === 'AKTIF' ? 'TUTUP' : 'BUKA';
-    const patchUrl = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}`;
-    const patchRes = await fetch(patchUrl, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({ status_kedai: next }),
-    });
-    if (!patchRes.ok) return false;
-    await answerCallbackQuery(env, cb.id, next === 'BUKA' ? 'Kedai dibuka' : 'Kedai ditutup');
-    // Re-render dashboard terkini
-    await handleMerchantDashboard(env, chatId, cb.from.id);
-    return true;
-  } catch {
-    return false; // Soft-fail (Fasal 7 Strategy 4)
-  }
-}
-
-/** Quick actions dari papan pemerintah (laporan / pesanan / tetapan / carian). */
-async function handleDashboardQuickAction(
-  env: Env,
-  cb: import('./types').TelegramCallbackQuery,
-  chatId: number,
-  action: string,
-  tgId: number
-): Promise<boolean> {
-  await answerCallbackQuery(env, cb.id);
-  switch (action) {
-    case 'merchant_report': {
-      const m = await fetchSaasMetrics(env);
-      if (!m) {
-        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan.'));
-        return true;
-      }
-      await sendMessage(
-        env,
-        chatId,
-        escapeMarkdownV2('📊 LAPORAN KEDAI\\n\\n') +
-          escapeMarkdownV2(`Peniaga Aktif: ${m.total_active_merchants}\\n`) +
-          escapeMarkdownV2(`Jumlah Pesanan: ${m.total_orders}\\n`) +
-          escapeMarkdownV2(`Hasil: RM${m.total_revenue_rm.toFixed(2)}`)
-      );
-      return true;
-    }
-    case 'merchant_orders':
-      await sendMessage(env, chatId, escapeMarkdownV2('📦 Semak pesanan: taip /invois atau lihat butang pesanan.'));
-      return true;
-    case 'merchant_settings':
-      await sendMessage(env, chatId, escapeMarkdownV2('⚙️ Tetapan: taip /urus untuk buka semula papan pemerintah.'));
-      return true;
-    case 'open_nearby':
-      await handleCustomerNearby(env, chatId, tgId);
-      return true;
-    case 'open_cart':
-      await handleViewCart(env, chatId, tgId);
-      return true;
-    default:
-      return false;
-  }
-}
-
 /** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
 function unifiedGreetingKeyboard() {
   return {
@@ -216,152 +133,12 @@ function unifiedGreetingKeyboard() {
 /** Routing utama — delegate ke modul merchant/customer mengikut jenis update. */
 export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<void> {
   // Start: Callback query router (delegate ke modul khusus)
+  // Phase 52: Ekstrak ke router_callbacks.ts (SOA split, elak fail >500 baris).
   const cb = update.callback_query;
   if (cb?.from) {
-   try {
     const cbChatId = cb.message?.chat.id ?? cb.from.id;
-    const data = cb.data || '';
-    // Merchant: order lifecycle + admin approval
-    if (await handleMerchantCallback(env, cb, cbChatId, data)) return;
-    // Start: Phase 29 - Invoice inline callback routing
-    if (data.startsWith('view_invoice:')) {
-      if (await handleInvoiceCallback(env, cb, cbChatId, data)) return;
-    }
-    // End: Phase 29 - Invoice inline callback routing
-    // Start: Phase 30 - Merchant Order Lifecycle callback routing
-    // Fasal 6 (interactive buttons accept/ready/reject) -> delegate ke merchant_order.
-    if (
-      data.startsWith('accept_order:') ||
-      data.startsWith('ready_order:') ||
-      data.startsWith('reject_order:')
-    ) {
-      if (await handleMerchantOrderCallback(env, cb, cbChatId, data)) return;
-    }
-    // End: Phase 30 - Merchant Order Lifecycle callback routing
-    // Customer: payment confirmation
-    if (await handlePayNow(env, cb, cbChatId, data)) return;
-
-    // Start: Phase 31 - Dashboard inline callback routing (Fasal 6 interactive grid)
-    // Toggle status operasi kedai + quick actions dari papan pemerintah.
-    if (data.startsWith('toggle_status:')) {
-      const kedaiId = data.slice('toggle_status:'.length);
-      if (await handleDashboardToggle(env, cb, cbChatId, kedaiId)) return;
-    }
-    if (
-      data === 'merchant_report' ||
-      data === 'merchant_orders' ||
-      data === 'merchant_settings' ||
-      data === 'open_nearby' ||
-      data === 'open_cart'
-    ) {
-      if (await handleDashboardQuickAction(env, cb, cbChatId, data, cb.from.id)) return;
-    }
-    // Start: Phase 46 - Dead Callback Repair (merchant_menu / merchant_analytics)
-    // Button ini dipapar di merchant_dashboard.ts tapi tiada router -> mati.
-    // Delegasikan ke handler sedia ada (handleSenaraiMenu / handleMerchantSalesSummary).
-    if (data === 'merchant_menu') {
-      await answerCallbackQuery(env, cb.id, 'Memuatkan menu...');
-      await withCommandGuard(env, cbChatId, '/senarai_menu', () => handleSenaraiMenu(env, cbChatId, cb.from.id));
-      return;
-    }
-    if (data === 'merchant_analytics') {
-      await answerCallbackQuery(env, cb.id, 'Memuatkan analitik...');
-      await withCommandGuard(env, cbChatId, '/laporan_jualan', () => handleMerchantSalesSummary(env, cbChatId, cb.from.id));
-      return;
-    }
-    // End: Phase 46 - Dead Callback Repair
-
-    // Start: Phase 49 - History Pagination Router (sejarah_page:<n>)
-    // Butang "Laman Seterusnya" dari handleSejarahPesanan mati sebelum ini.
-    // Delegate ke handleSejarahPesanan dengan page parse dari callback.
-    if (data.startsWith('sejarah_page:')) {
-      const page = Number(data.slice('sejarah_page:'.length)) || 1;
-      await answerCallbackQuery(env, cb.id, 'Memuatkan...');
-      await withCommandGuard(env, cbChatId, '/sejarah_pesanan', () => handleSejarahPesanan(env, cbChatId, cb.from.id, page));
-      return;
-    }
-    // End: Phase 49 - History Pagination Router
-
-    // Start: Phase 49 - Sales CSV Export Callback Router (export_sales_csv:)
-    // Butang "Muat Turun CSV" dari handleLaporanJualan mati sebelum ini.
-    if (data.startsWith('export_sales_csv:')) {
-      await answerCallbackQuery(env, cb.id, 'Menyediakan CSV...');
-      await withCommandGuard(env, cbChatId, '/laporan_jualan', () => handleExportSalesCsv(env, cbChatId, cb.from.id));
-      return;
-    }
-    // End: Phase 49 - Sales CSV Export Callback Router
-
-    // Start: Phase 49 - Help Locale Toggle Router (help_locale:<cat>:<locale>)
-    // Butang BM/EN dalam handleHelpCategory (Fasal 6 bilingual grid).
-    if (data.startsWith('help_locale:')) {
-      const parts = data.slice('help_locale:'.length).split(':');
-      const cat = (parts[0] || 'pelanggan') as 'peniaga' | 'pelanggan' | 'pentadbir';
-      const loc = (parts[1] || 'ms') as 'ms' | 'en';
-      await answerCallbackQuery(env, cb.id, 'Menukar bahasa...');
-      await withCommandGuard(env, cbChatId, '/bantuan', () => handleHelpLocaleToggle(env, cbChatId, cat, loc));
-      return;
-    }
-    // End: Phase 49 - Help Locale Toggle Router
-
-    // Start: Phase 46 - Status Refresh Callback Repair
-    // Button 'status_refresh' dipapar di status.ts tapi tiada router -> mati.
-    // Delegasikan semula ke handleStatus untuk re-render kad status terkini.
-    if (data === 'status_refresh') {
-      await answerCallbackQuery(env, cb.id, 'Menyegarkan...');
-      await withCommandGuard(env, cbChatId, '/status', () => handleStatus(env, cbChatId, cb.from.id));
-      return;
-    }
-    // End: Phase 46 - Status Refresh Callback Repair
-    // End: Phase 31 - Dashboard inline callback routing
-
-    // Start: Phase 24 - Menu browsing + interactive cart callback routing
-    // Fasal 7 Strategy 3 (cart buffer) + Fasal 6 (callback delegation).
-    if (data.startsWith('view_shop:')) {
-      const kedaiId = data.slice('view_shop:'.length);
-      if (await handleViewShopMenu(env, cbChatId, cb.from.id, kedaiId)) return;
-    }
-    if (data.startsWith('add_to_cart:')) {
-      const parts = data.split(':');
-      const itemId = parts[1] || '';
-      const kedaiId = parts[2] || '';
-      if (await handleAddToCart(env, cbChatId, cb.from.id, itemId, kedaiId, cb.id)) return;
-    }
-    // End: Phase 24 - Menu browsing + interactive cart callback routing
-
-    // Start: Phase 25 - View Cart callback routing (dismiss spinner via handleViewCart)
-    if (data.startsWith('view_cart:')) {
-      if (await handleViewCart(env, cbChatId, cb.from.id, cb.id)) return;
-    }
-    // End: Phase 25 - View Cart callback routing
-
-    // Start: Phase 34 - Coupon inline deletion callback wiring (del_coupon:<KOD>)
-    // Bridge terus ke logic pemadaman terharden (rollback buffer + audit snapshot).
-    // Dismiss spinner dulu (Fasal 6 UX) sebelum delegate ke handler.
-    if (data.startsWith('del_coupon:')) {
-      const kod = data.slice('del_coupon:'.length);
-      await answerCallbackQuery(env, cb.id, 'Memadam kupon...');
-      await handleDeleteCouponInline(env, cbChatId, cb.from.id, kod);
-      return;
-    }
-    // End: Phase 34 - Coupon inline deletion callback wiring
-
-    // Start: Phase 51 - Settings callback router (set_locale: / set_notif)
-    // Panel tetapan /tetapan toggle bahasa + notifikasi (Fasal 6 grid).
-    if (data.startsWith('set_locale:') || data === 'set_notif') {
-      await answerCallbackQuery(env, cb.id, 'Menyimpan...');
-      if (await handleTetapanCallback(env, cbChatId, cb.from.id, data)) return;
-    }
-    // End: Phase 51 - Settings callback router
-
-    // Start: Phase 35 - Callback Spinner Hardening (Fasal 7 Strategy 4)
-    // Dismiss spinner untuk callback tak dikenali supaya Tiada Telegram retry hang.
-    await answerCallbackQuery(env, cb.id, '✅');
+    await routeCallbackQuery(env, cb, cbChatId);
     return;
-    // End: Phase 35 - Callback Spinner Hardening
-   } catch {
-    // Phase 35: soft-fail - jawab spinner jika handler throw (elak hang).
-    await answerCallbackQuery(env, cb.id, 'Sila cuba sebentar lagi');
-   }
   }
   // End: Callback query router
 
@@ -390,6 +167,20 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await withCommandGuard(env, chatId, '/tetapan', () => handleTetapan(env, chatId, tgId));
     return;
   }
+  // Start: Phase 52 - New 3-Command Activation (cart_kosong, promo, bantuan_lokasi)
+  if (cmd === '/cart_kosong') {
+    await withCommandGuard(env, chatId, '/cart_kosong', () => handleCartKosong(env, chatId, tgId));
+    return;
+  }
+  if (cmd === '/promo') {
+    await withCommandGuard(env, chatId, '/promo', () => handlePromo(env, chatId));
+    return;
+  }
+  if (cmd === '/bantuan_lokasi') {
+    await withCommandGuard(env, chatId, '/bantuan_lokasi', () => handleBantuanLokasi(env, chatId));
+    return;
+  }
+  // End: Phase 52 - New 3-Command Activation
   if (cmd === '/urus' || cmd === '/dashboard') {
     await withCommandGuard(env, chatId, '/urus', () => handleMerchantDashboard(env, chatId, tgId));
     return;

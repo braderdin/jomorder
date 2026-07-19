@@ -108,7 +108,7 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
     escapeMarkdownV2(`Pesanan Hari Ini: ${pesananHariIni}\\n\\n`) +
     escapeMarkdownV2('Pilih tindakan di bawah:');
 
-  const buttons = merchantDashboardKeyboardV2();
+  const buttons = merchantDashboardKeyboardV2(kedai.id);
 
   await sendMessage(env, chatId, text, buttons);
 }

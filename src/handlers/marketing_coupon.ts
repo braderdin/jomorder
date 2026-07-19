@@ -212,4 +212,47 @@ export async function handleDeleteCouponInline(
   // Backend cleanup: tiada cache JSONB kupon setempat; DELETE terus terikat kedai.
   await deleteCouponCore(env, chatId, tgId, clean);
 }
+
+// Start: Phase 52 - /promo (Customer active coupon discovery)
+/**
+ * handlePromo
+ * Pelanggan lihat senarai kupon aktif (status_aktif='AKTIF' dan belum tamat).
+ * Papar grid kod + diskaun. Soft-fail: mesej neutral jika tiada/retait.
+ */
+export async function handlePromo(env: Env, chatId: number): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const url =
+    `${SUPABASE_REST(env)}/kempen_diskaun?status_aktif=eq.AKTIF&tamat_pada=gte.${today}T00:00:00.000Z` +
+    `&select=kod_kupon,peratus_diskaun,min_pesanan_rm,kedai_id&limit=20`;
+  try {
+    const res = await fetch(url, { method: 'GET', headers: svcHeaders(env) });
+    if (!res.ok) {
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil promosi. Cuba sebentar lagi.'));
+      return;
+    }
+    const rows = (await res.json()) as Array<{
+      kod_kupon: string;
+      peratus_diskaun: number;
+      min_pesanan_rm?: number;
+    }>;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      await sendMessage(env, chatId, escapeMarkdownV2('🎟️ Tiada promosi aktif buat masa ini. Lawat lagi nanti!'));
+      return;
+    }
+    const lines = rows
+      .map((r) => {
+        const min = r.min_pesanan_rm ? ` (min RM${r.min_pesanan_rm})` : '';
+        return `🎟️ ${escapeMarkdownV2(r.kod_kupon)} — ${r.peratus_diskaun}%${min}`;
+      })
+      .join('\n');
+    const text =
+      escapeMarkdownV2('🔥 PROMOSI AKTIF\\n\\n') +
+      lines +
+      escapeMarkdownV2('\\n\\nGuna kod semasa buat pesanan. Selamat menjamu selera! 🇲🇾');
+    await sendMessage(env, chatId, text);
+  } catch {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat sistem. Cuba sebentar lagi.'));
+  }
+}
+// End: Phase 52 - /promo
 // End: Phase 49 - Marketing Coupon Handlers (Unified kempen_diskaun)

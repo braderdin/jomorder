@@ -38,6 +38,9 @@ export async function handleTetapan(env: Env, chatId: number, tgId: number): Pro
     [
       { text: notif ? '🔔 Notif: HIDUP' : '🔕 Notif: MATI', callback_data: 'set_notif' },
     ],
+    [
+      { text: '📤 Muat Naik QR DuitNow', callback_data: 'upload_qr' },
+    ],
   ]);
 
   await sendMessage(env, chatId, text, buttons);
