@@ -27,7 +27,15 @@ export async function handleMerchantMenuGui(env: Env, chatId: number, tgId: numb
     const st = await getState(env, tgId);
     const kedaiId = (st as unknown as { kedai_id?: string } | null)?.kedai_id;
     if (!kedaiId) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai tidak dijumpai. Sila daftar dulu.'), inlineKeyboard([[{ text: '⬅️ Kembali', callback_data: 'back:merchant' }]]));
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('⚠️ Kedai tidak dijumpai.\\n\\nSila daftar kedai anda dulu untuk mula tambah menu.'),
+        inlineKeyboard([
+          [{ text: '🏪 Daftar Kedai', callback_data: 'onboard_shop' }],
+          [{ text: '⬅️ Kembali', callback_data: 'back:merchant' }],
+        ])
+      );
       return;
     }
     const url = `${SUPABASE_REST(env)}/item_menu?kedai_id=eq.${encodeURIComponent(kedaiId)}&select=id,nama_item,harga,tersedia&order=nama_item.asc&limit=30`;
@@ -38,7 +46,15 @@ export async function handleMerchantMenuGui(env: Env, chatId: number, tgId: numb
     }
     const rows = (await res.json()) as Array<{ id: string; nama_item: string; harga: number; tersedia: boolean }>;
     if (!Array.isArray(rows) || rows.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2('🍽️ Menu kosong.\\n\\nTambah item pertama anda!'), menuActionButtons(''));
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2('🍽️ Menu kosong.\\n\\nTambah item pertama anda dan terima order pelanggan!'),
+        inlineKeyboard([
+          [{ text: '➕ Tambah Item Pertama', callback_data: 'menu_add' }],
+          [{ text: '⬅️ Kembali', callback_data: 'back:merchant' }],
+        ])
+      );
       return;
     }
     const lines = rows.map((r, i) => `${i + 1}\\. ${escapeMarkdownV2(r.nama_item)} \\- RM${r.harga} ${r.tersedia ? '✅' : '⛔'}`).join('\n');

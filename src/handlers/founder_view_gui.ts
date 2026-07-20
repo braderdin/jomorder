@@ -11,7 +11,7 @@ import { getFounderShop, getFounderMenu } from '../db';
 function founderViewKeyboard(): ReturnType<typeof inlineKeyboard> {
   return inlineKeyboard([
     [{ text: '🌐 Lihat Portal Demo', url: 'https://jomorder-portal.vercel.app/' } as never],
-    [{ text: '⬅️ Kembali', callback_data: 'nav:customer' }],
+    [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
   ]);
 }
 
@@ -51,7 +51,7 @@ export async function handleFounderGui(env: Env, chatId: number): Promise<void> 
     }
     await sendMessage(env, chatId, text, founderViewKeyboard());
   } catch {
-    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai contoh tidak tersedia sementara.'), inlineKeyboard([[{ text: '⬅️ Kembali', callback_data: 'nav:customer' }]]));
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Kedai contoh tidak tersedia sementara.'), inlineKeyboard([[{ text: '⬅️ Kembali', callback_data: 'nav:main' }]]));
   }
 }
 // End: Phase 65 - Founder Demo Shop View GUI

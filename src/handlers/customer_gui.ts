@@ -10,13 +10,14 @@ export async function handleCustomerGui(env: Env, chatId: number, tgId: number):
   if (typeof tgId === 'number') await setNav(env, tgId, 'customer_main');
   const text =
     escapeMarkdownV2('🛒 *PAPAN PELANGGAN JomOrder*\\n\\n') +
-    escapeMarkdownV2('Pilih tindakan di bawah:\\n') +
+    escapeMarkdownV2('Pilih tindakan di bawah tanpa taip apa-apa:\\n') +
     escapeMarkdownV2('📍 Cari kedai berdekatan\\n') +
     escapeMarkdownV2('🏪 Lihat menu kedai\\n') +
     escapeMarkdownV2('🛒 Troli & semak pesanan\\n') +
     escapeMarkdownV2('🎟️ Kupon promo aktif\\n') +
     escapeMarkdownV2('📖 Sejarah pesanan\\n') +
-    escapeMarkdownV2('👤 Profil & langganan');
+    escapeMarkdownV2('👤 Profil & langganan\\n\\n') +
+    escapeMarkdownV2('💡 Kali pertama? Taip /start untuk pilih peranan.');
   const kb = {
     inline_keyboard: [
       [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🏪 Menu Kedai', callback_data: 'open_shops' }],
