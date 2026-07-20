@@ -29,6 +29,7 @@ import { handleMinigameCallback, showMinigame } from './minigame_gui';
 import { handleAdminGui, handleAdminListGui } from './platform_admin';
 import { handleCustomerCommerceGui, handleNearbyShopGui, handleShopMenuGui, handleAddToCartGui } from './customer_commerce_gui';
 import { handleCheckoutGui, handlePayNowGui } from './customer_checkout_gui';
+import { handleProfileEditGui, handleHistoryGui, handleProfileDeleteConfirm } from './customer_profile_gui';
 
 /**
  * Route semua callback_query (inline button) ke handler khusus.
@@ -230,14 +231,26 @@ export async function routeCallbackQuery(
     }
     if (data === 'open_history') {
       await answerCallbackQuery(env, cb.id);
-      await handleSejarahPesanan(env, cbChatId, cb.from.id, 1);
+      await handleHistoryGui(env, cbChatId, cb.from.id, 1);
       return true;
     }
     if (data === 'open_profile') {
       await answerCallbackQuery(env, cb.id);
-      await handleCustomerProfileGui(env, cbChatId, cb.from.id);
+      await handleProfileEditGui(env, cbChatId, cb.from.id);
       return true;
     }
+    // Start: Phase 63 - Profile edit + delete GUI
+    if (data === 'profile_edit_name') {
+      await answerCallbackQuery(env, cb.id, 'Taip nama baharu...');
+      await sendMessage(env, cbChatId, escapeMarkdownV2('✏️ Taip nama paparan baharu anda:'));
+      return true;
+    }
+    if (data === 'profile_delete') {
+      await answerCallbackQuery(env, cb.id, 'Mengesahkan...');
+      await handleProfileDeleteConfirm(env, cbChatId, cb.from.id);
+      return true;
+    }
+    // End: Phase 63 - Profile edit + delete GUI
     if (data === 'open_pay') {
       await answerCallbackQuery(env, cb.id);
       await handleViewCart(env, cbChatId, cb.from.id);
