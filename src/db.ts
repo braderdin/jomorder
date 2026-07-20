@@ -253,11 +253,11 @@ export async function daftarKedaiPermulaan(
         merchant_telegram_id: String(telegramId),
         nama_kedai: namaKedai,
         nama_pemilik: 'PEMILIK_BAHARU',
-        emel_pemilik: `${telegramId}@jomorder.local`,
-        no_telefon_sim: String(telegramId),
+        emel_pemilik: null,
+        no_telefon_sim: null,
         latitude_kedai: typeof lat === 'number' ? lat : 0,
         longitude_kedai: typeof lng === 'number' ? lng : 0,
-        status_kedai: 'MENUNGGU_PENGESAHAN',
+        status_kedai: 'DILULUSKAN',
       }),
     });
     return res.ok;

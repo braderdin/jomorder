@@ -41,8 +41,11 @@ import { withCommandGuard } from './services/command_error_interceptor';
 // daftarKedaiPermulaan datang dari db.ts (commit onboarding), handleTambahMenu dari merchant.ts.
 import { daftarKedaiPermulaan } from './db';
 import { handleTambahMenu } from './handlers/merchant';
-import { aiMenuWriter } from './services/ai_features';
+import { aiMenuWriter, aiSpellCheck, aiCustomerFaq } from './services/ai_features';
+import { NATIVE_COMMAND_LIST } from './types';
 // End: Phase 41 - 22 Command BM Activation imports
+// Start: Phase 71 - AI Spell-Checker + Customer FAQ hooks
+// End: Phase 71 - AI Spell-Checker + Customer FAQ hooks
 // End: Phase 37 - New 22-Command handler imports
 
 // Start: Phase 53 - 30-Command Distributor Routing Matrix (1:1 NATIVE_COMMAND_LIST)
@@ -443,6 +446,38 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     return;
   }
   // End: Phase 23 - Merchant state prefix routing
+
+  // Start: Phase 71 - AI Spell-Checker (typo command rescue)
+  // Jika teks mula dgn '/' tapi TAK dikenali sebagai command natif,
+  // panggil AI utk betul typo + cadang command betul (soft-fail: fallback ke merchant).
+  if (text.startsWith('/')) {
+    const fixed = await aiSpellCheck(env, text, (NATIVE_COMMAND_LIST as ReadonlyArray<{ command: string }>).map((c) => c.command));
+    if (fixed && fixed.trim() !== text.trim() && fixed.trim().startsWith('/')) {
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2(`🔤 Ralat ejaan dikesan!\nMaksud anda: \`${fixed.trim()}\` ?\n\nGuna butang /menu utk lihat semua command.`)
+      );
+      return;
+    }
+  }
+  // End: Phase 71 - AI Spell-Checker
+
+  // Start: Phase 71 - AI Customer FAQ (free-text fallback utk pelanggan)
+  // Jika teks TAK mula '/' dan state idle (bukan merchant dalan flow),
+  // panggil AI FAQ utk jawab soalan am pelanggan (soft-fail: merchant fallback).
+  if (!text.startsWith('/') && (!state || state.step === 'idle')) {
+    const faq = await aiCustomerFaq(env, text, 'JomOrder');
+    if (faq && faq.trim().length > 0) {
+      await sendMessage(
+        env,
+        chatId,
+        escapeMarkdownV2(`🤖 *JomOrder AI:*\n${faq.trim()}\n\n(Mahu bercakap dgn pengasas? Guna /bantuan)`)
+      );
+      return;
+    }
+  }
+  // End: Phase 71 - AI Customer FAQ
 
   // Default fallback -> merchant handler
   await withCommandGuard(env, chatId, 'merchant_fallback', () => handleMerchantMessage(env, chatId, tgId, text));
