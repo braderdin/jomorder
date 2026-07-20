@@ -28,6 +28,7 @@ import { handleFeedbackGui } from './feedback_gui';
 import { handleMinigameCallback, showMinigame } from './minigame_gui';
 import { handleAdminGui, handleAdminListGui } from './platform_admin';
 import { handleCustomerCommerceGui, handleNearbyShopGui, handleShopMenuGui, handleAddToCartGui } from './customer_commerce_gui';
+import { handleCheckoutGui, handlePayNowGui } from './customer_checkout_gui';
 
 /**
  * Route semua callback_query (inline button) ke handler khusus.
@@ -312,6 +313,17 @@ export async function routeCallbackQuery(
     }
     // End: Phase 60 - Founder Demo Shop View route
 
+    // Start: Phase 63 - Checkout + Pay GUI
+    if (data === 'checkout_now') {
+      await answerCallbackQuery(env, cb.id, 'Memuatkan pembayaran...');
+      await handleCheckoutGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data.startsWith('pay_now:')) {
+      await handlePayNowGui(env, cbChatId, cb.from.id, data);
+      return true;
+    }
+    // End: Phase 63 - Checkout + Pay GUI
     // Start: Phase 58 - Nested BACK Chain (smart parent return)
     if (data === 'back:customer') {
       await answerCallbackQuery(env, cb.id);
