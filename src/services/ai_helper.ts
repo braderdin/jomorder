@@ -2,8 +2,10 @@
 // Baca senarai HELPER01-20 secara DINAMIK dari env (satu sumber benar).
 // Skip model kosong + skip model dalam Redis cooldown jo:helper:fail:{model}.
 // Round-robin dengan fallback ke model seterusnya. openrouter/free = last resort.
+// Phase 69: tambah rate limiter (5s/5RPM/20RPD) sebelum setiap call.
 import { Env } from '../types';
 import { getRedis, setRedis } from '../redis';
+import { checkHelperQuota } from './ai_rate_limit';
 
 interface HelperModel {
   idx: number;
@@ -110,6 +112,12 @@ export async function callHelperRoundRobin(env: Env, opts: HelperCallOpts): Prom
     if (opts.needReason && !h.reason) continue;
     if (opts.needVision && !h.vision) continue;
     if (await isCooledDown(env, h.name)) continue;
+    // Phase 69: Rate limit 5s/5RPM/20RPD sebelum call sebenar
+    const quota = await checkHelperQuota(env);
+    if (!quota.ok) {
+      lastErr = `Quota: ${quota.reason}`;
+      continue;
+    }
     try {
       const res = await fetch(`${env.BASE_URL}/chat/completions`, {
         method: 'POST',

@@ -1,0 +1,39 @@
+// Start: Phase 69 - AI Helper Rate Limiter (Fasal 18 + syarat Chip Besar)
+// Had: 5 saat antara call, 5 RPM, 20 RPD. Guna Redis Upstash.
+// Hanya untuk Layer A (projek sendiri). Pengguna (Puter) TAK sentuh ini.
+import { Env } from '../types';
+import { getRedis, setRedis } from '../redis';
+
+const RPM_KEY = 'jo:helper:rpm';
+const RPD_KEY = (d: string) => `jo:helper:rpd:${d}`;
+const RPM_TTL = 60; // saat
+const RPD_TTL = 86400; // saat (1 hari)
+const MAX_RPM = 5;
+const MAX_RPD = 20;
+const MIN_GAP_MS = 5000; // 5 saat tunggu
+
+let lastCallTs = 0;
+
+export async function checkHelperQuota(env: Env): Promise<{ ok: boolean; reason?: string }> {
+  const now = Date.now();
+  const gap = now - lastCallTs;
+  if (gap < MIN_GAP_MS) {
+    await new Promise((r) => setTimeout(r, MIN_GAP_MS - gap));
+  }
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const rpm = Number((await getRedis(env, RPM_KEY)) || '0');
+    const rpd = Number((await getRedis(env, RPD_KEY(day))) || '0');
+    if (rpm >= MAX_RPM) return { ok: false, reason: 'RPM penuh' };
+    if (rpd >= MAX_RPD) return { ok: false, reason: 'RPD penuh' };
+    await setRedis(env, RPM_KEY, String(rpm + 1), RPM_TTL);
+    await setRedis(env, RPD_KEY(day), String(rpd + 1), RPD_TTL);
+    lastCallTs = Date.now();
+    return { ok: true };
+  } catch (e) {
+    // Soft-fail: benarkan jika Redis down (jangan block projek)
+    lastCallTs = Date.now();
+    return { ok: true };
+  }
+}
+// End: Phase 69 - AI Helper Rate Limiter

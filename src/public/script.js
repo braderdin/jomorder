@@ -378,3 +378,35 @@ document.removeEventListener("DOMContentLoaded", init);
 document.addEventListener("DOMContentLoaded", initAll);
 // End: Phase 61 - Consolidated Init
 // End: JomOrder Portal Live Metrics Fetch (Phase 27 + Phase 45 UI)
+
+// Start: Phase 69 - Hidden AI Agent Button (Puter.js, user-funded)
+// Butang rahsia "AI Pintar". Pengguna login Google sendiri via Puter,
+// TAK guna quota HELPER projek. Tiada teks "Puter" dipaparkan.
+function initXAgent() {
+  const btn = document.getElementById('x-agent-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const box = document.createElement('div');
+    box.id = 'x-agent-box';
+    box.style.cssText = 'position:fixed;bottom:20px;right:20px;width:320px;max-width:90vw;z-index:9999;background:#0a0e1a;border:1px solid #7c3aed55;border-radius:12px;padding:12px;box-shadow:0 8px 32px rgba(124,58,237,0.3);font-family:sans-serif;';
+    box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong style="color:#a78bfa;">✨ AI Pintar</strong><button id="x-agent-close" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer;">×</button></div><textarea id="x-agent-in" placeholder="Tanya apa sahaja..." style="width:100%;height:70px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:8px;resize:none;"></textarea><button id="x-agent-send" style="width:100%;margin-top:8px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px;cursor:pointer;">Hantar</button><div id="x-agent-out" style="margin-top:8px;font-size:13px;color:#cbd5e1;white-space:pre-wrap;max-height:160px;overflow:auto;"></div><div style="font-size:10px;color:#555;margin-top:4px;">Log masuk Google diperlukan (akaun anda sendiri)</div>';
+    document.body.appendChild(box);
+    document.getElementById('x-agent-close').onclick = () => box.remove();
+    document.getElementById('x-agent-send').onclick = async () => {
+      const inp = document.getElementById('x-agent-in');
+      const out = document.getElementById('x-agent-out');
+      const q = inp.value.trim();
+      if (!q) return;
+      out.textContent = 'Memproses...';
+      if (!window.__xAgent) { out.textContent = 'Ejen belum sedia. Muat semula.'; return; }
+      const r = await window.__xAgent.run(q);
+      if (r.ok) {
+        out.textContent = '[' + r.model + ']\n' + r.text;
+      } else {
+        out.textContent = 'Ralat: ' + r.error;
+      }
+    };
+  });
+}
+document.addEventListener('DOMContentLoaded', initXAgent);
+// End: Phase 69 - Hidden AI Agent Button
