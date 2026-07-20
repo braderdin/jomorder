@@ -3,7 +3,7 @@
 // Modul ini mengandungi SEMUA routing inline button (Fasal 6 grid).
 // Dipanggil dari handleUpdate() di handlers.ts bagi elak duplication.
 import { Env, TelegramCallbackQuery } from '../types';
-import { answerCallbackQuery, sendMessage, escapeMarkdownV2, navGrid } from '../telegram';
+import { answerCallbackQuery, sendMessage, escapeMarkdownV2, navGrid, inlineKeyboard } from '../telegram';
 import { handleMerchantCallback } from './merchant';
 import { handleInvoiceCallback } from './merchant_invoice';
 import { handleMerchantOrderCallback } from './merchant_order';
@@ -30,6 +30,7 @@ import { handleAdminGui, handleAdminListGui } from './platform_admin';
 import { handleCustomerCommerceGui, handleNearbyShopGui, handleShopMenuGui, handleAddToCartGui } from './customer_commerce_gui';
 import { handleCheckoutGui, handlePayNowGui } from './customer_checkout_gui';
 import { handleProfileEditGui, handleHistoryGui, handleProfileDeleteConfirm } from './customer_profile_gui';
+import { handleMerchantMenuGui, handleMerchantMenuAddPrompt, handleMerchantMenuPhotoPrompt, deleteMenuItem } from './merchant_menu_gui';
 
 /**
  * Route semua callback_query (inline button) ke handler khusus.
@@ -76,12 +77,7 @@ export async function routeCallbackQuery(
     ) {
       return await handleDashboardQuickAction(env, cb, cbChatId, data, cb.from.id);
     }
-    // Dead callback repair: merchant_menu / merchant_analytics
-    if (data === 'merchant_menu') {
-      await answerCallbackQuery(env, cb.id, 'Memuatkan menu...');
-      await withCommandGuard(env, cbChatId, '/senarai_menu', () => handleSenaraiMenu(env, cbChatId, cb.from.id));
-      return true;
-    }
+    // Dead callback repair: merchant_analytics (merchant_menu dipindah ke Phase 64 GUI)
     if (data === 'merchant_analytics') {
       await answerCallbackQuery(env, cb.id, 'Memuatkan analitik...');
       await withCommandGuard(env, cbChatId, '/laporan_jualan', () => handleLaporanJualan(env, cbChatId, cb.from.id));
@@ -348,6 +344,49 @@ export async function routeCallbackQuery(
       await handleMerchantGui(env, cbChatId, cb.from.id);
       return true;
     }
+    // Start: Phase 64 - Merchant Menu GUI routing + back:menu
+    if (data === 'merchant_menu') {
+      await answerCallbackQuery(env, cb.id, 'Memuatkan menu...');
+      await handleMerchantMenuGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'menu_add') {
+      await answerCallbackQuery(env, cb.id);
+      await handleMerchantMenuAddPrompt(env, cbChatId);
+      return true;
+    }
+    if (data.startsWith('menu_edit:')) {
+      const itemId = data.slice('menu_edit:'.length);
+      await answerCallbackQuery(env, cb.id, 'Edit item...');
+      await sendMessage(env, cbChatId, escapeMarkdownV2(`✏️ Edit item #${itemId.slice(0, 8)}:\\nTaip: Nama Baharu | Harga Baharu`), inlineKeyboard([[{ text: '⬅️ Kembali', callback_data: 'back:menu' }]]));
+      return true;
+    }
+    if (data.startsWith('menu_del:')) {
+      const itemId = data.slice('menu_del:'.length);
+      await answerCallbackQuery(env, cb.id, 'Padam item...');
+      await sendMessage(env, cbChatId, escapeMarkdownV2(`🗑️ Sah padam item #${itemId.slice(0, 8)}?`), inlineKeyboard([
+        [{ text: '✅ Ya Padam', callback_data: `menu_del_confirm:${itemId}` }, { text: '⬅️ Batal', callback_data: 'back:menu' }],
+      ]));
+      return true;
+    }
+    if (data.startsWith('menu_del_confirm:')) {
+      const itemId = data.slice('menu_del_confirm:'.length);
+      await answerCallbackQuery(env, cb.id, 'Memadam...');
+      await deleteMenuItem(env, cbChatId, itemId);
+      return true;
+    }
+    if (data.startsWith('menu_photo:')) {
+      const itemId = data.slice('menu_photo:'.length);
+      await answerCallbackQuery(env, cb.id);
+      await handleMerchantMenuPhotoPrompt(env, cbChatId, itemId);
+      return true;
+    }
+    if (data === 'back:menu') {
+      await answerCallbackQuery(env, cb.id);
+      await handleMerchantMenuGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    // End: Phase 64 - Merchant Menu GUI routing + back:menu
     if (data === 'back:cart') {
       await answerCallbackQuery(env, cb.id);
       await handleViewCart(env, cbChatId, cb.from.id);
