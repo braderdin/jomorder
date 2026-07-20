@@ -183,4 +183,17 @@ export async function mergeState(
 }
 // End: Phase 57 - mergeState
 
+// Start: Phase 68 - Generic Redis GET/SET wrappers (untuk AI Helper cooldown)
+/** Baca value string dari Redis; null jika tiada/gagal. */
+export async function getRedis(env: Env, key: string): Promise<string | null> {
+  const raw = await redisCommand(env, ['GET', key]);
+  return typeof raw === 'string' ? raw : null;
+}
+
+/** Tulis value string dengan TTL (saat). */
+export async function setRedis(env: Env, key: string, value: string, ttlSeconds: number): Promise<void> {
+  await redisCommand(env, ['SET', key, value, 'EX', ttlSeconds]);
+}
+// End: Phase 68 - Generic Redis GET/SET wrappers
+
 // End: JomOrder Fasa 4 - Upstash Redis State & Cart Engine (Fail 2)

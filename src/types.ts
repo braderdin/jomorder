@@ -60,6 +60,32 @@ TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
   CLOUDFLARE_ACCOUNT_ID: string; // Variable: CF account hash (Images API)
   CF_IMAGES_API_TOKEN: string; // Secret: CF Images API token (Bearer)
   // End: Phase 64 - Cloudflare Images API
+
+  // Start: Phase 68 - AI Helper Engine bindings (Fasal 18)
+  BASE_URL: string; // Variable: OpenAI-compatible proxy URL (worker)
+  OPENAI_API_KEY: string; // Secret: dummy key (real key di worker proxy)
+  // MODEL_AI_HELPER01..20 dinamik dari .env.local / wrangler vars
+  MODEL_AI_HELPER01?: string;
+  MODEL_AI_HELPER02?: string;
+  MODEL_AI_HELPER03?: string;
+  MODEL_AI_HELPER04?: string;
+  MODEL_AI_HELPER05?: string;
+  MODEL_AI_HELPER06?: string;
+  MODEL_AI_HELPER07?: string;
+  MODEL_AI_HELPER08?: string;
+  MODEL_AI_HELPER09?: string;
+  MODEL_AI_HELPER10?: string;
+  MODEL_AI_HELPER11?: string;
+  MODEL_AI_HELPER12?: string;
+  MODEL_AI_HELPER13?: string;
+  MODEL_AI_HELPER14?: string;
+  MODEL_AI_HELPER15?: string;
+  MODEL_AI_HELPER16?: string;
+  MODEL_AI_HELPER17?: string;
+  MODEL_AI_HELPER18?: string;
+  MODEL_AI_HELPER19?: string;
+  MODEL_AI_HELPER20?: string;
+  // End: Phase 68 - AI Helper Engine bindings
 }
 
 /** Safe public cache payload (Phase 28 - elak compilation drift). */
