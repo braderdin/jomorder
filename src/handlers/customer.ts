@@ -1,6 +1,7 @@
 // Start: JomOrder Fasa 9 - Modular Customer Handler (File 3)
 // Fasal 4 (SOA) + Fasal 7 Strategy 3 (cart buffer) + Fasal 6 (escape/keyboard)
 // Pindahan dari src/handlers.ts: geolocation match, checkout payload, pay_now trigger.
+// Phase 70: handleSejarahPesanan + handleBatalkanPesanan dipecah ke customer_archive.ts
 import { Env } from '../types';
 import {
   sendMessage,
@@ -14,7 +15,7 @@ import {
 import { ambilKedaiBerhampiran, commitOrderPayload, updateOrderState, getMenuByKedaiId, getMerchantProfileSafe } from '../db';
 import { getState, setState } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert } from '../subscription';
-import { isSearchRestricted, canCancelOrder } from '../orders';
+import { isSearchRestricted } from '../orders';
 import { generateDuitNowQrText, buildPaymentReceiptLayout } from '../services/payment';
 import { notifyMerchantNewOrder } from '../services/notifications';
 import { validateCoupon, applyDiscount, CampaignDiscount } from '../services/discounts';
@@ -260,7 +261,6 @@ export async function handleCheckout(env: Env, chatId: number, tgId: number): Pr
     deliveryLng: buffer.deliveryLng,
   });
   // Start: Phase 51 - Real QR image display (fetch duitnow_qr_url from shop)
-  // Jika kedai ada muat naik QR DuitNow ke R2, papar imej sebenar juga.
   let qrImageUrl: string | null = null;
   try {
     const shopRes = await fetch(
@@ -417,139 +417,6 @@ export async function handleAddToCart(
   );
   return true;
 }
-// Start: Phase 37 - Customer Archive & Order Cancellation (22-command matrix)
-/**
- * handleSejarahPesanan
- * Papar rekod pesanan pelanggan yang sudah COMPLETED atau REJECTED.
- * Diikat ke pelanggan_telegram_id (Fasal 7 Strategy 1 RLS).
- */
-export async function handleSejarahPesanan(
-  env: Env,
-  chatId: number,
-  tgId: number,
-  page = 1
-): Promise<void> {
-  try {
-    // Start: Phase 48 - Pagination (10 per page, offset = (page-1)*10)
-    const PAGE_SIZE = 10;
-    const offset = (page - 1) * PAGE_SIZE;
-    // End: Phase 48 - Pagination
-    const url =
-      `${env.SUPABASE_URL}/rest/v1/rekod_pesanan` +
-      `?pelanggan_telegram_id=eq.${tgId}` +
-      `&status_penghantaran=in.(COMPLETED,REJECTED)` +
-      `&select=id,jumlah_harga,status_pembayaran,status_penghantaran,created_at` +
-      `&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
-    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
-    if (!res.ok) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil sejarah pesanan.'), customerMenuKeyboard());
-      return;
-    }
-    const rows = (await res.json()) as Array<{
-      id: number;
-      jumlah_harga?: number;
-      status_pembayaran?: string;
-      status_penghantaran?: string;
-      created_at?: string;
-    }>;
-    if (!Array.isArray(rows) || rows.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2(page > 1 ? '📭 Tiada lagi sejarah pesanan.' : '📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
-      return;
-    }
-    // Start: Phase 38 - Restrict archive view to TERMINAL states only (completed/rejected)
-    const filtered = rows.filter((r) => {
-      const s = (r.status_penghantaran || '').toUpperCase();
-      return s === 'COMPLETED' || s === 'REJECTED';
-    });
-    if (filtered.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2(page > 1 ? '📭 Tiada lagi sejarah pesanan.' : '📭 Tiada sejarah pesanan lengkap/ditolak.'), customerMenuKeyboard());
-      return;
-    }
-    const lines = filtered
-      .map((r) => {
-        const tarikh = (r.created_at || '').slice(0, 10);
-        return `#${r.id} \\- RM${(Number(r.jumlah_harga) || 0).toFixed(2)} \\[${r.status_penghantaran}\\] ${tarikh}`;
-      })
-      .join('\n');
-    // End: Phase 38 - Restrict archive view
-
-    // Start: Phase 48 - Next page inline button (if full page returned)
-    const replyMarkup = filtered.length >= PAGE_SIZE
-      ? { inline_keyboard: [[{ text: '➡️ Laman Seterusnya', callback_data: `sejarah_page:${page + 1}` }]] }
-      : undefined;
-    // End: Phase 48 - Next page inline button
-    await sendMessage(
-      env,
-      chatId,
-      escapeMarkdownV2(`📜 SEJARAH PESANAN \\(Laman ${page}\\):\\n`) + lines,
-      replyMarkup ?? customerMenuKeyboard()
-    );
-  } catch {
-    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat baca sejarah pesanan.'), customerMenuKeyboard());
-  }
-}
-
-/**
- * handleBatalkanPesanan
- * Benarkan batal pesanan HANYA jika status_penghantaran == PENDING.
- * Validasi mutasi melalui canCancelOrder() di orders.ts (Fasal 7 Strategy 4).
- * Format: /batalkan_pesanan <ID>
- */
-export async function handleBatalkanPesanan(
-  env: Env,
-  chatId: number,
-  tgId: number,
-  rawCmd: string
-): Promise<void> {
-  const parts = rawCmd.split(/\s+/);
-  const orderId = Number(parts[1]);
-  if (!orderId || Number.isNaN(orderId)) {
-    await sendMessage(env, chatId, escapeMarkdownV2('Format: /batalkan_pesanan <ID_PESANAN>'), customerMenuKeyboard());
-    return;
-  }
-  try {
-    const url = `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?id=eq.${orderId}&pelanggan_telegram_id=eq.${tgId}&select=status_penghantaran,kedai_id`;
-    const res = await fetch(url, { method: 'GET', headers: supabaseHeaders(env) });
-    if (!res.ok) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal semak pesanan.'), customerMenuKeyboard());
-      return;
-    }
-    const rows = (await res.json()) as Array<{ status_penghantaran?: string; kedai_id?: string }>;
-    if (!Array.isArray(rows) || rows.length === 0) {
-      await sendMessage(env, chatId, escapeMarkdownV2('❌ Pesanan tidak dijumpai dalam akaun anda.'), customerMenuKeyboard());
-      return;
-    }
-    const status = (rows[0].status_penghantaran || 'PENDING') as 'PENDING' | 'COMPLETED';
-    if (!canCancelOrder(status)) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⛔ Pesanan tidak boleh dibatalkan (sudah diproses).'), customerMenuKeyboard());
-      return;
-    }
-    const patchUrl = `${env.SUPABASE_URL}/rest/v1/rekod_pesanan?id=eq.${orderId}&pelanggan_telegram_id=eq.${tgId}`;
-    const patch = await fetch(patchUrl, {
-      method: 'PATCH',
-      headers: { ...supabaseHeaders(env), Prefer: 'return=minimal' },
-      body: JSON.stringify({ status_penghantaran: 'REJECTED', status_pembayaran: 'DIBATALKAN' }),
-    });
-    if (patch.ok) {
-      await sendMessage(env, chatId, escapeMarkdownV2(`✅ Pesanan #${orderId} berjaya dibatalkan.`), customerMenuKeyboard());
-    } else {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal batalkan pesanan.'), customerMenuKeyboard());
-    }
-  } catch {
-    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat batalkan pesanan.'), customerMenuKeyboard());
-  }
-}
-
-/** Header Supabase service_role (customer module RLS-bypass read). */
-function supabaseHeaders(env: Env): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-  };
-}
-// End: Phase 37 - Customer Archive & Order Cancellation
-
 // End: Phase 24 - Dynamic Menu Browsing & Interactive Cart Populatio
 
 // Start: Phase 41 - 22 Command BM Activation (handleProfil export)
@@ -580,5 +447,14 @@ export async function handleProfil(
   await sendMessage(env, chatId, text);
 }
 // End: Phase 41 - 22 Command BM Activation (handleProfil export)
+
+/** Header Supabase service_role (customer module RLS-bypass read). Export untuk customer_archive.ts. */
+export function supabaseHeaders(env: Env): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+  };
+}
 
 // End: JomOrder Fasa 9 - Modular Customer Handler (File 3)

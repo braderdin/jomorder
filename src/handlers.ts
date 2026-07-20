@@ -30,7 +30,8 @@ import { handleCariMakan, handlePesananSaya, handleStartDeepLink } from './handl
 import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './handlers/platform_admin';
 // Start: Phase 37 - New 22-Command handler imports (merchant/customer/admin modules)
 import { handleSenaraiMenu, handleSetLokasi } from './handlers/merchant';
-import { handleSejarahPesanan, handleBatalkanPesanan, handleProfil } from './handlers/customer';
+import { handleProfil } from './handlers/customer';
+import { handleSejarahPesanan, handleBatalkanPesanan } from './handlers/customer_archive';
 import { handlePengumumanBroadcast } from './handlers/admin';
 import { handleStatus } from './handlers/status';
 import { routeCallbackQuery } from './handlers/router_callbacks';

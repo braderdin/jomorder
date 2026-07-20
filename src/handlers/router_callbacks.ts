@@ -10,7 +10,7 @@ import { handleMerchantOrderCallback } from './merchant_order';
 import { handlePayNow } from './customer';
 import { handleSenaraiMenu, handleSetLokasi } from './merchant';
 import { handleLaporanJualan, handleDashboardQuickAction, handleExportSalesCsv } from './merchant_dashboard';
-import { handleSejarahPesanan } from './customer';
+import { handleSejarahPesanan } from './customer_archive';
 import { handleHelpLocaleToggle, handleHelp } from './help';
 import { handleStatus } from './status';
 import { handleViewShopMenu, handleAddToCart } from './customer';

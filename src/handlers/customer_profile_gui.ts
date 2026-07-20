@@ -4,7 +4,7 @@
 import { Env } from '../types';
 import { sendMessage, escapeMarkdownV2, inlineKeyboard, customerReplyKeyboard } from '../telegram';
 import { handleCustomerProfileGui as showProfile } from './customer_profile';
-import { handleSejarahPesanan } from './customer';
+import { handleSejarahPesanan } from './customer_archive';
 import { getState, setState } from '../redis';
 
 /**
