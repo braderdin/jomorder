@@ -391,5 +391,54 @@ function initXAgent() {
   const btn = document.getElementById('x-agent-btn');
   if (cta) cta.addEventListener('click', openXAgent);
   if (btn) btn.addEventListener('click', openXAgent);
+  // Start: Phase 70 - 3 Widget Puter.js (user-funded)
+  const menuIdea = document.getElementById('x-menu-idea');
+  const reviewW = document.getElementById('x-review-writer');
+  const translator = document.getElementById('x-translator');
+  if (menuIdea) menuIdea.addEventListener('click', () => openXWidget('menuIdea'));
+  if (reviewW) reviewW.addEventListener('click', () => openXWidget('review'));
+  if (translator) translator.addEventListener('click', () => openXWidget('translator'));
+  // End: Phase 70 - 3 Widget Puter.js
 }
+// Start: Phase 70 - Generic Widget Modal (user-funded Puter.js)
+function openXWidget(kind) {
+  if (document.getElementById('x-widget-box')) return;
+  const titles = {
+    menuIdea: '🍽️ Idea Menu AI',
+    review: '⭐ Tulis Review AI',
+    translator: '🌐 Terjemah AI'
+  };
+  const ph = {
+    menuIdea: 'Jenis kedai (cth: Nasi Ayam, Kedai Kopi)...',
+    review: 'Taip pengalaman kasar anda...',
+    translator: 'Teks nak diterjemah (BM/EN)...'
+  };
+  const opt = kind === 'translator'
+    ? '<select id="x-w-lang" style="width:100%;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:10px;padding:8px;margin-bottom:8px;"><option value="en">BM -> EN</option><option value="ms">EN -> BM</option></select>'
+    : '';
+  const box = document.createElement('div');
+  box.id = 'x-widget-box';
+  box.style.cssText = 'position:fixed;bottom:20px;right:20px;width:360px;max-width:94vw;z-index:9999;background:#0a0e1a;border:1px solid #7c3aed66;border-radius:16px;padding:16px;box-shadow:0 12px 40px rgba(124,58,237,0.4);font-family:sans-serif;';
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><strong style="color:#c4b5fd;font-size:15px;">' + titles[kind] + '</strong><button id="x-w-close" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;">×</button></div>'
+    + opt
+    + '<textarea id="x-w-in" placeholder="' + ph[kind] + '" style="width:100%;height:64px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:10px;padding:10px;resize:none;box-sizing:border-box;"></textarea>'
+    + '<button id="x-w-send" style="width:100%;margin-top:8px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:10px;padding:10px;cursor:pointer;font-weight:bold;">Jana</button>'
+    + '<div id="x-w-out" style="margin-top:10px;font-size:13px;color:#cbd5e1;white-space:pre-wrap;max-height:200px;overflow:auto;line-height:1.5;"></div>';
+  document.body.appendChild(box);
+  document.getElementById('x-w-close').onclick = () => box.remove();
+  document.getElementById('x-w-send').onclick = async () => {
+    const inp = document.getElementById('x-w-in');
+    const out = document.getElementById('x-w-out');
+    const v = inp.value.trim();
+    if (!v) return;
+    out.textContent = 'Memproses...';
+    if (!window.__xAgent) { out.textContent = 'Ejen belum sedia.'; return; }
+    let r;
+    if (kind === 'menuIdea') r = await window.__xMenuIdea(v);
+    else if (kind === 'review') r = await window.__xReview(v);
+    else r = await window.__xTranslate(v, document.getElementById('x-w-lang').value);
+    out.textContent = r.ok ? ('[' + (r.model || 'puter') + ']\n' + r.text) : ('Ralat: ' + r.error);
+  };
+}
+// End: Phase 70 - Generic Widget Modal
 // End: Phase 69 - Hidden AI Agent Button

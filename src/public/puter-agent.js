@@ -94,7 +94,6 @@
         try {
           resp = await tryModel(DEFAULT_MODEL);
         } catch (e) {
-          // Default gagal -> cuba fallback satu demi satu.
           let lastErr;
           for (let i = 0; i < FALLBACK_MODELS.length; i++) {
             const fb = nextFallback();
@@ -115,6 +114,22 @@
     },
     defaultModel: DEFAULT_MODEL,
     fallbackModels: FALLBACK_MODELS
+  };
+
+  // Widget 1: AI Menu Idea Generator (pelawat taip jenis kedai).
+  window.__xMenuIdea = async (jenis) => {
+    const p = `Cadangkan 5 nama hidangan popular untuk kedai "${jenis}" di Malaysia, dengan harga RM munasabah dan emoji. Format: EMOJI NAMA - RMHARGA (satu satu baris).`;
+    return window.__xAgent.run(p);
+  };
+  // Widget 2: AI Review Writer (pelanggan taip experience kasar).
+  window.__xReview = async (draft) => {
+    const p = `Tulis review pendek & mesra (1-2 ayat) dalam BM dari draf kasar ini: "${draft}". Tambah emoji.`;
+    return window.__xAgent.run(p);
+  };
+  // Widget 3: AI Translator BM<->EN (terjemah description menu).
+  window.__xTranslate = async (teks, ke) => {
+    const p = `Terjemah teks ini ke ${ke === 'en' ? 'Bahasa Inggeris' : 'Bahasa Melayu'}: "${teks}". Jawab HANYA terjemahan.`;
+    return window.__xAgent.run(p);
   };
 
   // Auto-init on idle (visitor not prompted; used for page enrichment only).

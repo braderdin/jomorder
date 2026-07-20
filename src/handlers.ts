@@ -41,6 +41,7 @@ import { withCommandGuard } from './services/command_error_interceptor';
 // daftarKedaiPermulaan datang dari db.ts (commit onboarding), handleTambahMenu dari merchant.ts.
 import { daftarKedaiPermulaan } from './db';
 import { handleTambahMenu } from './handlers/merchant';
+import { aiMenuWriter } from './services/ai_features';
 // End: Phase 41 - 22 Command BM Activation imports
 // End: Phase 37 - New 22-Command handler imports
 
@@ -270,6 +271,20 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await withCommandGuard(env, chatId, '/tambah_menu', () => handleTambahMenu(env, chatId, tgId));
     return;
   }
+  // Start: Phase 70 - AI Menu Writer command (/tambah_menu_ai)
+  // Peniaga taip /tambah_menu_ai <nama> -> AI jana detail menu.
+  if (cmd.startsWith('/tambah_menu_ai')) {
+    const nama = cmd.split(/\s+/).slice(1).join(' ').trim();
+    if (!nama) {
+      await sendMessage(env, chatId, escapeMarkdownV2('🤖 Taip nama hidangan: /tambah_menu_ai Nasi Lemak'));
+      return;
+    }
+    await sendMessage(env, chatId, escapeMarkdownV2('🤖 AI sedang menulis menu...'));
+    const hasil = await aiMenuWriter(env, nama);
+    await sendMessage(env, chatId, escapeMarkdownV2(`🎨 Hasil AI:\\n${hasil}\\n\\nSalin & guna di /tambah_menu.`));
+    return;
+  }
+  // End: Phase 70 - AI Menu Writer command
   // /urus_kedai -> alias papan pemerintah peniaga.
   if (cmd === '/urus_kedai') {
     await withCommandGuard(env, chatId, '/urus_kedai', () => handleMerchantDashboard(env, chatId, tgId));
