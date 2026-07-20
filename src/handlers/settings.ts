@@ -81,14 +81,18 @@ export async function handleTetapanCallback(
       // Buka terus flow muat naik QR tanpa suruh taip command (no-command UX).
       next.step = 'awaiting_qr_upload';
       await setState(env, next as never);
-      const kb = inlineKeyboard([[ { text: '⬅️ Kembali', callback_data: 'nav:main' } ]]);
+      // Start: Phase 62 - BACK nested ke merchant GUI bukan nav:main
+      const kb = inlineKeyboard([[ { text: '⬅️ Kembali', callback_data: 'back:merchant' } ]]);
+      // End: Phase 62 - BACK nested
       await sendMessage(env, cbChatId, escapeMarkdownV2('📤 MUAT NAIK QR DUITNOW\\n\\nHantar gambar QR ke chat ini. Sistem mampat ke WebP (<150KB) & simpan ke R2.'), kb);
       return true;
     } else if (action === 'merchant_zon') {
       // Buka terus flow zon operasi tanpa suruh taip command.
       next.step = 'awaiting_zon_operasi';
       await setState(env, next as never);
-      const kb = inlineKeyboard([[ { text: '⬅️ Kembali', callback_data: 'nav:main' } ]]);
+      // Start: Phase 62 - BACK nested ke merchant GUI
+      const kb = inlineKeyboard([[ { text: '⬅️ Kembali', callback_data: 'back:merchant' } ]]);
+      // End: Phase 62 - BACK nested
       await sendMessage(env, cbChatId, escapeMarkdownV2('📍 ZON OPERASI\\n\\nHantar radius penghantaran (km) ke chat ini.\\nContoh: 10'), kb);
       return true;
     }

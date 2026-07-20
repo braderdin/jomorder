@@ -559,5 +559,19 @@ export async function runConcurrencyStressSpike(
 }
 // End: Phase 40 - Concurrency Burst Stress Runner
 
+// Start: Phase 62 - Callback Matrix Hook (unit test integration)
+/**
+ * runCallbackCoverage
+ * Jalankan matrix callback dari callback_test.ts dan return summary.
+ * Digunakan oleh endpoint /api/test/callback untuk audit GUI routing.
+ */
+export async function runCallbackCoverage(env: Env): Promise<{ total: number; pass: number; fail: number; details: Array<{ name: string; pass: boolean; note: string }> }> {
+  const { runCallbackMatrix } = await import('./callback_test');
+  const details = await runCallbackMatrix(env);
+  const pass = details.filter((d) => d.pass).length;
+  return { total: details.length, pass, fail: details.length - pass, details };
+}
+// End: Phase 62 - Callback Matrix Hook
+
 // End: Phase 34 - High-Concurrency Load Loop
 // End: JomOrder Fasa 9 - Automated Smoke Test Suite (File 5)

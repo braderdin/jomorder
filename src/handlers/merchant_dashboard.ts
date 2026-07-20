@@ -182,39 +182,18 @@ export async function handleDashboardQuickAction(
       return true;
     }
     case 'merchant_zon': {
-      await setState(env, {
-        merchant_telegram_id: tgId,
-        step: 'awaiting_zon_operasi',
-        last_active: new Date().toISOString(),
-      } as never);
-      await sendMessage(
-        env,
-        chatId,
-        escapeMarkdownV2('📍 ZON OPERASI\\n\\n') +
-          escapeMarkdownV2('Taip /zon_operasi <radius_km> untuk set radius penghantaran\\.') +
-          escapeMarkdownV2('\\nContoh: /zon_operasi 10')
-      );
+      // Start: Phase 62 - Route terus ke tetapan zon tanpa suruh taip command
+      const { handleTetapanCallback } = await import('./settings');
+      await handleTetapanCallback(env, chatId, tgId, 'merchant_zon');
       return true;
+      // End: Phase 62 - Route terus ke tetapan zon
     }
     case 'upload_qr': {
-      // Start: Phase 51 - Set QR upload state (capture next photo)
-      await setState(env, {
-        merchant_telegram_id: tgId,
-        step: 'awaiting_qr_upload',
-        last_active: new Date().toISOString(),
-      });
-      // End: Phase 51 - Set QR upload state
-      await sendMessage(
-        env,
-        chatId,
-        escapeMarkdownV2('📤 MUAT NAIK QR DUITNOW\\n\\n') +
-          escapeMarkdownV2('Hantar gambar QR DuitNow anda ke chat ini\\. Sistem akan:\\n') +
-          escapeMarkdownV2('• Mampat ke WebP (Fasal 8)\\n') +
-          escapeMarkdownV2('• Had 2MB / akaun 25MB\\n') +
-          escapeMarkdownV2('• Papar di papan bayaran pelanggan\\n\\n') +
-          escapeMarkdownV2('Sila hantar imej sekarang.')
-      );
+      // Start: Phase 62 - Route terus ke tetapan upload QR tanpa suruh taip command
+      const { handleTetapanCallback } = await import('./settings');
+      await handleTetapanCallback(env, chatId, tgId, 'upload_qr');
       return true;
+      // End: Phase 62 - Route terus ke tetapan upload QR
     }
     default:
       return false;

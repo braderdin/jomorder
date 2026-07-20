@@ -174,4 +174,37 @@ export async function handlePengumuman(env: Env, chatId: number, tgId: number, t
   }
 }
 
+// Start: Phase 62 - Admin GUI Panel (no-command, BACK nested)
+import { inlineKeyboard } from '../telegram';
+
+/**
+ * handleAdminGui
+ * Papar papan pentadbir tanpa command. Butang akses terus ke
+ * admin_stats / senarai_pendaftaran / pengumuman. BACK nested ke nav:main.
+ * Guard: hanya admin sahaja (isAdmin).
+ */
+export async function handleAdminGui(env: Env, chatId: number, tgId: number): Promise<void> {
+  if (!isAdmin(env, tgId)) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⛔ Akses ditolak.'));
+    return;
+  }
+  const text = escapeMarkdownV2('🛡️ PAPAN PENTADBIR JomOrder\\n\\n') +
+    escapeMarkdownV2('Pilih tindakan di bawah:');
+  const buttons = inlineKeyboard([
+    [{ text: '📊 Stats', callback_data: 'admin_stats' }, { text: '📋 Pendaftaran', callback_data: 'admin_list' }],
+    [{ text: '📢 Pengumuman', callback_data: 'admin_announce' }],
+    [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+  ]);
+  await sendMessage(env, chatId, text, buttons);
+}
+
+/**
+ * handleAdminListGui
+ * Papar senarai pendaftaran terus dari GUI (callback admin_list).
+ */
+export async function handleAdminListGui(env: Env, chatId: number, tgId: number): Promise<void> {
+  await handleSenaraiPendaftaran(env, chatId, tgId);
+}
+// End: Phase 62 - Admin GUI Panel
+
 // End: Phase 32 - Platform Admin Controller

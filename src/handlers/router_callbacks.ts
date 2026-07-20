@@ -26,6 +26,7 @@ import { handleMerchantGui } from './merchant_gui';
 import { handleMerchantOnboardGui } from './merchant_onboard';
 import { handleFeedbackGui } from './feedback_gui';
 import { handleMinigameCallback, showMinigame } from './minigame_gui';
+import { handleAdminGui, handleAdminListGui } from './platform_admin';
 
 /**
  * Route semua callback_query (inline button) ke handler khusus.
@@ -163,9 +164,27 @@ export async function routeCallbackQuery(
     }
     if (data === 'nav:admin') {
       await answerCallbackQuery(env, cb.id);
-      await sendMessage(env, cbChatId, escapeMarkdownV2('🛡️ Pentadbir: taip /admin\\_stats atau /pengumuman'), navGrid());
+      await handleAdminGui(env, cbChatId, cb.from.id);
       return true;
     }
+    // Start: Phase 62 - Admin GUI sub-menu callbacks
+    if (data === 'admin_stats') {
+      await answerCallbackQuery(env, cb.id, 'Memuatkan stats...');
+      const { handleAdminStats } = await import('./platform_admin');
+      await handleAdminStats(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'admin_list') {
+      await answerCallbackQuery(env, cb.id, 'Memuatkan pendaftaran...');
+      await handleAdminListGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'admin_announce') {
+      await answerCallbackQuery(env, cb.id, 'Taip pengumuman...');
+      await sendMessage(env, cbChatId, escapeMarkdownV2('📢 PENGUMUMAN\\n\\nTaip /pengumuman <teks> untuk broadcast ke semua peniaga.'));
+      return true;
+    }
+    // End: Phase 62 - Admin GUI sub-menu callbacks
     if (data === 'nav:help') {
       await answerCallbackQuery(env, cb.id);
       await withCommandGuard(env, cbChatId, '/bantuan', () => handleHelp(env, cbChatId, cb.from));
