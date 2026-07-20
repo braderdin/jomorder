@@ -16,7 +16,7 @@ export async function showMinigame(env: Env, chatId: number, tgId: number): Prom
     inline_keyboard: [
       [{ text: '🔄 Pusing Roda!', callback_data: 'mg:catch' }],
       [{ text: '⏹ Tamat', callback_data: 'mg:end' }],
-      [backButton('nav:customer')],
+      [backButton('back:customer')],
     ],
   };
   await sendMessage(env, chatId, MINIGAME_INTRO, kb, customerReplyKeyboard());
@@ -50,7 +50,7 @@ export async function handleMinigameCallback(env: Env, chatId: number, tgId: num
       inline_keyboard: [
         [{ text: '🔄 Pusing Lagi!', callback_data: 'mg:catch' }],
         [{ text: '⏹ Tamat', callback_data: 'mg:end' }],
-        [backButton('nav:customer')],
+        [backButton('back:customer')],
       ],
     };
     const msg = `🎡 *Pusing Roda Makanan*\n\n${grid}\n\n${s.last_catch} Pusingan! 🎉\nSkor: *${s.score}* | Pusingan: ${s.round}`;
@@ -60,7 +60,7 @@ export async function handleMinigameCallback(env: Env, chatId: number, tgId: num
   if (action === 'mg:end') {
     const s = await endMinigame(env, tgId);
     const score = s ? s.score : 0;
-    const kb = { inline_keyboard: [[backButton('nav:customer')]] };
+    const kb = { inline_keyboard: [[backButton('back:customer')]] };
     await sendMessage(env, chatId, `🏁 *Game Tamat!*\nSkor akhir anda: *${score}* mata.\nTerima kasih main ya! 🍔`, kb, customerReplyKeyboard());
     return;
   }

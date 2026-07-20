@@ -2,7 +2,7 @@
 // Fasal 4 (SOA) + Fasal 6 (mobile grid) + Fasal 7 Strategy 1 (RLS merchant binding)
 // Arahan: papan pemerintah peniaga - toggle status operasi, semak jualan, query.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, inlineKeyboard, merchantDashboardKeyboardV2 } from '../telegram';
+import { sendMessage, escapeMarkdownV2, inlineKeyboard, merchantReplyKeyboard } from '../telegram';
 import { getCommandSession, setCommandSession, touchCommandSession } from '../services/session_cache';
 import { fetchMerchantSalesSummary } from '../services/analytics';
 import { setState } from '../redis';
@@ -106,7 +106,6 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
     escapeMarkdownV2(`Kedai: ${kedai.nama_kedai}\\n`) +
     escapeMarkdownV2(`Status: ${statusLabel}\\n`) +
     escapeMarkdownV2(`Pesanan Hari Ini: ${pesananHariIni}\\n\\n`) +
-    escapeMarkdownV2('📋 /menu_kedai · ⚙️ /tetapan · 📤 /invois\\n') +
     escapeMarkdownV2('Pilih tindakan di bawah:');
 
   const buttons = {
@@ -118,7 +117,7 @@ export async function handleMerchantDashboard(env: Env, chatId: number, tgId: nu
     ],
   };
 
-  await sendMessage(env, chatId, text, buttons);
+  await sendMessage(env, chatId, text, buttons, merchantReplyKeyboard());
 }
 
 // Start: Phase 46 - Merchant-Scoped Quick Action Router (dipisah dari controller)
@@ -156,12 +155,17 @@ export async function handleDashboardQuickAction(
       return true;
       // End: Phase 46 - Merchant-Scoped Report Fix
     }
-    case 'merchant_orders':
-      await sendMessage(env, chatId, escapeMarkdownV2('📦 Semak pesanan: taip /invois atau lihat butang pesanan.'));
+    case 'merchant_orders': {
+      // Route ke GUI pesanan masuk tanpa command (no-command UX).
+      const { handleMerchantOrderListGui } = await import('./merchant_order');
+      await handleMerchantOrderListGui(env, chatId, tgId);
       return true;
-    case 'merchant_settings':
-      await sendMessage(env, chatId, escapeMarkdownV2('⚙️ Tetapan: taip /urus untuk buka semula papan pemerintah.'));
+    }
+    case 'merchant_settings': {
+      const { handleTetapan } = await import('./settings');
+      await handleTetapan(env, chatId, tgId);
       return true;
+    }
     case 'open_nearby': {
       const { handleCustomerNearby } = await import('../handlers/customer');
       await handleCustomerNearby(env, chatId, tgId);

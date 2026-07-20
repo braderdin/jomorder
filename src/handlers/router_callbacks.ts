@@ -227,6 +227,20 @@ export async function routeCallbackQuery(
       await handleMerchantOnboardGui(env, cbChatId, cb.from.id);
       return true;
     }
+    // Onboarding: isi nama kedai (no-command) -> prompt GUI
+    if (data === 'onboard_name') {
+      await answerCallbackQuery(env, cb.id);
+      const { handleOnboardNamePrompt } = await import('./merchant_onboard');
+      await handleOnboardNamePrompt(env, cbChatId, cb.from.id);
+      return true;
+    }
+    // Kongsi lokasi (customer + merchant onboard) -> trigger native location prompt
+    if (data === 'share_loc') {
+      await answerCallbackQuery(env, cb.id);
+      const { handleOnboardShareLoc } = await import('./merchant_onboard');
+      await handleOnboardShareLoc(env, cbChatId, cb.from.id);
+      return true;
+    }
     if (data.startsWith('rate:')) {
       const parts = data.split(':');
       const oid = Number(parts[1] || 0);

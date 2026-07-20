@@ -128,6 +128,15 @@ const QUEUE_NEXT: Record<string, string> = {
   COMPLETED: 'COMPLETED',
 };
 
+/** GUI senarai pesanan dari dashboard (no-command) dengan BACK + reply keyboard. */
+export async function handleMerchantOrderListGui(
+  env: Env,
+  chatId: number,
+  merchantTgId: number
+): Promise<boolean> {
+  return handleMerchantOrderQueue(env, chatId, merchantTgId);
+}
+
 export async function handleMerchantOrderQueue(
   env: Env,
   chatId: number,
@@ -170,11 +179,13 @@ export async function handleMerchantOrderQueue(
         },
       ];
     });
+    keyboard.push([{ text: '⬅️ Kembali', callback_data: 'back:merchant' }]);
     await sendMessage(
       env,
       chatId,
       escapeMarkdownV2('📋 SENARAI PESANAN AKTIF:\\n') + lines,
-      { inline_keyboard: keyboard }
+      { inline_keyboard: keyboard },
+      merchantReplyKeyboard()
     );
   } catch {
     await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Ralat baca queue pesanan.'), navGrid());

@@ -27,7 +27,7 @@ export async function handleFeedbackGui(
         { text: '⭐⭐⭐⭐', callback_data: `rate:${orderId}:4` },
       ],
       [{ text: '⭐⭐⭐⭐⭐', callback_data: `rate:${orderId}:5` }],
-      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+      [{ text: '⬅️ Kembali', callback_data: 'back:customer' }],
     ],
   };
   await sendMessage(env, chatId, text, kb, customerReplyKeyboard());

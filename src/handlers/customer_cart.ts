@@ -116,7 +116,7 @@ export async function handleViewCart(
       [{ text: '💳 Bayar Sekarang', callback_data: 'checkout_now' }],
       [{ text: '🍔 Tambah Lagi', callback_data: 'browse_more' }],
       [{ text: '🧹 Kosongkan', callback_data: 'cart_clear' }],
-      [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+      [{ text: '⬅️ Kembali', callback_data: 'back:customer' }],
     ]);
   }
   // End: Phase 38 - Cart Checkout Lock

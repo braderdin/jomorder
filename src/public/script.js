@@ -284,25 +284,6 @@ async function init() {
 
 document.addEventListener("DOMContentLoaded", init);
 
-// Start: Phase 57 - Showcase "Buka Menu" Scroll Handler
-// Klik butang 🍔 Buka Menu -> smooth scroll ke #menu-grid (Section C2).
-function initBukaMenu() {
-  const btn = document.getElementById("buka-menu-btn");
-  const target = document.getElementById("menu-grid");
-  if (!btn || !target) return;
-  btn.addEventListener("click", () => {
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-}
-// Hook ke init()
-const _origInitShowcase = init;
-init = async function () {
-  await _origInitShowcase();
-  initGuiNav();
-  initBukaMenu();
-};
-// End: Phase 57 - Showcase "Buka Menu" Scroll Handler
-
 // Start: Phase 55 - GUI Nav Button reveal (Modern-Siber glow entry)
 function initGuiNav() {
   const nav = document.querySelector('.gui-nav');
@@ -318,16 +299,20 @@ function initGuiNav() {
     }, 80 * i);
   });
 }
-// Hook ke init()
-const _origInit = init;
-init = async function () {
-  await _origInit();
-  initGuiNav();
-};
 // End: Phase 55 - GUI Nav Button reveal
 
+// Start: Phase 57 - Showcase "Buka Menu" Scroll Handler
+function initBukaMenu() {
+  const btn = document.getElementById("buka-menu-btn");
+  const target = document.getElementById("menu-grid");
+  if (!btn || !target) return;
+  btn.addEventListener("click", () => {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+// End: Phase 57 - Showcase "Buka Menu" Scroll Handler
+
 // Start: Phase 58 - Deep-Link ?start=menu scroll handler
-// Bila landing page dibuka dari t.me/...?start=menu, scroll terus ke #menu-grid.
 function initDeepLinkScroll() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -340,20 +325,36 @@ function initDeepLinkScroll() {
     }
   } catch { /* ignore deep-link parse error */ }
 }
-// Hook ke init()
-const _origInit58 = init;
-init = async function () {
-  await _origInit58();
-  initDeepLinkScroll();
-};
 // End: Phase 58 - Deep-Link ?start=menu scroll handler
 
 // Start: Phase 60 - Founder Demo Shop loader hook
-const _origInit60 = init;
-init = async function () {
-  await _origInit60();
+async function loadFounderShop() {
   await fetchFounderShop();
-};
+}
 // End: Phase 60 - Founder Demo Shop loader hook
 
+// Start: Phase 61 - Consolidated Init (fix multiple reassignment bug)
+// Semua hook digabung ke SATU init supaya tiada fungsi tertinggal.
+async function initAll() {
+  initAnalyticsStatus();
+  initFaq();
+  initScrollReveal();
+  initOrderSim();
+  initGuiNav();
+  initBukaMenu();
+  initDeepLinkScroll();
+  await fetchPublicStats();
+  await fetchMenuGrid();
+  await loadFounderShop();
+  const hShop = document.getElementById("counter-merchants");
+  const hOrder = document.getElementById("counter-orders");
+  if (hShop && hShop.textContent === "0") animateCounter("counter-merchants", 12);
+  if (hOrder && hOrder.textContent === "0") animateCounter("counter-orders", 48);
+  const now = new Date();
+  const lu = document.getElementById("last-updated");
+  if (lu) lu.textContent = "Kemas kini terakhir: " + now.toLocaleString("ms-MY");
+}
+document.removeEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", initAll);
+// End: Phase 61 - Consolidated Init
 // End: JomOrder Portal Live Metrics Fetch (Phase 27 + Phase 45 UI)
