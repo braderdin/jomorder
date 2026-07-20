@@ -27,6 +27,7 @@ import { handleMerchantOnboardGui } from './merchant_onboard';
 import { handleFeedbackGui } from './feedback_gui';
 import { handleMinigameCallback, showMinigame } from './minigame_gui';
 import { handleAdminGui, handleAdminListGui } from './platform_admin';
+import { handleCustomerCommerceGui, handleNearbyShopGui, handleShopMenuGui, handleAddToCartGui } from './customer_commerce_gui';
 
 /**
  * Route semua callback_query (inline button) ke handler khusus.
@@ -112,20 +113,35 @@ export async function routeCallbackQuery(
       await withCommandGuard(env, cbChatId, '/status', () => handleStatus(env, cbChatId, cb.from.id));
       return true;
     }
-    // Menu browsing + cart
+    // Menu browsing + cart (Phase 63 GUI routing)
     if (data.startsWith('view_shop:')) {
       const kedaiId = data.slice('view_shop:'.length);
-      if (await handleViewShopMenu(env, cbChatId, cb.from.id, kedaiId)) return true;
+      await answerCallbackQuery(env, cb.id, 'Memuatkan menu...');
+      await handleShopMenuGui(env, cbChatId, cb.from.id, kedaiId);
+      return true;
     }
     if (data.startsWith('add_to_cart:')) {
       const parts = data.split(':');
       const itemId = parts[1] || '';
       const kedaiId = parts[2] || '';
-      if (await handleAddToCart(env, cbChatId, cb.from.id, itemId, kedaiId, cb.id)) return true;
+      await handleAddToCartGui(env, cbChatId, cb.from.id, itemId, kedaiId, cb.id);
+      return true;
     }
     if (data.startsWith('view_cart:')) {
       if (await handleViewCart(env, cbChatId, cb.from.id, cb.id)) return true;
     }
+    // Start: Phase 63 - Customer Commerce GUI entry
+    if (data === 'open_commerce') {
+      await answerCallbackQuery(env, cb.id);
+      await handleCustomerCommerceGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    if (data === 'open_nearby_gui') {
+      await answerCallbackQuery(env, cb.id);
+      await handleNearbyShopGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    // End: Phase 63 - Customer Commerce GUI entry
     // Coupon inline deletion
     if (data.startsWith('del_coupon:')) {
       const kod = data.slice('del_coupon:'.length);
