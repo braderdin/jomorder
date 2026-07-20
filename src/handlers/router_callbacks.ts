@@ -19,7 +19,8 @@ import { handleDeleteCouponInline, handlePromo } from './marketing_coupon';
 import { handleTetapanCallback } from './settings';
 import { withCommandGuard } from '../services/command_error_interceptor';
 import { setNav } from './navigation';
-import { handleStart, handleFounderView } from './start';
+import { handleStart } from './start';
+import { handleFounderGui } from './founder_view_gui';
 import { handleCustomerGui, handleCustomerShopsGui } from './customer_gui';
 import { handleCustomerProfileGui } from './customer_profile';
 import { handleMerchantGui } from './merchant_gui';
@@ -314,13 +315,13 @@ export async function routeCallbackQuery(
     }
     // End: Phase 56 - Minigame routes
 
-    // Start: Phase 60 - Founder Demo Shop View route (lihat dari bot)
+    // Start: Phase 65 - Founder Demo Shop View GUI route (lihat dari bot)
     if (data === 'founder_view') {
       await answerCallbackQuery(env, cb.id, 'Memuatkan kedai contoh...');
-      await handleFounderView(env, cbChatId);
+      await handleFounderGui(env, cbChatId);
       return true;
     }
-    // End: Phase 60 - Founder Demo Shop View route
+    // End: Phase 65 - Founder Demo Shop View GUI route
 
     // Start: Phase 63 - Checkout + Pay GUI
     if (data === 'checkout_now') {
