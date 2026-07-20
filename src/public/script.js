@@ -141,7 +141,6 @@ const LANG_STRINGS = {
 };
 function applyLang(lang) {
   const s = LANG_STRINGS[lang] || LANG_STRINGS.ms;
-  // Phase 59: toggle semua elemen data-i18n
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
     if (s[key]) el.textContent = s[key];
@@ -165,8 +164,6 @@ try {
 // End: Phase 47 - BM/EN Language Toggle
 
 // Start: Phase 51 - Live Menu Photo Grid Fetcher
-// Tarik menu terkini dari endpoint worker (/api/menu-showcase) dan papar
-// grid gambar + harga. Fail-open: jika tiada gambar, papar placeholder teks.
 async function fetchMenuGrid() {
   const grid = document.getElementById("menu-grid");
   if (!grid) return;
@@ -252,7 +249,6 @@ function escapeHtml(str) {
 // End: Phase 60 - Founder Demo Shop Fetcher
 
 // Start: Phase 52 - Live Order Tracker Simulation (UI Demo)
-// Simulasikan aliran pesanan 4 langkah: terima -> sediakan -> serah -> selesai.
 function initOrderSim() {
   const btn = document.getElementById("order-sim-btn");
   const steps = Array.from(document.querySelectorAll(".order-step"));
@@ -280,29 +276,6 @@ function initOrderSim() {
   });
 }
 // End: Phase 52 - Live Order Tracker Simulation
-
-// Boot
-async function init() {
-  initAnalyticsStatus();
-  initFaq();
-  initScrollReveal();
-  initOrderSim();
-  await fetchPublicStats();
-  await fetchMenuGrid();
-  // Start: Phase 46 - Hero Counter Fallback (pastikan beranimasi walaupun API lambat)
-  // Jika elemen masih '0' selepas fetch (API gagal), picu animasi ke nilai placeholder
-  // kecil supaya UI nampak hidup (bukan statik kosong).
-  const hShop = document.getElementById("counter-merchants");
-  const hOrder = document.getElementById("counter-orders");
-  if (hShop && hShop.textContent === "0") animateCounter("counter-merchants", 12);
-  if (hOrder && hOrder.textContent === "0") animateCounter("counter-orders", 48);
-  // End: Phase 46 - Hero Counter Fallback
-  const now = new Date();
-  const lu = document.getElementById("last-updated");
-  if (lu) lu.textContent = "Kemas kini terakhir: " + now.toLocaleString("ms-MY");
-}
-
-document.addEventListener("DOMContentLoaded", init);
 
 // Start: Phase 55 - GUI Nav Button reveal (Modern-Siber glow entry)
 function initGuiNav() {
@@ -347,14 +320,7 @@ function initDeepLinkScroll() {
 }
 // End: Phase 58 - Deep-Link ?start=menu scroll handler
 
-// Start: Phase 60 - Founder Demo Shop loader hook
-async function loadFounderShop() {
-  await fetchFounderShop();
-}
-// End: Phase 60 - Founder Demo Shop loader hook
-
 // Start: Phase 61 - Consolidated Init (fix multiple reassignment bug)
-// Semua hook digabung ke SATU init supaya tiada fungsi tertinggal.
 async function initAll() {
   initAnalyticsStatus();
   initFaq();
@@ -365,7 +331,7 @@ async function initAll() {
   initDeepLinkScroll();
   await fetchPublicStats();
   await fetchMenuGrid();
-  await loadFounderShop();
+  await fetchFounderShop();
   const hShop = document.getElementById("counter-merchants");
   const hOrder = document.getElementById("counter-orders");
   if (hShop && hShop.textContent === "0") animateCounter("counter-merchants", 12);
@@ -373,40 +339,57 @@ async function initAll() {
   const now = new Date();
   const lu = document.getElementById("last-updated");
   if (lu) lu.textContent = "Kemas kini terakhir: " + now.toLocaleString("ms-MY");
+  initXAgent();
 }
-document.removeEventListener("DOMContentLoaded", init);
 document.addEventListener("DOMContentLoaded", initAll);
 // End: Phase 61 - Consolidated Init
 // End: JomOrder Portal Live Metrics Fetch (Phase 27 + Phase 45 UI)
 
-// Start: Phase 69 - Hidden AI Agent Button (Puter.js, user-funded)
-// Butang rahsia "AI Pintar". Pengguna login Google sendiri via Puter,
-// TAK guna quota HELPER projek. Tiada teks "Puter" dipaparkan.
-function initXAgent() {
-  const btn = document.getElementById('x-agent-btn');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    const box = document.createElement('div');
-    box.id = 'x-agent-box';
-    box.style.cssText = 'position:fixed;bottom:20px;right:20px;width:320px;max-width:90vw;z-index:9999;background:#0a0e1a;border:1px solid #7c3aed55;border-radius:12px;padding:12px;box-shadow:0 8px 32px rgba(124,58,237,0.3);font-family:sans-serif;';
-    box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong style="color:#a78bfa;">✨ AI Pintar</strong><button id="x-agent-close" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer;">×</button></div><textarea id="x-agent-in" placeholder="Tanya apa sahaja..." style="width:100%;height:70px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:8px;resize:none;"></textarea><button id="x-agent-send" style="width:100%;margin-top:8px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px;cursor:pointer;">Hantar</button><div id="x-agent-out" style="margin-top:8px;font-size:13px;color:#cbd5e1;white-space:pre-wrap;max-height:160px;overflow:auto;"></div><div style="font-size:10px;color:#555;margin-top:4px;">Log masuk Google diperlukan (akaun anda sendiri)</div>';
-    document.body.appendChild(box);
-    document.getElementById('x-agent-close').onclick = () => box.remove();
-    document.getElementById('x-agent-send').onclick = async () => {
-      const inp = document.getElementById('x-agent-in');
-      const out = document.getElementById('x-agent-out');
-      const q = inp.value.trim();
-      if (!q) return;
-      out.textContent = 'Memproses...';
-      if (!window.__xAgent) { out.textContent = 'Ejen belum sedia. Muat semula.'; return; }
-      const r = await window.__xAgent.run(q);
-      if (r.ok) {
-        out.textContent = '[' + r.model + ']\n' + r.text;
-      } else {
-        out.textContent = 'Ralat: ' + r.error;
-      }
-    };
+// Start: Phase 69 - Hidden AI Agent Button (client-side, user-funded)
+// Butang "Tanya AI tentang JomOrder" (CTA) + "AI Pintar" (grid).
+// Pengguna login Google sendiri, TAK guna quota HELPER projek.
+function openXAgent() {
+  if (document.getElementById('x-agent-box')) return;
+  const box = document.createElement('div');
+  box.id = 'x-agent-box';
+  box.style.cssText = 'position:fixed;bottom:20px;right:20px;width:360px;max-width:94vw;z-index:9999;background:#0a0e1a;border:1px solid #7c3aed66;border-radius:16px;padding:16px;box-shadow:0 12px 40px rgba(124,58,237,0.4);font-family:sans-serif;';
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><strong style="color:#c4b5fd;font-size:15px;">🔮 Tanya AI tentang JomOrder</strong><button id="x-agent-close" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;">×</button></div>'
+    + '<div id="x-agent-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">'
+    + '<button class="x-chip" data-q="Apakah JomOrder dan bagaimana ia berfungsi?">Apa itu JomOrder?</button>'
+    + '<button class="x-chip" data-q="Berapa kos untuk gunakan JomOrder?">Berapa kos?</button>'
+    + '<button class="x-chip" data-q="Bagaimana cara daftar kedai di JomOrder?">Cara daftar</button>'
+    + '<button class="x-chip" data-q="Bolehkah terima bayaran DuitNow?">Bayaran DuitNow?</button>'
+    + '</div>'
+    + '<textarea id="x-agent-in" placeholder="Tanya apa sahaja tentang projek JomOrder..." style="width:100%;height:72px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:10px;padding:10px;resize:none;box-sizing:border-box;"></textarea>'
+    + '<button id="x-agent-send" style="width:100%;margin-top:8px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:10px;padding:10px;cursor:pointer;font-weight:bold;">Hantar Soalan</button>'
+    + '<div id="x-agent-out" style="margin-top:10px;font-size:13px;color:#cbd5e1;white-space:pre-wrap;max-height:200px;overflow:auto;line-height:1.5;"></div>'
+    + '<div style="font-size:10px;color:#666;margin-top:6px;">Percuma · Log masuk Google anda sendiri · Tak guna quota kami</div>';
+  document.body.appendChild(box);
+  const style = document.createElement('style');
+  style.textContent = '.x-chip{background:#1e1b4b;color:#c4b5fd;border:1px solid #4c1d9566;border-radius:9999px;padding:4px 10px;font-size:11px;cursor:pointer;} .x-chip:hover{background:#312e81;}';
+  document.head.appendChild(style);
+  document.getElementById('x-agent-close').onclick = () => { box.remove(); style.remove(); };
+  const send = async () => {
+    const inp = document.getElementById('x-agent-in');
+    const out = document.getElementById('x-agent-out');
+    const q = inp.value.trim();
+    if (!q) return;
+    out.textContent = 'Memproses...';
+    if (!window.__xAgent) { out.textContent = 'Ejen belum sedia. Muat semula.'; return; }
+    const r = await window.__xAgent.run(q);
+    if (r.ok) { out.textContent = '[' + r.model + ']\n' + r.text; }
+    else { out.textContent = 'Ralat: ' + r.error; }
+  };
+  document.getElementById('x-agent-send').onclick = send;
+  box.querySelectorAll('.x-chip').forEach((c) => {
+    c.onclick = () => { const inp = document.getElementById('x-agent-in'); inp.value = c.getAttribute('data-q'); send(); };
   });
 }
-document.addEventListener('DOMContentLoaded', initXAgent);
+
+function initXAgent() {
+  const cta = document.getElementById('x-agent-cta');
+  const btn = document.getElementById('x-agent-btn');
+  if (cta) cta.addEventListener('click', openXAgent);
+  if (btn) btn.addEventListener('click', openXAgent);
+}
 // End: Phase 69 - Hidden AI Agent Button
