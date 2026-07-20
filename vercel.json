@@ -8,7 +8,7 @@
   "rewrites": [
     {
       "source": "/bot",
-      "destination": "https://t.me/JomOrderBot"
+      "destination": "https://t.me/jomorder_makan_bot"
     },
     {
       "source": "/api/public-stats",
@@ -26,7 +26,7 @@
   "redirects": [
     {
       "source": "/telegram",
-      "destination": "https://t.me/JomOrderBot",
+      "destination": "https://t.me/jomorder_makan_bot",
       "permanent": false
     }
   ],

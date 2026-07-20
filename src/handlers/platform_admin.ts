@@ -193,7 +193,7 @@ export async function handleAdminGui(env: Env, chatId: number, tgId: number): Pr
   const buttons = inlineKeyboard([
     [{ text: '📊 Stats', callback_data: 'admin_stats' }, { text: '📋 Pendaftaran', callback_data: 'admin_list' }],
     [{ text: '📢 Pengumuman', callback_data: 'admin_announce' }],
-    [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+    [{ text: '⬅️ Kembali', callback_data: 'back:admin' }],
   ]);
   await sendMessage(env, chatId, text, buttons);
 }

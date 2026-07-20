@@ -72,9 +72,7 @@ export async function routeCallbackQuery(
       data === 'merchant_settings' ||
       data === 'open_nearby' ||
       data === 'open_cart' ||
-      data === 'open_promo' ||
-      data === 'merchant_zon' ||
-      data === 'upload_qr'
+      data === 'open_promo'
     ) {
       return await handleDashboardQuickAction(env, cb, cbChatId, data, cb.from.id);
     }
@@ -199,6 +197,13 @@ export async function routeCallbackQuery(
       await sendMessage(env, cbChatId, escapeMarkdownV2('📢 PENGUMUMAN\\n\\nTaip /pengumuman <teks> untuk broadcast ke semua peniaga.'));
       return true;
     }
+    // Start: Phase 67 - back:admin nested return to admin panel
+    if (data === 'back:admin') {
+      await answerCallbackQuery(env, cb.id);
+      await handleAdminGui(env, cbChatId, cb.from.id);
+      return true;
+    }
+    // End: Phase 67 - back:admin nested return to admin panel
     // End: Phase 62 - Admin GUI sub-menu callbacks
     if (data === 'nav:help') {
       await answerCallbackQuery(env, cb.id);

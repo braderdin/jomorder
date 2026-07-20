@@ -3,7 +3,7 @@
 import { Env } from '../types';
 import { getState, mergeState } from '../redis';
 
-export type NavStage = 'idle' | 'customer_main' | 'merchant_main' | 'admin_main' | 'customer_browse' | 'customer_cart' | 'merchant_menu' | 'merchant_orders' | 'merchant_coupons' | 'merchant_settings';
+export type NavStage = 'idle' | 'customer_main' | 'merchant_main' | 'admin_main' | 'admin_stats' | 'admin_list' | 'customer_browse' | 'customer_cart' | 'merchant_menu' | 'merchant_orders' | 'merchant_coupons' | 'merchant_settings';
 
 const NAV_PREFIX = 'jo:nav:';
 
@@ -73,6 +73,8 @@ export const NAV_PARENT: Record<NavStage, NavStage> = {
   merchant_orders: 'merchant_main',
   merchant_coupons: 'merchant_main',
   merchant_settings: 'merchant_main',
+  admin_stats: 'admin_main',
+  admin_list: 'admin_main',
 };
 
 /** Dapatkan parent stage untuk nested BACK. */
@@ -85,6 +87,7 @@ export function backToStage(stage: NavStage): string {
   const p = parentOf(stage);
   if (p === 'customer_main') return 'customer_gui';
   if (p === 'merchant_main') return 'merchant_gui';
+  if (p === 'admin_main') return 'back:admin';
   return 'nav:main';
 }
 // End: Phase 58 - Nested BACK Chain
