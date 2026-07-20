@@ -55,6 +55,11 @@ TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
   // PUBLIC_STATS_TTL=60 -> sepadan dengan cache window analytics.ts.
   PUBLIC_STATS_TTL?: string | number; // Variable: public stats cache lifespan (saat)
   // End: Phase 28 - Public Redis Caching Grid config
+
+  // Start: Phase 64 - Cloudflare Images API (real WebP re-encode, Fasal 8)
+  CLOUDFLARE_ACCOUNT_ID: string; // Variable: CF account hash (Images API)
+  CF_IMAGES_API_TOKEN: string; // Secret: CF Images API token (Bearer)
+  // End: Phase 64 - Cloudflare Images API
 }
 
 /** Safe public cache payload (Phase 28 - elak compilation drift). */
