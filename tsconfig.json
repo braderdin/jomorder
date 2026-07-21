@@ -1,31 +1,29 @@
-// Start: JomOrder Fasa 4 - TypeScript Compiler Config (Fasa 11 Hardened)
-// Fasal 4 (TS backend) + Fasal 11 (env binding) - aligned to Cloudflare Workers runtime.
-// Fasa 11: Robust R2Bucket/KVNamespace alias mapping + zero dev-to-prod path drift.
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "lib": ["ESNext", "DOM"],
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "module": "CommonJS",
     "strict": true,
-    "noEmit": true,
-    "skipLibCheck": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noUncheckedIndexedAccess": false,
-    "allowImportingTsExtensions": false,
-    "types": [],
-    // Start: Fasa 11 - Dynamic import alias (no path drift dev<->prod)
-    "paths": {
-      "@root/*": ["./src/*"],
-      "@services/*": ["./src/services/*"],
-      "@handlers/*": ["./src/handlers/*"]
-    }
-    // End: Fasa 11 - Dynamic import alias
+    "noEmit": true,
+    "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", ".git", ".memory_hidden"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/**/*.json",
+    "src/handlers/merchant_menu.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
-// End: JomOrder Fasa 4 - TypeScript Compiler Config (Fasa 11 Hardened)
