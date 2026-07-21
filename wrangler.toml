@@ -22,6 +22,27 @@ R2_PUBLIC_URL = "https://pub-b47780d8bdac50140d3e4df43f03d945.r2.dev/jomorder-as
 # Start: Phase 29 - Public Stats Cache TTL Alignment (Fasal 11 env alignment)
 # PUBLIC_STATS_TTL=60 selaras dengan analytics.ts PUBLIC_STATS_TTL konstant.
 PUBLIC_STATS_TTL = 60
+
+MODEL_AI_HELPER01 = ""
+MODEL_AI_HELPER02 = ""
+MODEL_AI_HELPER03 = ""
+MODEL_AI_HELPER04 = ""
+MODEL_AI_HELPER05 = ""
+MODEL_AI_HELPER06 = ""
+MODEL_AI_HELPER07 = ""
+MODEL_AI_HELPER08 = ""
+MODEL_AI_HELPER09 = ""
+MODEL_AI_HELPER10 = ""
+MODEL_AI_HELPER11 = ""
+MODEL_AI_HELPER12 = ""
+MODEL_AI_HELPER13 = ""
+MODEL_AI_HELPER14 = ""
+MODEL_AI_HELPER15 = ""
+MODEL_AI_HELPER16 = ""
+MODEL_AI_HELPER17 = ""
+MODEL_AI_HELPER18 = ""
+MODEL_AI_HELPER19 = ""
+MODEL_AI_HELPER20 = ""
 # End: Phase 29 - Public Stats Cache TTL Alignment
 
 # Start: Phase 42 - Secrets Provisioning (Fasal 15 - TIADA kunci rahsia di sini)

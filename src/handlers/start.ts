@@ -73,7 +73,7 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
 
   if (isMerchant) {
     if (typeof tgId === 'number') await setNav(env, tgId, 'merchant_main');
-    await handleMerchantGui(env, chatId, tgId as number);
+    await handleAdaptiveWelcome(env, chatId, user);
     return;
   }
 
@@ -81,7 +81,7 @@ export async function handleStart(env: Env, chatId: number, user: TelegramUser |
   if (typeof tgId === 'number') await setNav(env, tgId, 'customer_main');
   // Phase 59: i18n hook (locale BM default; EN toggle via nav:lang akan datang).
   void i18n('welcome', 'BM');
-  await handleCustomerGui(env, chatId, tgId as number);
+  await handleAdaptiveWelcome(env, chatId, user);
 }
 
 // Start: Phase 51 - Adaptive Welcome Card (role + time-aware greeting)

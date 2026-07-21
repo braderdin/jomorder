@@ -166,6 +166,7 @@ PROJECT_SYNC_MASTER.md
 .agents/
 skills-lock.json
 Puter_Ai_Model/
+free_models.txt
 
 # Start: Phase 50 - Dev Tooling Artifacts (jangan serabut GitHub)
 # Wrangler dev log dari bin/dev-watch.sh + wrangler dev tmp
