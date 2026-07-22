@@ -1,6 +1,6 @@
 // Start: Phase 39 - Mock Telegram Worker Test Harness (Fasal 7 S4 + Fasal 10)
-// Skrip simulasi khusus untuk semua 22 arahan bot natif + callback kritikal.
-// Menggunakan raw JSON frame seolah-olah dihantar Telegram ke webhook worker.
+// Skrip simulasi khusus untuk semua 22 perintah bot natif + callback kritikal.
+// Menggunakan bingkai JSON mentah seolah-olah dihantar Telegram ke webhook worker.
 import { Env, TelegramUpdate } from '../types';
 
 /** Satu kes ujian simulasi masukan. */
@@ -49,8 +49,8 @@ function mkLocation(lat: number, lng: number): TelegramUpdate {
 
 /**
  * buildAll22CommandCases
- * Hasilkan senarai penuh 22 kes arahan natif (termasuk suffix @BotName)
- * + callback penting + location event untuk ujian E2E pasif.
+ * Hasilkan senarai penuh 22 kes perintah natif (termasuk suffix @BotName)
+ * + callback penting + acara lokasi untuk ujian E2E pasif.
  */
 export function buildAll22CommandCases(): MockTestCase[] {
   const commands = [
@@ -105,9 +105,9 @@ export function buildAll22CommandCases(): MockTestCase[] {
 
 /**
  * runMockInjection
- * Serialize setiap kes ke raw JSON string (simulasi webhook frame) dan
- * jadikan array string untuk dihantar ke worker test harness.
- * Return: array { label, rawFrame }.
+ * Menyerialkan setiap kes kepada string JSON mentah (simulasi bingkai webhook) dan
+ * menjadikannya array string untuk dihantar ke worker test harness.
+ * Mengembalikan: array { label, rawFrame }.
  */
 export function runMockInjection(): Array<{ label: string; rawFrame: string }> {
   const cases = buildAll22CommandCases();

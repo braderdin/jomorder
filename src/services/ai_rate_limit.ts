@@ -1,6 +1,6 @@
 // Start: Phase 69 - AI Helper Rate Limiter (Fasal 18 + syarat Chip Besar)
-// Had: 5 saat antara call, 5 RPM, 20 RPD. Guna Redis Upstash.
-// Hanya untuk Layer A (projek sendiri). Pengguna (Puter) TAK sentuh ini.
+// Had: 5 saat antara panggilan, 5 RPM, 20 RPD. Menggunakan Redis Upstash.
+// Hanya untuk Lapisan A (projek sendiri). Pengguna (Puter) TIDAK menyentuh ini.
 import { Env } from '../types';
 import { getRedis, setRedis } from '../redis';
 
@@ -10,7 +10,7 @@ const RPM_TTL = 60; // saat
 const RPD_TTL = 86400; // saat (1 hari)
 const MAX_RPM = 5;
 const MAX_RPD = 20;
-const MIN_GAP_MS = 5000; // 5 saat tunggu
+const MIN_GAP_MS = 5000; // jeda minimum 5 saat
 
 // Konstanta untuk pesan alasan dan kesalahan
 const REASON_RPM_FULL = 'RPM penuh';
@@ -36,9 +36,9 @@ export async function checkHelperQuota(env: Env): Promise<{ ok: boolean; reason?
     lastCallTs = Date.now();
     return { ok: true };
   } catch (e) {
-    // Log kesalahan Redis, tetapi tetap soft-fail agar fungsionalitas inti tidak terganggu
+    // Log kesalahan Redis, tetapi tetap soft-fail agar fungsionaliti inti tidak terganggu
     console.error('AI Rate Limiter Redis Error:', e); // Log kesalahan Redis
-    // Soft-fail: benarkan jika Redis down (jangan block projek)
+    // Soft-fail: membenarkan jika Redis tidak berfungsi (jangan menyekat projek)
     lastCallTs = Date.now();
     return { ok: true };
   }

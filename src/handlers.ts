@@ -1,6 +1,6 @@
 // Start: JomOrder Fasa 9 - Core Distributor Router (File 4)
-// Fasal 4 (SOA) + Fasal 9 (modular split). Strip berat ke ./handlers/merchant & ./handlers/customer.
-// Distributor sahaja: terima update, delegate ke modul khusus. Orchestrate cron maintenance.
+// Fasa 4 (SOA) + Fasa 9 (pemisahan modular). Mengalihkan beban ke ./handlers/merchant & ./handlers/customer.
+// Hanya sebagai pengedar: menerima kemas kini, mendelegasikan kepada modul khusus. Mengatur penyelenggaraan cron.
 import { Env, TelegramUpdate } from './types';
 import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation, handleMerchantPhoto } from './handlers/merchant';
 import { getState, checkRateLimit, rateLimitKey } from './redis';
@@ -91,9 +91,9 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
 // End: Phase 53 - 30-Command Distributor Routing Matrix
 
 // Start: Phase 39 - Command Username Sanitizer Overhaul (DISTRIBUTOR_COMMAND_MAP parser)
-// Telegram hantar arahan dengan suffix@BotName (contoh: '/start@JomOrderBot').
-// Parser wajib buang suffix supaya routing grid match bersih ke 22-command map.
-// Phase 39: handle multiple @ (bot forward chains) dan guard empty input.
+// Telegram menghantar perintah dengan suffix@BotName (contoh: '/start@JomOrderBot').
+// Parser wajib membuang suffix supaya padanan grid routing yang bersih ke peta 22-perintah.
+// Fasa 39: mengendalikan pelbagai @ (rantai pemajuan bot) dan melindungi input kosong.
 const COMMAND_USERNAME_RE = /@[\w]+/g;
 function normalizeCommand(raw?: string): string {
   if (!raw) return '';
@@ -103,19 +103,18 @@ function normalizeCommand(raw?: string): string {
   const cleaned = t.replace(COMMAND_USERNAME_RE, '').trim();
   return cleaned;
 }
-// Build canonical lookup daripada DISTRIBUTOR_COMMAND_MAP untuk validasi pantas.
+// Bina carian kanonikal daripada DISTRIBUTOR_COMMAND_MAP untuk validasi pantas.
 const ACTIVE_COMMAND_SET: ReadonlySet<string> = new Set(
   DISTRIBUTOR_COMMAND_MAP.map((e) => e.command)
 );
-/** Sanitize + sahkan arahan wujud dalam 22-command grid (Fasal 7 S1 isolation). */
+/** Bersihkan + mengesahkan perintah wujud dalam grid 22-perintah (Fasa 7 S1 isolation). */
 export function resolveCommand(raw: string): string | null {
   const c = normalizeCommand(raw);
   if (!c) return null;
   return ACTIVE_COMMAND_SET.has(c) ? c : c;
 }
 // End: Phase 39 - Command Username Sanitizer Overhaul
-
-/** Keyboard unified greeting (Fasal 6 max 2-3 btn/row, mobile-optimized). */
+/** Papan kekunci ucapan bersatu (Fasa 6 maks 2-3 butang/baris, dioptimumkan untuk mudah alih). */
 function unifiedGreetingKeyboard() {
   return {
     keyboard: [
@@ -127,7 +126,7 @@ function unifiedGreetingKeyboard() {
   };
 }
 
-/** Routing utama — delegate ke modul merchant/customer mengikut jenis update. */
+/** Routing utama — mendelegasikan kepada modul pedagang/pelanggan mengikut jenis kemas kini. */
 export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<void> {
   // Start: Callback query router (delegate ke modul khusus)
   // Phase 52: Ekstrak ke router_callbacks.ts (SOA split, elak fail >500 baris).
@@ -146,7 +145,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   const tgId = msg.from.id;
 
   // Start: Phase 31 - Core Bot Command Activation Matrix (Fasal 4 SOA delegation)
-  // Arahan teks di-delegate ke sub-handler khusus (LOOP 1-2 modules).
+  // Perintah teks didelegasikan kepada sub-handler khusus (LOOP 1-2 modul).
   const cmd = normalizeCommand(msg.text);
   if (cmd === '/help' || cmd === '/bantuan') {
     await withCommandGuard(env, chatId, '/help', () => handleHelp(env, chatId, msg.from));
@@ -195,7 +194,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       await withCommandGuard(env, chatId, '/start', () => handleStartDeepLink(env, chatId, msg.from, payload));
       return;
     }
-    // Default /start -> auto-detect role & papar GUI (Phase 58 auto-role).
+    // Lalai /start -> mengesan peranan secara automatik dan memaparkan GUI (Fasa 58 auto-peranan).
     await handleStart(env, chatId, msg.from);
     return;
   }
@@ -257,7 +256,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   }
   if (cmd === '/laporan_jualan') {
     if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
       return;
     }
     await withCommandGuard(env, chatId, '/laporan_jualan', () => handleLaporanJualan(env, chatId, tgId));
@@ -269,26 +268,26 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await withCommandGuard(env, chatId, '/daftar', () => handleMerchantMessage(env, chatId, tgId, '/daftar'));
     return;
   }
-  // /tambah_menu -> flow tambah item menu (alias handleTambahMenu).
+  // /tambah_menu -> aliran tambah item menu (alias handleTambahMenu).
   if (cmd.startsWith('/tambah_menu')) {
     await withCommandGuard(env, chatId, '/tambah_menu', () => handleTambahMenu(env, chatId, tgId));
     return;
   }
   // Start: Phase 70 - AI Menu Writer command (/tambah_menu_ai)
-  // Peniaga taip /tambah_menu_ai <nama> -> AI jana detail menu.
+  // Peniaga menaip /tambah_menu_ai <nama> -> AI menjana butiran menu.
   if (cmd.startsWith('/tambah_menu_ai')) {
     const nama = cmd.split(/\s+/).slice(1).join(' ').trim();
     if (!nama) {
       await sendMessage(env, chatId, escapeMarkdownV2('🤖 Taip nama hidangan: /tambah_menu_ai Nasi Lemak'));
       return;
     }
-    await sendMessage(env, chatId, escapeMarkdownV2('🤖 AI sedang menulis menu...'));
+    await sendMessage(env, chatId, escapeMarkdownV2('🤖 AI sedang menjana menu...'));
     const hasil = await aiMenuWriter(env, nama);
-    await sendMessage(env, chatId, escapeMarkdownV2(`🎨 Hasil AI:\\n${hasil}\\n\\nSalin & guna di /tambah_menu.`));
+    await sendMessage(env, chatId, escapeMarkdownV2(`🎨 Hasil AI:\\n${hasil}\\n\\nSalin dan gunakan di /tambah_menu.`));
     return;
   }
   // End: Phase 70 - AI Menu Writer command
-  // /urus_kedai -> alias papan pemerintah peniaga.
+  // /urus_kedai -> alias papan pemuka peniaga.
   if (cmd === '/urus_kedai') {
     await withCommandGuard(env, chatId, '/urus_kedai', () => handleMerchantDashboard(env, chatId, tgId));
     return;
@@ -304,18 +303,20 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     return;
   }
   // /profil -> handler profil & langganan baharu.
+  // /profil -> handler profil dan langganan baharu.
   if (cmd === '/profil') {
     if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
       return;
     }
     await withCommandGuard(env, chatId, '/profil', () => handleProfil(env, chatId, tgId));
     return;
   }
   // /status -> kad status bot & akaun (Phase 44).
+  // /status -> kad status bot dan akaun (Fasa 44).
   if (cmd === '/status') {
     if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
       return;
     }
     await withCommandGuard(env, chatId, '/status', () => handleStatus(env, chatId, tgId));
@@ -328,7 +329,9 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   // Start: Phase 23 - Geolocation routing (merchant intercept vs customer pipeline)
   // Jika peniaga sedang dalam awaiting_shop_location, lokasi ke merchant handler.
+  // Jika peniaga sedang dalam awaiting_shop_location, lokasi akan dihantar ke merchant handler.
   // Else, lokasi pelanggan ke customer handler (Haversine search).
+  // Jika tidak, lokasi pelanggan akan dihantar ke customer handler (carian Haversine).
   if (msg.location) {
     const mState = await getState(env, tgId);
     if (mState && mState.step === 'awaiting_shop_location') {
@@ -342,7 +345,9 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   // Start: Phase 51 - Merchant Photo Upload routing (R2 QR capture)
   // Jika mesej ada imej dan peniaga dalam state awaiting_qr_upload,
+  // Jika mesej mengandungi imej dan peniaga dalam state awaiting_qr_upload,
   // delegate ke handleMerchantPhoto (download Telegram -> R2 -> patch DB).
+  // mendelegasikan kepada handleMerchantPhoto (muat turun Telegram -> R2 -> kemas kini DB).
   if (msg.photo && msg.photo.length > 0) {
     const fileId = msg.photo[msg.photo.length - 1].file_id;
     const handled = await handleMerchantPhoto(env, chatId, tgId, fileId);
@@ -370,14 +375,14 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // End: Fasa 13 - Super-Admin delegation
 
   // Start: Fasa 15 - Customer Coupon Router hook (resolve Fasa 14 drift)
-  // Pembeli taip /kupon <KOD> -> halakan ke customer handler apply kupon ke cart buffer.
+  // Pembeli menaip /kupon <KOD> -> halakan kepada customer handler untuk mengaplikasikan kupon ke cart buffer.
   if (text.startsWith('/kupon ')) {
     const kod = text.split(/\s+/)[1] || '';
     await withCommandGuard(env, chatId, '/kupon', () => handleApplyCoupon(env, chatId, tgId, kod));
     return;
   }
   // End: Fasa 15 - Customer Coupon Router hook
-
+  
   // Start: Phase 25 - Localized Command Matrix (Bahasa Melayu)
   // /troli -> papar cart buffer pelanggan (handleViewCart).
   // Phase 26: Rate-limit shield (Fasal 7 Strategy 2) elak spam troli.
@@ -385,7 +390,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // di redis.ts -> memelihara memori cluster (Fasal 7 Strategy 3).
   if (text === '/troli') {
     if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
       return;
     }
     await withCommandGuard(env, chatId, '/troli', () => handleViewCart(env, chatId, tgId));
@@ -396,12 +401,12 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Phase 26: Rate-limit shield (Fasal 7 Strategy 2) elak spam laporan.
   if (text === '/laporan_jualan') {
     if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
       return;
     }
     const metrics = await fetchSaasMetrics(env);
     if (!metrics) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal ambil laporan jualan. Cuba lagi sebentar.'));
+      await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Gagal mendapatkan laporan jualan. Sila cuba lagi sebentar.'));
       return;
     }
     const report =
@@ -425,9 +430,10 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   // Start: Phase 29 - /invois command (Digital Invoice Engine)
   // Peniaga jana invois digital MarkdownV2 untuk kedai mereka.
+  // Peniaga menjana invois digital MarkdownV2 untuk kedai mereka.
   if (text === '/invois') {
     if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Cuba sebentar lagi.'));
+      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
       return;
     }
     await withCommandGuard(env, chatId, '/invois', () => handleMerchantInvoiceText(env, chatId, tgId, text));
@@ -439,8 +445,8 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 
   // Start: Phase 23 - Merchant state prefix routing ('merchant:' namespace guard)
   // Jika state peniaga wujud (namespace jo:state:{id}), delegate ke merchant handler.
+  // Jika state peniaga wujud (namespace jo:state:{id}), mendelegasikan kepada merchant handler.
   // Default: semua teks lain -> merchant handler (dashboard/daftar/fallback).
-  const state = await getState(env, tgId);
   if (state && (state.step.startsWith('merchant:') || state.step !== 'idle')) {
     await handleMerchantMessage(env, chatId, tgId, text);
     return;
@@ -448,31 +454,31 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // End: Phase 23 - Merchant state prefix routing
 
   // Start: Phase 71 - AI Spell-Checker (typo command rescue)
-  // Jika teks mula dgn '/' tapi TAK dikenali sebagai command natif,
-  // panggil AI utk betul typo + cadang command betul (soft-fail: fallback ke merchant).
+  // Jika teks bermula dengan '/' tetapi TIDAK dikenali sebagai perintah natif,
+  // panggil AI untuk membetulkan kesilapan ejaan + mencadangkan perintah yang betul (soft-fail: fallback ke merchant).
   if (text.startsWith('/')) {
     const fixed = await aiSpellCheck(env, text, (NATIVE_COMMAND_LIST as ReadonlyArray<{ command: string }>).map((c) => c.command));
     if (fixed && fixed.trim() !== text.trim() && fixed.trim().startsWith('/') && ACTIVE_COMMAND_SET.has(fixed.trim())) {
       await sendMessage(
         env,
         chatId,
-        escapeMarkdownV2(`🔤 Ralat ejaan dikesan!\nMaksud anda: \`${fixed.trim()}\` ?\n\nGuna butang /menu utk lihat semua command.`)
+        escapeMarkdownV2(`🔤 Ralat ejaan dikesan!\nMaksud anda: \`${fixed.trim()}\` ?\n\nGunakan butang /menu untuk melihat semua perintah.`)
       );
       return;
     }
   }
   // End: Phase 71 - AI Spell-Checker
-
+  
   // Start: Phase 71 - AI Customer FAQ (free-text fallback utk pelanggan)
-  // Jika teks TAK mula '/' dan state idle (bukan merchant dalan flow),
-  // panggil AI FAQ utk jawab soalan am pelanggan (soft-fail: merchant fallback).
+  // Jika teks TIDAK bermula dengan '/' dan state idle (bukan pedagang dalam aliran),
+  // panggil AI FAQ untuk menjawab soalan umum pelanggan (soft-fail: fallback ke merchant).
   if (!text.startsWith('/') && (!state || state.step === 'idle')) {
     const faq = await aiCustomerFaq(env, text, 'JomOrder');
     if (faq && faq.trim().length > 0) {
       await sendMessage(
         env,
         chatId,
-        escapeMarkdownV2(`🤖 *JomOrder AI:*\n${faq.trim()}\n\n(Mahu bercakap dgn pengasas? Guna /bantuan)`)
+        escapeMarkdownV2(`🤖 *JomOrder AI:*\n${faq.trim()}\n\n(Mahu bercakap dengan pengasas? Gunakan /bantuan)`)
       );
       return;
     }
@@ -484,7 +490,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
 }
 
 // Start: Fasa 6 - Scheduled Maintenance Wiring (orchestration kekal di distributor)
-// Dipanggil dari cron / scheduled invocation (index.ts) bagi loop automasi penuh.
+// Dipanggil dari cron / scheduled invocation (index.ts) untuk gelung automasi penuh.
 export async function runScheduledMaintenance(env: Env): Promise<number> {
   const scanned = await dispatchSubscriptionAlerts(env);
   const ids = scanned.map((r) => r.telegramId);
@@ -494,6 +500,16 @@ export async function runScheduledMaintenance(env: Env): Promise<number> {
   return ids.length;
 }
 // End: Fasa 6 - Scheduled Maintenance Wiring
+// Start: Phase 28 - Public Stats Controller Linkage (Redis KV bindings passthrough)
+// Memaparkan statistik agregat tanpa pengesahan untuk penghidratan frontend (menggantikan N/A).
+// Dipanggil dari index.ts GET /api/public-stats (bypass webhook secret).
+// Env penuh (termasuk UPSTASH_REDIS_REST_URL/TOKEN) diserahkan kepada lapisan analitik
+// supaya grid cache 60s boleh dimanfaatkan tanpa perlu mengambil semula binding.
+export async function handlePublicStats(env: Env): Promise<ReturnType<typeof fetchPublicStats> extends Promise<infer T> ? T : never> {
+  const payload = await fetchPublicStats(env);
+  return payload;
+}
+// End: Phase 28 - Public Stats Controller Linkage
 
 // Start: Phase 28 - Public Stats Controller Linkage (Redis KV bindings passthrough)
 // Expose unauthenticated aggregate stats untuk frontend hydration (ganti N/A).

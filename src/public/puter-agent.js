@@ -1,10 +1,10 @@
 // Start: Phase 69c - Hidden AI Agent (client-side, user-funded) + JomOrder Brain
-// Agent penyeri untuk PELAWAT portal. Pengguna login Google sendiri,
-// guna model list sendiri, BAYAR SENDIRI. Projek TAK bazir quota HELPER.
-// RAHSIA: tiada label pembekal di DOM. Script di-load dynamic tanpa teks.
+// Agen AI untuk pelawat portal. Pengguna log masuk menggunakan akaun Google mereka sendiri,
+// menggunakan senarai model mereka sendiri, dan membayar sendiri. Projek ini tidak menggunakan kuota Pembantu AI.
+// RAHSIA: Tiada label pembekal dipaparkan di DOM. Skrip dimuatkan secara dinamik tanpa teks yang kelihatan.
 //
-// OTAK: systemMessage terangkan JomOrder supaya model jawab betul walaupun
-// model rawak tak tahu apa-apa pasal projek ini.
+// OTAK: systemMessage menerangkan JomOrder supaya model dapat menjawab dengan tepat walaupun
+// model rawak tidak mengetahui apa-apa tentang projek ini.
 (function () {
   const SCRIPT_SRC = 'https://js.puter.com/v2/';
 
@@ -39,16 +39,16 @@
   const BRAIN = [
     'Anda ialah "Pembantu JomOrder", chatbot rasmi untuk projek JomOrder.',
     'JomOrder ialah platform mikro-SaaS (Software-as-a-Service) multi-tenant untuk peniaga F&B (makanan & minuman) Malaysia.',
-    'Ia beroperasi 100% melalui bot Telegram - peniaga tak perlu app berasingan.',
+    'Ia beroperasi 100% melalui bot Telegram - peniaga tidak memerlukan aplikasi berasingan.',
     'Kos operasi ialah RM0 (freetier) - dibina untuk program MDEC GLOW (Global Online Workforce / Gig Economy).',
-    'Fungsi utama: (1) Peniaga daftar kedai guna /daftar, (2) bina menu guna /tambah_menu, (3) pelanggan cari kedai berdekatan, pilih makanan, bayar guna DuitNow QR, (4) peniaga terima pesanan & sediakan.',
+    'Fungsi utama: (1) Peniaga mendaftar kedai menggunakan /daftar, (2) membina menu menggunakan /tambah_menu, (3) pelanggan mencari kedai berdekatan, memilih makanan, membayar menggunakan DuitNow QR, (4) peniaga menerima pesanan dan menyediakannya.',
     'Ada 30 perintah native Bahasa Malaysia: pelanggan (/start, /menu, /troli, /pesanan_saya, /promo), peniaga (/daftar, /tambah_menu, /laporan_jualan, /cipta_kupon, /invois, /zon_operasi), pentadbir (/admin_stats, /pengumuman).',
     'Teknologi: Cloudflare Worker (serverless), Supabase (Postgres + RLS multi-tenant isolation), Redis (cache state), Cloudflare R2 (simpan QR DuitNow & foto menu WebP).',
-    'Bayaran: DuitNow QR - pelanggan scan, wang masuk terus ke akaun peniaga.',
+    'Bayaran: DuitNow QR - pelanggan mengimbas, wang masuk terus ke akaun peniaga.',
     'Portal web: https://jomorder-portal.vercel.app/ , Bot Telegram: https://t.me/jomorder_makan_bot',
     'Jawab dalam Bahasa Malaysia yang mesra & santai (gaya "JomOrder Modern-Siber"). Gunakan emoji bila sesuai.',
-    'Jika ditanya selain JomOrder, arahkan semula ke topik JomOrder. Jika tak pasti, kata "Sila buka bot Telegram untuk butiran lanjut".',
-    'JANGAN berbohong tentang ciri yang tak wujud. Fokus bantu pelawat faham & cuba JomOrder.'
+    'Jika ditanya selain JomOrder, arahkan semula ke topik JomOrder. Jika tidak pasti, katakan "Sila buka bot Telegram untuk butiran lanjut".',
+    'JANGAN berbohong tentang ciri yang tidak wujud. Fokus membantu pelawat memahami dan mencuba JomOrder.'
   ].join(' ');
 
   let idx = 0;
@@ -59,7 +59,7 @@
       if (window.puter) { sdk = window.puter; return resolve(sdk); }
       const s = document.createElement('script');
       s.src = SCRIPT_SRC;
-      s.onload = () => { sdk = window.puter; resolve(sdk); }; // Setelah SDK dimuat, inisialisasi variabel sdk
+      s.onload = () => { sdk = window.puter; resolve(sdk); }; // Setelah SDK dimuat, inisialisasi pemboleh ubah sdk
       s.onerror = () => reject(new Error(ERROR_LOAD_FAIL));
       document.head.appendChild(s);
     });
@@ -72,8 +72,8 @@
     return true;
   }
 
-  // Pick fallback model round-robin (default diuar senarai ini).
-  function nextFallback() {
+  // Pilih model fallback secara round-robin (model lalai di luar senarai ini).
+  function nextFallback() { // Pilih model fallback secara round-robin (model lalai di luar senarai ini).
     const m = FALLBACK_MODELS[idx % FALLBACK_MODELS.length];
     idx++;
     return m;
@@ -81,6 +81,7 @@
 
   // Public API: run a chat with JomOrder brain.
   // Auto: cuba DEFAULT_MODEL dulu, kalau gagal fallback round-robin.
+  // Auto: cuba DEFAULT_MODEL terlebih dahulu, jika gagal gunakan fallback round-robin.
   window.__xAgent = {
     async run(prompt, opts) {
       try {
@@ -120,19 +121,19 @@
     fallbackModels: FALLBACK_MODELS
   };
 
-  // Widget 1: AI Menu Idea Generator (pelawat taip jenis kedai).
+  // Widget 1: Penjana Idea Menu AI (pelawat menaip jenis kedai).
   window.__xMenuIdea = async (jenis) => {
-    const p = `Cadangkan 5 nama hidangan popular untuk kedai "${jenis}" di Malaysia, dengan harga RM munasabah dan emoji. Format: EMOJI NAMA - RMHARGA (satu satu baris).`;
+    const p = `Cadangkan 5 nama hidangan popular untuk kedai "${jenis}" di Malaysia, dengan harga RM yang munasabah dan emoji. Format: EMOJI NAMA - RMHARGA (satu baris setiap satu).`;
     return window.__xAgent.run(p);
   };
-  // Widget 2: AI Review Writer (pelanggan taip experience kasar).
+  // Widget 2: Penulis Ulasan AI (pelanggan menaip pengalaman kasar).
   window.__xReview = async (draft) => {
-    const p = `Tulis review pendek & mesra (1-2 ayat) dalam BM dari draf kasar ini: "${draft}". Tambah emoji.`;
+    const p = `Tulis ulasan pendek dan mesra (1-2 ayat) dalam Bahasa Malaysia berdasarkan draf kasar ini: "${draft}". Tambah emoji.`;
     return window.__xAgent.run(p);
   };
-  // Widget 3: AI Translator BM<->EN (terjemah description menu).
+  // Widget 3: Penterjemah AI BM<->EN (menterjemah deskripsi menu).
   window.__xTranslate = async (teks, ke) => {
-    const p = `Terjemah teks ini ke ${ke === 'en' ? 'Bahasa Inggeris' : 'Bahasa Melayu'}: "${teks}". Jawab HANYA terjemahan.`;
+    const p = `Terjemah teks ini ke ${ke === 'en' ? 'Bahasa Inggeris' : 'Bahasa Melayu'}: "${teks}". Jawab HANYA dengan terjemahan.`;
     return window.__xAgent.run(p);
   };
 

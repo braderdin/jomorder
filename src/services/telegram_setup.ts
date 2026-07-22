@@ -1,13 +1,13 @@
 // Start: Phase 32 - Bot Menu Registration (Native Telegram Command Grid)
 // Fasal 6 (Bahasa Malaysia UI) + Fasal 4 (SOA) + Fasal 11 (env binding).
-// Mendaftar 16 arahan natif ke attachment menu Telegram guna setMyCommands API.
+// Mendaftar 16 perintah natif ke menu lampiran Telegram menggunakan API setMyCommands.
 import { Env, NATIVE_COMMAND_LIST } from '../types';
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
-
-/** 30 arahan kanonikal BM dipaparkan di menu natif Telegram (deskripsi BM). */
+ 
+/** 30 perintah kanonikal BM dipaparkan di menu natif Telegram (deskripsi BM). */
 // Start: Phase 53 - 30 Command Master Sync (1:1 NATIVE_COMMAND_LIST)
-// Padan tepat 30 command BM supaya BotFather menu selari router handlers.ts.
+// Padanan tepat 30 perintah BM supaya menu BotFather selari dengan router handlers.ts.
 const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: '/start', description: 'Mula & pilih peranan' },
   { command: '/bantuan', description: 'Panduan interaktif bot' },
@@ -41,11 +41,11 @@ const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: '/pengumuman', description: 'Pengumuman pentadbir' },
   { command: '/status', description: 'Semak status bot & akaun' },
 ];
-
-/**
- * Daftarkan kesemua 30 arahan bot ke menu natif Telegram pengguna.
- * Memanggil Telegram setMyCommands API. Soft-fail: return false tanpa throw.
- */
+ 
+/** 
+ * Daftarkan kesemua 30 perintah bot ke menu natif Telegram pengguna.
+ * Memanggil API setMyCommands Telegram. Soft-fail: mengembalikan false tanpa membuang pengecualian.
+ */ 
 export async function registerBotCommands(env: Env): Promise<boolean> {
   try {
     const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/setMyCommands`;
@@ -58,15 +58,15 @@ export async function registerBotCommands(env: Env): Promise<boolean> {
     const data = (await res.json()) as { ok?: boolean };
     return data.ok === true;
   } catch {
-    // Soft-fail (Fasal 7 Strategy 4) - jangan crash worker bootstrap.
+    // Soft-fail (Fasa 7 Strategi 4) - jangan menyebabkan worker bootstrap terhenti.
     return false;
   }
 }
 /**
- * validateCommandSync - sahkan konfigurasi deployment menu selari 1:1 dengan
- * NATIVE_COMMAND_LIST (sumber benar tunggal di types.ts). Elak drift arahan
- * antara setMyCommands API dan registry 22-command (Fasal 4 SOA).
- * Return true jika kedua-dua set padan sempurna (command + kiraan).
+ * validateCommandSync - mengesahkan konfigurasi deployment menu selari 1:1 dengan
+ * NATIVE_COMMAND_LIST (sumber kebenaran tunggal di types.ts). Mengelakkan hanyutan perintah
+ * antara API setMyCommands dan registri 22-perintah (Fasa 4 SOA).
+ * Mengembalikan true jika kedua-dua set padan sempurna (perintah dan kiraan).
  */
 export function validateCommandSync(): boolean {
   if (BOT_COMMANDS.length !== NATIVE_COMMAND_LIST.length) return false;

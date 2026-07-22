@@ -6,8 +6,8 @@
 -- ============================================================
 
 -- Start: Phase 25 - Fixed Demo Shop UUID (idempotent anchor)
--- Guna UUID literal supaya seed boleh di-link secara stabil merentas run.
-DO $$
+-- Menggunakan UUID literal supaya seed boleh dihubungkan secara stabil merentasi pelaksanaan.
+DO $$ 
 DECLARE
   v_shop UUID := '00000000-0000-0000-0000-000000000001';
 BEGIN
@@ -38,7 +38,7 @@ END $$;
 -- End: Phase 25 - Fixed Demo Shop UUID
 
 -- Start: Phase 25 - Unique anchor untuk idempotent menu insert
-CREATE UNIQUE INDEX IF NOT EXISTS idx_menu_kedai_nama
+-- Anchor unik untuk penyisipan menu idempoten
   ON public.menu_makanan (kedai_id, nama_hidangan);
 -- End: Phase 25 - Unique anchor
 

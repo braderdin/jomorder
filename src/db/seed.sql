@@ -1,7 +1,7 @@
 -- Start: Fasa 12 - Database Operational Seeding (Live Validation)
 -- Jadual sasaran: kawasan_operasi (lihat src/db/schema.sql Jadual 1)
 -- Idempoten: ON CONFLICT (nama_kawasan) DO NOTHING elak duplicate push.
--- Fasal 13: DDL tiada perubahan, ini sekadar INSERT data operasi default.
+-- Idempoten: ON CONFLICT (nama_kawasan) DO NOTHING mengelakkan penambahan duplikat.
 
 -- ============================================================
 -- Seed: Zon Operasi Default (instant live validation)

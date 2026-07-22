@@ -3,6 +3,7 @@
 // Standard JomOrder secret names (selaras dengan wrangler.toml variables & secrets)
 
 // Cloudflare Runtime Types (minimal declare untuk compile tanpa workers-types)
+// Cloudflare Runtime Types (deklarasi minimum untuk kompilasi tanpa workers-types)
 declare abstract class R2Bucket {
   put(key: string, value: BodyInit): Promise<unknown>;
   get(key: string): Promise<unknown>;
@@ -18,15 +19,15 @@ declare abstract class KVNamespace {
 export interface Env {
   // Telegram Integration (Fasal 6 + Fasal 10)
 // Start: Phase 39 - TELEGRAM_BOT_TOKEN Binding Harmonization (Fasal 11 + Fasal 4)
-// Nama binding WAJIB sepadan 1:1 dengan wrangler.toml secret + .dev.vars.
-// Dihapuskan sebarang implicit any; token diiktiraf sebagai string wajib supaya
-// telegram.ts compile lulus tanpa drift (tiada optional chaining terkedukur).
+// Nama binding WAJIB sepadan 1:1 dengan secret wrangler.toml + .dev.vars.
+// Sebarang 'implicit any' dihapuskan; token diiktiraf sebagai string wajib supaya
+// kompilasi telegram.ts lulus tanpa hanyutan (tiada optional chaining yang terputus).
 TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
 // End: Phase 39 - TELEGRAM_BOT_TOKEN Binding Harmonization
   X_TELEGRAM_BOT_API_SECRET_TOKEN: string; // Secret: validates X-Telegram-Bot-Api-Secret-Token header
 
   // Supabase Multi-Tenant DB (Fasal 7 Strategy 1 RLS)
-  SUPABASE_URL: string; // Variable: project URL
+  SUPABASE_URL: string; // Pemboleh ubah: URL projek
   SUPABASE_ANON_KEY: string; // Variable: public anon key
   SUPABASE_SERVICE_ROLE_KEY: string; // Secret: service role (server-side only)
 
@@ -41,7 +42,7 @@ TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
   MERCHANT_STATE?: KVNamespace;
 
   // Start: Phase 21 - Fail-Open Rate Limit Toggle (Fasal 7 Strategy 2 resilience)
-  // Bila 'true', rate-limiter benarkan lintas jika Upstash Redis gagal.
+  // Apabila 'true', rate-limiter membenarkan laluan jika Upstash Redis gagal.
   RATE_LIMIT_FAIL_OPEN?: string | boolean; // Variable/Secret: fail-open pipeline
   // End: Phase 21 - Fail-Open Rate Limit Toggle
 
@@ -53,7 +54,7 @@ TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
 
   // Start: Phase 28 - Public Redis Caching Grid config (Fasal 11 alignment)
   // PUBLIC_STATS_TTL=60 -> sepadan dengan cache window analytics.ts.
-  PUBLIC_STATS_TTL?: string | number; // Variable: public stats cache lifespan (saat)
+  PUBLIC_STATS_TTL?: string | number; // Pemboleh ubah: jangka hayat cache statistik awam (saat)
   // End: Phase 28 - Public Redis Caching Grid config
 
   // Start: Phase 64 - Cloudflare Images API (real WebP re-encode, Fasal 8)
@@ -63,7 +64,7 @@ TELEGRAM_BOT_TOKEN: string; // Secret: bot API token (canonical, non-optional)
 
   // Start: Phase 68 - AI Helper Engine bindings (Fasal 18)
   BASE_URL: string; // Variable: OpenAI-compatible proxy URL (worker)
-  OPENAI_API_KEY: string; // Secret: dummy key (real key di worker proxy)
+  OPENAI_API_KEY: string; // Secret: kunci dummy (kunci sebenar di worker proxy)
   // MODEL_AI_HELPER01..20 dinamik dari .env.local / wrangler vars
   MODEL_AI_HELPER01?: string;
   MODEL_AI_HELPER02?: string;
@@ -96,7 +97,7 @@ export interface PublicStatsCache {
   status: 'OK' | 'CACHED' | 'DEGRADED';
   cached_at?: string; // ISO timestamp bila payload di-cache
 }
-
+ 
 /** Telegram Incoming Update Payload (subset untuk Fasa 3) */
 export interface TelegramUpdate {
   update_id: number;
@@ -156,7 +157,7 @@ export interface MerchantState {
   minigame?: MinigameState; // Phase 57: spin-wheel state (persist tanpa overwrite)
   locale?: 'BM' | 'EN'; // Phase 60: user language preference (i18n)
   last_active: string; // ISO timestamp untuk 1-hour timeout
-}
+} 
 
 // Start: Phase 57 - Minigame State (persisted in MerchantState.minigame)
 export interface MinigameState {
@@ -175,7 +176,7 @@ export interface TelegramApiResponse {
 
 // Start: Phase 29 - Invoice & Analytics Type Schemas (Fasal 4 SOA single source)
 // Re-eksport kontrak Invoice dari engine (services/invoice) supaya semua modul
-// share schema tunggal tanpa duplikasi. Type-only import elak cycle runtime.
+// berkongsi skema tunggal tanpa duplikasi. Import jenis sahaja mengelakkan kitaran runtime.
 export type { Invoice, InvoiceLineItem, InvoiceQueryBoundary } from './services/invoice';
 
 /** Sempadan query analitik pilihan (digunakan invoice + analytics layer). */
@@ -203,7 +204,7 @@ export interface OrderStatusPayload {
 }
 
 // Start: Phase 31 - Bot Command Registry (Fasal 4 SOA command tree matrix)
-/** Nama arahan kanonikal yang diaktifkan penuh dalam Phase 31. */
+/** Nama perintah kanonikal yang diaktifkan sepenuhnya dalam Fasa 31. */
 export type BotCommandName =
   | '/start'
   | '/mula'
@@ -212,19 +213,19 @@ export type BotCommandName =
   | '/menu'
   | '/urus'
   | '/dashboard';
-
-/** Peranan sasaran setiap arahan (pengasingan multi-tenant Fasal 7 S1). */
+ 
+/** Peranan sasaran setiap perintah (pengasingan multi-tenant Fasa 7 S1). */
 export type BotCommandRole = 'customer' | 'merchant' | 'both';
 
-/** Registry statik memetakan arahan ke sub-handler khusus (LOOP 1-2 modules). */
+/** Registri statik memetakan perintah kepada sub-handler khusus (LOOP 1-2 modul). */
 export interface BotCommandRegistry {
   command: BotCommandName;
   description: string;
   role: BotCommandRole;
   handler: 'handleStart' | 'handleHelp' | 'handleShopMenu' | 'handleMerchantDashboard';
 }
-
-/** Senarai registry arahan bot (rujukan tunggal router handlers.ts). */
+ 
+/** Senarai registri perintah bot (rujukan tunggal router handlers.ts). */
 export const BOT_COMMAND_MATRIX: BotCommandRegistry[] = [
   { command: '/start', description: 'Mula & pilih peranan', role: 'both', handler: 'handleStart' },
   { command: '/mula', description: 'Mula (BM) & pilih peranan', role: 'both', handler: 'handleStart' },
@@ -234,8 +235,8 @@ export const BOT_COMMAND_MATRIX: BotCommandRegistry[] = [
   { command: '/urus', description: 'Papan pemerintah peniaga', role: 'merchant', handler: 'handleMerchantDashboard' },
   { command: '/dashboard', description: 'Papan pemerintah (alias)', role: 'merchant', handler: 'handleMerchantDashboard' },
 ];
-
-/** Lanjutan state transition untuk pokok arahan interaktif (Fasal 7 Strategy 2). */
+ 
+/** Lanjutan transisi state untuk pokok perintah interaktif (Fasa 7 Strategi 2). */
 export type InteractiveCommandStep =
   | 'idle'
   | 'dashboard_view'
@@ -243,6 +244,7 @@ export type InteractiveCommandStep =
   | 'help_view';
 
 /** State mesin arahan interaktif disimpan bersama MerchantState. */
+/** State mesin perintah interaktif disimpan bersama MerchantState. */
 export interface CommandSessionState {
   telegram_id: number;
   step: InteractiveCommandStep;
@@ -271,7 +273,7 @@ export interface CachedCommandSession {
   ttl_seconds: number; // 3600 (1-jam)
 }
 
-/** Peranan command untuk panduan menu natif (customer/merchant/admin). */
+/** Peranan perintah untuk panduan menu natif (customer/merchant/admin). */
 export type CommandRole = 'customer' | 'merchant' | 'admin' | 'both';
 
 /** Registry 30-command natif BM (satu sumber benar untuk telegram_setup.ts). */
@@ -352,6 +354,7 @@ export interface NetworkTelemetryStats {
 }
 
 /** Payload amaran yang dihantar ke ADMIN_TELEGRAM_ID bila drift berterusan. */
+// Payload amaran yang dihantar ke ADMIN_TELEGRAM_ID apabila hanyutan berterusan.
 // Start: Phase 36 - Telemetry <-> Analytics Schema Synchronization
 // Selaraskan dengan sistem analytics (services/analytics SaasMetrics/PublicStats)
 // supaya sentinel boleh lampirkan snapshot metrik platform ke dalam alert.

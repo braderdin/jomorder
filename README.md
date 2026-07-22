@@ -19,8 +19,7 @@
 ---
 
 ## ✨ Apa itu JomOrder?
-
-JomOrder membantu peniaga F&B Malaysia menerima pesanan secara digital tanpa kos operasi — terus ke Telegram yang pelanggan dah guna setiap hari.
+JomOrder membantu peniaga F&B Malaysia menerima pesanan secara digital tanpa kos operasi — terus ke Telegram yang pelanggan sudah gunakan setiap hari.
 
 - **Multi-Tenant** — setiap kedai dapat ruang sendiri, data diasingkan selamat.
 - **Interface Bahasa Malaysia** — mesra pengguna tempatan, tak perlu switch app.
@@ -77,23 +76,21 @@ Portal web turut memaparkan **GUI Nav Button Grid** (glow hover Modern-Siber) di
 ---
 
 ## 🧱 Teknologi
-
-Dibina sebagai *serverless-first SaaS* menggunakan edge compute, managed database dan cache layer — tanpa pelayan untuk diurus.
+Dibina sebagai SaaS serverless-first menggunakan edge compute, pangkalan data terurus dan lapisan cache — tanpa pelayan untuk diuruskan.
 
 ---
 
 ## 📜 Lesen
-
 MIT © JomOrder — Projek MDEC GLOW.
 
 ---
 
 # Start: Phase 57 - Minigame + R2 Storage + Landing Page Upgrade
 - Minigame spin-wheel "Pusing Roda Makanan" (hiburan, tanpa kupon): src/services/minigame.ts + src/handlers/minigame_gui.ts
-- Landing page "🍔 Buka Menu" glow button + scroll ke #menu-grid (index.html + style.css + script.js)
-- R2 Storage quota enforcer (20MB/akaun) + image optimize guard (<150KB WebP)
+- Laman utama "🍔 Buka Menu" butang bercahaya + tatal ke #menu-grid (index.html + style.css + script.js)
+- Penguatkuasa kuota Storan R2 (20MB/akaun) + pelindung pengoptimuman imej (<150KB WebP)
 - QR DuitNow upload ke R2 melalui /tetapan -> Muat Naik QR (settings.ts)
-- Redis mergeState (atomic field merge, elak overwrite field lain)
+- Redis mergeState (penggabungan medan atomik, mengelakkan penulisan ganti medan lain)
 - Minigame analytics lightweight counter (session_cache.ts + analytics.ts)
 - Customer GUI richer grid (Bayar / Nilai) + Merchant GUI QR DuitNow button
 - Router: open_pay + open_review + upload_qr routed
@@ -102,20 +99,21 @@ MIT © JomOrder — Projek MDEC GLOW.
 # End: Phase 57 - Minigame + R2 Storage + Landing Page Upgrade
 
 # Start: Phase 58 - GUI Elevation & UX Polish
-- Persistent reply keyboard pelanggan (`customerReplyKeyboard`) & peniaga (`merchantReplyKeyboard`) pada semua skrin utama.
-- Auto-role detect di `/start` -> route terus ke Customer GUI atau Merchant Papan (tiada taip /command).
+- Papan kekunci balasan berterusan pelanggan (`customerReplyKeyboard`) dan peniaga (`merchantReplyKeyboard`) pada semua skrin utama.
+- Pengesanan peranan automatik di `/start` -> laluan terus ke GUI Pelanggan atau Papan Pemuka Peniaga (tanpa menaip /command).
 - Nested BACK chain: `back:customer`, `back:merchant`, `back:cart`, `back:shop` + smart parent return.
-- Empty-state mesra: troli kosong & tiada pesanan aktif papar CTA "Cari Kedai" + promo.
+- Keadaan kosong yang mesra: troli kosong dan tiada pesanan aktif memaparkan CTA "Cari Kedai" + promo.
 - Order progress bar emoji (DITERIMA 🟡 / MEMASAK 🟢 / DIHANTAR 🔵 / SIAP 🟣) pada `handlePesananSaya`.
 - Rich menu item card helper (`buildMenuItemCaption`, `menuItemAddKeyboard`) di `ui_helpers.ts`.
-- Quick Reorder: snapshot cart ke state + `reorderKeyboard` 1-tap pesan semula.
-- Landing page deep-link `?start=menu` scroll terus ke #menu-grid + butang "🍔 Buka Menu Terus".
+- Pesanan Semula Pantas: snapshot cart ke state + `reorderKeyboard` pesan semula dengan 1-ketuk.
+- Pautan dalam laman utama `?start=menu` tatal terus ke #menu-grid + butang "🍔 Buka Menu Terus".
 - Minigame polish: persistent keyboard + glow style (`.showcase-btn`).
 # End: Phase 58 - GUI Elevation & UX Polish
 
 # Start: Phase 59 - Webhook Resilience, i18n & Photo Cards
 - Webhook retry/backoff bridge (`src/services/telegram_retry_bridge.ts`) + middleware binding di `telegram.ts` `sendMessage` (429/5xx auto-retry, clean 200 OK ke Telegram pada timeout, Fasal 7 S4).
 - Image optimization pipeline (`image_optimize.ts`) + storage quota guard (<150KB WebP, 25MB akaun) di `storage_quota.ts`; `storage.ts` convert ke WebP sebelum upload R2.
+- Saluran pengoptimuman imej (`image_optimize.ts`) + pelindung kuota storan (<150KB WebP, 25MB akaun) di `storage_quota.ts`; `storage.ts` menukar ke WebP sebelum muat naik ke R2.
 - Merchant menu photo upload `/tetapan -> Muat Naik Foto Menu` terus ke R2 WebP (`merchant.ts` + `handleSetMenuPhoto`).
 - e2e-regression.sh (tsc + smoke + e2e flow) + hook di `smoke-test.sh` (`-e2e` flag).
 - testing.ts GUI matrix (caption/keyboard/back assertion) + sentinel version bump.
@@ -123,12 +121,11 @@ MIT © JomOrder — Projek MDEC GLOW.
 - Shop photo card caption (`buildShopCaption`) + menu photo grid glow (style.css).
 - Manual action: TIADA (semua DDL automatik via postgres MCP).
 # End: Phase 59 - Webhook Resilience, i18n & Photo Cards
-
 # Start: Phase 60 - Founder Demo Shop, CI/CD Auto & MDEC GLOW Ready
-- Kedai contoh pengasas (fixed UUID 00000000-0000-0000-0000-000000000001) + 8 menu dummy di `src/db/migrations/025_founder_demo_shop.sql` (idempoten, auto-apply CI + postgres MCP).
+- Kedai contoh pengasas (UUID tetap 00000000-0000-0000-0000-000000000001) + 8 menu dummy di `src/db/migrations/025_founder_demo_shop.sql` (idempoten, aplikasi automatik CI + postgres MCP).
 - Public API `/api/founder-showcase` (index.ts) + helper `getFounderShop` / `getFounderMenu` (db.ts, service_role soft-fail).
 - Landing page Section C3 "Kedai Contoh Pengasas" dengan grid menu live (index.html + script.js `fetchFounderShop`, glow style.css `.menu-card`/`.founder-badge`).
-- GitHub Actions `deploy.yml`: auto apply migration 025 + auto `force-webhook-register.sh` (zero manual) pasca-deploy; `cron.yml`: auto `coupon-sweep` + `daily-digest` (tiada notifikasi ke admin, ikut permintaan).
+- GitHub Actions `deploy.yml`: aplikasi migrasi 025 automatik + force-webhook-register.sh automatik (sifar manual) pasca-deploy; `cron.yml`: coupon-sweep automatik + daily-digest (tiada notifikasi kepada admin, mengikut permintaan).
 - start.ts welcome message + router_callbacks `founder_view` (lihat kedai contoh terus dari bot).
 - customer_gui featured pin kedai pengasas + ui_helpers caption; i18n expansion (founderShop/founderTagline) + customer_cart EN toggle.
 - sentinel version bump ke "v9.1.0-phase60" + smoke-test assertion `/api/founder-showcase`.

@@ -1,7 +1,9 @@
 -- Start: Phase 60 - Founder Demo Shop Seed Data (Dummy Showcase)
 -- Idempotent INSERT untuk kedai contoh pengasas + 8 menu dummy.
 -- Semua baris guna ON CONFLICT DO NOTHING supaya re-run selamat.
+-- Semua baris menggunakan ON CONFLICT DO NOTHING supaya pelaksanaan semula yang selamat.
 -- Kedai ini PREMIUM + DILULUSKAN untuk marketing MDEC GLOW.
+-- Kedai ini PREMIUM + DILULUSKAN untuk pemasaran MDEC GLOW.
 -- Fasal 7 Strategy 1: merchant_telegram_id='0' (dummy, isolation retained).
 
 -- 1. Kedai pengasas (fixed UUID supaya menu boleh ikat).

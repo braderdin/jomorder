@@ -1,15 +1,15 @@
 // Start: Phase 31 - /help & /bantuan Command Controller (LOOP 1 File 2)
-// Fasal 4 (SOA) + Fasal 6 (HTML guide + inline operator queues)
-// Arahan: papar panduan interaktif HTML dengan butang dinamik ke barisan operator.
+// Fasa 4 (SOA) + Fasa 6 (panduan HTML + barisan operator inline)
+// Perintah: memaparkan panduan interaktif HTML dengan butang dinamik ke barisan operator.
 import { Env, TelegramUser } from '../types';
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
-
-/**
- * Hantar mesej berformat HTML (parse_mode=HTML) dengan inline keyboard.
- * Dipisah dari sendMessage MarkdownV2 standard supaya panduan kekal kaya
- * tanpa perlu escape setiap aksara MarkdownV2 (Fasal 6).
- */
+ 
+/** 
+ * Hantar mesej berformat HTML (parse_mode=HTML) dengan papan kekunci inline.
+ * Dipisahkan dari sendMessage MarkdownV2 standard supaya panduan kekal kaya
+ * tanpa perlu escape setiap aksara MarkdownV2 (Fasa 6).
+ */ 
 async function sendHtmlMessage(
   env: Env,
   chatId: number,
@@ -30,15 +30,15 @@ async function sendHtmlMessage(
       body: JSON.stringify(payload),
     });
   } catch {
-    // Soft-fail (Fasal 7 Strategy 4): jangan biarkan panduan gagal keras
+    // Soft-fail (Fasa 7 Strategi 4): jangan biarkan panduan gagal secara keras
   }
 }
-
-/**
- * Controller untuk arahan '/help' dan '/bantuan'.
- * Papar dokumen panduan user berformat HTML dengan butang inline yang
- * terus menghubungkan ke barisan operator sokongan (Fasal 6 mobile grid).
- */
+ 
+/** 
+ * Controller untuk perintah '/help' dan '/bantuan'.
+ * Memaparkan dokumen panduan pengguna berformat HTML dengan butang inline yang
+ * terus menghubungkan ke barisan operator sokongan (Fasa 6 mobile grid).
+ */ 
 export async function handleHelp(env: Env, chatId: number, _user: TelegramUser | undefined): Promise<void> {
   const html =
     '<b>📖 PANDUAN JomOrder Modern-Siber</b>\n\n' +
@@ -46,10 +46,10 @@ export async function handleHelp(env: Env, chatId: number, _user: TelegramUser |
     '👨‍🍳 <b>Peniaga (13):</b> /daftar · /tambah_menu · /senarai_menu · /urus_kedai · /laporan_jualan · /cipta_kupon · /senarai_kupon · /padam_kupon · /invois · /tetapan · /set_lokasi · /zon_operasi · /naiktaraf\n\n' +
     '🛒 <b>Pelanggan (11):</b> /cari_makan · /menu · /menu_kedai · /troli · /cart_kosong · /pesanan_saya · /senarai_pesanan · /sejarah_pesanan · /promo · /profil · /batalkan_pesanan · /bantuan_lokasi\n\n' +
     '⚙️ <b>Pentadbir (6):</b> /admin_stats · /senarai_pendaftaran · /pengumuman · /status · /bantuan · /start\n\n' +
-    '✅ <b>JUMLAH 30 ARAHAN AKTIF</b>\n\n' +
-    '🚀 <b>Cara buat pesanan:</b> tekan 📍 Kedai Berdekatan → pilih kedai → tambah ke troli → 💳 Bayar Sekarang.\n\n' +
+    '✅ <b>JUMLAH 30 PERINTAH AKTIF</b>\n\n' +
+    '🚀 <b>Cara membuat pesanan:</b> tekan 📍 Kedai Berdekatan → pilih kedai → tambah ke troli → 💳 Bayar Sekarang.\n\n' +
     'Ada masalah? Hubungi barisan operator kami di bawah 👇';
-
+ 
   const inline = {
     inline_keyboard: [
       [{ text: '🏪 Panduan Peniaga', callback_data: 'help_merchant' }, { text: '🛒 Panduan Pelanggan', callback_data: 'help_customer' }],
@@ -62,11 +62,11 @@ export async function handleHelp(env: Env, chatId: number, _user: TelegramUser |
 }
 
 // Start: Phase 47 - Category-Specific Help Deep-Link Router
-/**
+/** 
  * handleHelpCategory
- * Papar panduan mendalam mengikut kategori (peniaga/pelanggan/pentadbir).
+ * Memaparkan panduan mendalam mengikut kategori (peniaga/pelanggan/pentadbir).
  * Dipanggil dari deep-link start payload (help_xxx) atau callback help_xxx.
- */
+ */ 
 export async function handleHelpCategory(
   env: Env,
   chatId: number,
@@ -119,6 +119,7 @@ export async function handleHelpCategory(
         '• <b>/cipta_kupon</b> — Cipta diskaun (PREMIUM)\n' +
         '• <b>/naiktaraf</b> — Naik taraf PREMIUM\n\n' +
         'Guna butang 📍 Kongsi Lokasi untuk set lokasi kedai.';
+        'Gunakan butang 📍 Kongsi Lokasi untuk menetapkan lokasi kedai.';
     } else if (category === 'pelanggan') {
       html +=
         '🛒 <b>PANDUAN PELANGGAN</b>\n\n' +
@@ -152,9 +153,9 @@ export async function handleHelpCategory(
 
 /**
  * handleHelpLocaleToggle
- * Terima callback help_locale:<category>:<locale> -> re-render kategori
- * dalam locale baharu (BM <-> EN) tanpa regression (default 'ms').
- */
+ * Menerima callback help_locale:<category>:<locale> -> memaparkan semula kategori
+ * dalam locale baharu (BM <-> EN) tanpa regression (lalai 'ms').
+ */ 
 export async function handleHelpLocaleToggle(
   env: Env,
   chatId: number,
@@ -166,23 +167,23 @@ export async function handleHelpLocaleToggle(
 // End: Phase 47 - Category-Specific Help Deep-Link Router
 
 // Start: Phase 52 - /bantuan_lokasi (Location Sharing Guide)
-/**
+/** 
  * handleBantuanLokasi
- * Panduan kongsi lokasi untuk carian kedai berdekatan + set lokasi kedai.
- * Dipanggil dari /bantuan_lokasi (pelanggan & peniaga).
- */
+ * Panduan kongsi lokasi untuk carian kedai berdekatan + menetapkan lokasi kedai.
+ * Dipanggil dari /bantuan_lokasi (pelanggan dan peniaga).
+ */ 
 export async function handleBantuanLokasi(env: Env, chatId: number): Promise<void> {
   const html =
     '<b>📍 PANDUAN KONGSI LOKASI</b>\n\n' +
     '🔎 <b>Pelanggan</b>\n' +
     '• Tekan butang 📍 <b>Kedai Berdekatan</b> atau taip /cari_makan\n' +
     '• Hantar lokasi anda (attachment 📎 → Location)\n' +
-    '• Kami cari restoran dalam radius 10km (Haversine)\n\n' +
+    '• Kami mencari restoran dalam radius 10km (Haversine)\n\n' +
     '🏪 <b>Peniaga</b>\n' +
-    '• Taip /set_lokasi untuk buka flow koordinat\n' +
-    '• Kongsi lokasi kedai supaya pelanggan jumpa anda\n' +
+    '• Taip /set_lokasi untuk membuka aliran koordinat\n' +
+    '• Kongsi lokasi kedai supaya pelanggan menemui anda\n' +
     '• Atau taip manual: /set_lokasi 3.1390 101.6869\n\n' +
-    'Lokasi disimpan selamat ikut RLS kedai anda sahaja.';
+    'Lokasi disimpan dengan selamat mengikut RLS kedai anda sahaja.';
   const inline = {
     inline_keyboard: [
       [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🛒 Troli', callback_data: 'open_cart' }],
