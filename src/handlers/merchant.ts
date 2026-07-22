@@ -13,6 +13,7 @@ import { notifyCustomerOrderUpdate } from '../services/notifications';
 import { createCoupon, listCoupons } from '../services/discounts';
 import { uploadMerchantAsset } from '../services/storage';
 import { guardUpload } from '../services/image_optimize';
+import { handleMerchantOnboarding } from './merchant_onboarding';
 
 // Telegram Bot API base (Fasal 6 - native file send endpoint).
 const TELEGRAM_API = 'https://api.telegram.org/bot';
@@ -161,8 +162,8 @@ export async function handleMerchantCallback(
 
 /**
  * handleMerchantMessage
- * Tangani mesej teks milik peniaga: menu dashboard, pendaftaran kedai,
- * fallback daftar, dan default. (Geolocation & checkout diurus customer.ts)
+ * Tangani mesej teks milik peniaga: menu dashboard, pendaftaran kedai.
+ * Delegation: Onboarding flow diurus penuh oleh handleMerchantOnboarding.
  */
 export async function handleMerchantMessage(
   env: Env,
@@ -170,60 +171,20 @@ export async function handleMerchantMessage(
   tgId: number,
   text: string
 ): Promise<void> {
-  // Start: Phase 39 - Responsive Onboarding Thread Lock-Clear (anti-abandon)
-  // Tangani /daftar, /set_lokasi, /urus_kedai secara interaktif dengan
-  // persist state segera + prompt jelas supaya thread tak terbengkalai.
-  // Phase 39: guard double-setState dan pastikan setiap branch return segera
-  // (tiada fall-through ke bawah yang buat thread tersekat).
-  if (text === '/daftar' || text === '/urus_kedai' || text === '/set_lokasi') {
-    const exists = await checkMerchantExists(env, tgId);
-    if (text === '/set_lokasi') {
-      if (!exists) {
-        await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum daftar kedai. Taip /daftar untuk mula.'), daftarKedaiKeyboard());
-        return;
-      }
-      await setState(env, {
-        merchant_telegram_id: tgId,
-        step: 'awaiting_shop_location',
-        last_active: new Date().toISOString(),
-      });
-      await sendMessage(env, chatId, escapeMarkdownV2('📍 Hantar lokasi baharu kedai anda dengan butang 📍 di bawah:'), {
-        keyboard: [[{ text: '📍 Kongsi Lokasi Kedai', request_location: true }]],
-        resize_keyboard: true,
-        one_time_keyboard: false,
-      });
-      return;
-    }
-    // /daftar & /urus_kedai
-    if (exists) {
-      await setState(env, {
-        merchant_telegram_id: tgId,
-        step: 'idle',
-        last_active: new Date().toISOString(),
-      });
-      await sendMessage(env, chatId, escapeMarkdownV2('🏪 Kedai anda sudah berdaftar. Gunakan butang di bawah untuk urus operasi.'), merchantMenuKeyboard());
-      return;
-    }
-    await setState(env, {
-      merchant_telegram_id: tgId,
-      step: 'awaiting_shop_name',
-      last_active: new Date().toISOString(),
-    });
-    await sendMessage(env, chatId, escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:'), daftarKedaiKeyboard());
-    return;
-  }
-  // End: Phase 39 - Responsive Onboarding Thread Lock-Clear
+  // Start: Phase 70 - Onboarding Delegation (SSOT)
+  // Semua logik /daftar, /set_lokasi, /urus_kedai didelegasikan ke merchant_onboarding.ts
+  const onboardingHandled = await handleMerchantOnboarding(env, chatId, tgId, text);
+  if (onboardingHandled) return;
+  // End: Phase 70 - Onboarding Delegation
 
   // Start: Fasa 15 - Premium Upsell Command (/naiktaraf)
   if (text === '/naiktaraf') {
-    // Start: Fasa 18 Rate-Limit Key Centralization - guna helper rateLimitKey (jo:limit:{id})
     const limitKey = rateLimitKey(String(tgId));
     const allowed = await checkRateLimit(env, limitKey);
     if (!allowed) {
       await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan naik taraf. Sila cuba sebentar lagi.'), merchantMenuKeyboard());
       return;
     }
-    // End: Fasa 16 Spam Protection Rate-Limiting
     const exists = await checkMerchantExists(env, tgId);
     if (!exists) {
       await sendMessage(env, chatId, escapeMarkdownV2('Hai! Anda belum daftar kedai. Tekan butang di bawah untuk mula 🚀'), daftarKedaiKeyboard());
@@ -234,7 +195,6 @@ export async function handleMerchantMessage(
       await sendMessage(env, chatId, escapeMarkdownV2('⭐ Anda sudah akaun PREMIUM! Nikmati semua ciri eksklusif.'), merchantMenuKeyboard());
       return;
     }
-    // Simulasi payment gateway check-out success (Fasa 15 flow).
     const upgraded = await upgradeMerchantToPremium(env, tgId);
     if (upgraded) {
       await sendMessage(
@@ -248,7 +208,7 @@ export async function handleMerchantMessage(
     }
     return;
   }
-  // End: Fasa 15 - Premium Upsell Command (/naiktaraf)
+  // End: Fasa 15 - Premium Upsell Command
 
   // Start: Fasa 14 - Premium Coupon Commands (guarded)
   if (text.startsWith('/cipta_kupon') || text.startsWith('/senarai_kupon')) {
@@ -258,7 +218,6 @@ export async function handleMerchantMessage(
       return;
     }
     const subStatus = await getSubscriptionStatus(env, tgId);
-    // Guard: hanya akaun PREMIUM atau AKTIF diluluskan sahaja (premium SaaS gate)
     const premiumDiluluskan = (subStatus as string) === 'PREMIUM' || subStatus === 'AKTIF';
     if (!premiumDiluluskan) {
       await sendMessage(env, chatId, escapeMarkdownV2('🔒 Ciri kupon adalah eksklusif PREMIUM. Sila naik taraf langganan anda.'), merchantMenuKeyboard());
@@ -305,7 +264,7 @@ export async function handleMerchantMessage(
     }
     return;
   }
-  // End: Fasa 14 - Premium Coupon Commands (guarded)
+  // End: Fasa 14 - Premium Coupon Commands
 
   // Langkah A: 💼 Menu Peniaga
   if (text === '💼 Menu Peniaga') {
@@ -336,16 +295,14 @@ export async function handleMerchantMessage(
     return;
   }
 
-  // Semak state sedia ada (Fasal 7 Strategy 2)
+  // Semak state sedia ada (Fasal 7 Strategy 2) - input nama kedai selepas /daftar
   const current = await getState(env, tgId);
   if (current?.step === 'awaiting_shop_name') {
-    // Phase 40: sanitasi + validasi nama kedai sebelum commit (clean dangling params).
-    const cleanName = sanitizeShopName(text);
-    if (!isValidNameKedai(cleanName)) {
+    const cleanName = (text || '').replace(/[\r\n]/g, ' ').trim().slice(0, 60);
+    if (cleanName.length === 0) {
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Nama kedai tidak sah. Sila taip nama kedai yang sah (1-60 aksara).'), daftarKedaiKeyboard());
       return;
     }
-    // Langkah B: simpan nama kedai, minta lokasi native Telegram (Fasal 7 Strategy 2).
     const next: MerchantState = {
       merchant_telegram_id: tgId,
       shop_name: cleanName,
@@ -378,58 +335,10 @@ export async function handleMerchantMessage(
     return;
   }
 
-  // Start: Phase 38 - /urus_kedai Onboarding Redis Harmonization
-  // Route eksplisit untuk buka papan kedai; persist state ke Redis (Fasal 7 Strategy 2)
-  // supaya session panjang tidak hilang antara callback.
-  if (text === '/urus_kedai' || text === '/daftar') {
-    const exists = await checkMerchantExists(env, tgId);
-    if (exists) {
-      const st: MerchantState = {
-        merchant_telegram_id: tgId,
-        step: 'idle',
-        last_active: new Date().toISOString(),
-      };
-      await setState(env, st);
-      await sendMessage(env, chatId, escapeMarkdownV2('🏪 Kedai anda sudah berdaftar. Gunakan butang di bawah untuk urus operasi.'), merchantMenuKeyboard());
-      return;
-    }
-    const next: MerchantState = {
-      merchant_telegram_id: tgId,
-      step: 'awaiting_shop_name',
-      last_active: new Date().toISOString(),
-    };
-    await setState(env, next);
-    await sendMessage(env, chatId, escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:'), daftarKedaiKeyboard());
-    return;
-  }
-  // End: Phase 38 - /urus_kedai Onboarding Redis Harmonization
-
   await sendMessage(env, chatId, escapeMarkdownV2('Menu utama JomOrder 🤖'), navGrid());
 }
 
-// Start: Phase 40 - Onboarding Input Sanitizer (clean dangling params)
-/**
- * sanitizeShopName
- * Bersihkan input nama kedai: potong 60 char, buang whitespace hadapan/akhir,
- * elak injection karakter baris baru. Guard input dangling (Fasal 7 S4).
- */
-function sanitizeShopName(raw: string): string {
-  return (raw || '').replace(/[\r\n]/g, ' ').trim().slice(0, 60);
-}
-
-/**
- * isValidNameKedai
- * Sahkan nama kedai tidak kosong selepas sanitasi.
- */
-function isValidNameKedai(name: string): boolean {
-  return sanitizeShopName(name).length > 0;
-}
-// End: Phase 40 - Onboarding Input Sanitizer
-
 // Start: Phase 23 - Merchant Geolocation Intercept (awaiting_shop_location)
-// Tangkap native Telegram location object, kunci lat/long, dan commit ke
-// senarai_kedai via daftarKedaiPermulaan (Fasal 7 Strategy 2 + Strategy 1).
-// Return true jika lokasi diuruskan (halang lencongan ke customer pipeline).
 export async function handleMerchantLocation(
   env: Env,
   chatId: number,
@@ -470,24 +379,7 @@ export async function handleMerchantLocation(
   }
   return true;
 }
-// Removed: handleSenaraiMenu and handleSetLokasi as they are now in merchant_menu.ts
-
-// Dummy implementations for handleSenaraiMenu and handleSetLokasi
-// These functions are expected to be exported from here by src/handlers.ts
-// and were previously imported from a non-existent merchant_menu.ts.
-// Their actual logic would need to be moved from merchant_menu.ts if it exists.
-export async function handleSenaraiMenu(env: Env, chatId: number, tgId: number): Promise<void> {
-  // Placeholder implementation
-  await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Fungsi senarai menu belum diimplementasi sepenuhnya di sini.'));
-  // You might want to add merchantMenuKeyboard() here if it's a menu screen
-}
-
-export async function handleSetLokasi(env: Env, chatId: number, tgId: number): Promise<void> {
-  // Placeholder implementation
-  await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Fungsi tetapkan lokasi belum diimplementasi sepenuhnya di sini.'));
-  // You might want to add merchantMenuKeyboard() here if it's a settings screen
-}
-// End: Phase 37 - Merchant Catalog & Location Hooks
+// End: Phase 23 - Merchant Geolocation Intercept
 
 /** Helper: dapatkan kedai_id dari merchant_telegram_id (RLS bind). */
 async function getKedaiIdByMerchant(env: Env, tgId: number): Promise<string | null> {
@@ -510,12 +402,6 @@ async function getKedaiIdByMerchant(env: Env, tgId: number): Promise<string | nu
 }
 
 // Start: Phase 41 - 22 Command BM Activation (handleTambahMenu export)
-/**
- * handleTambahMenu
- * Alias /tambah_menu -> set state awaiting_menu_item supaya peniaga boleh
- * taip nama + harga hidangan secara interaktif (Fasal 7 Strategy 2 state).
- * Jika kedai belum wujud, arahkan ke /daftar.
- */
 export async function handleTambahMenu(
   env: Env,
   chatId: number,
@@ -539,18 +425,38 @@ export async function handleTambahMenu(
     merchantMenuKeyboard()
   );
 }
-// End: Phase 41 - 22 Command BM Activation (handleTambahMenu export)
+// End: Phase 41 - 22 Command BM Activation
 
-// End: Phase 37 - Merchant Catalog & Location Hooks
+// Start: Phase 70 - handleSenaraiMenu Implementation (dari merchant_menu_gui.ts)
+export async function handleSenaraiMenu(env: Env, chatId: number, tgId: number): Promise<void> {
+  // Import dynamic to avoid circular dependency
+  const { handleMerchantMenuGui } = await import('./merchant_menu_gui');
+  await handleMerchantMenuGui(env, chatId, tgId);
+}
+// End: Phase 70 - handleSenaraiMenu Implementation
+
+// Start: Phase 70 - handleSetLokasi Implementation
+export async function handleSetLokasi(env: Env, chatId: number, tgId: number): Promise<void> {
+  const exists = await checkMerchantExists(env, tgId);
+  if (!exists) {
+    await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum daftar kedai. Taip /daftar untuk mula.'), daftarKedaiKeyboard());
+    return;
+  }
+  const next: MerchantState = {
+    merchant_telegram_id: tgId,
+    step: 'awaiting_shop_location',
+    last_active: new Date().toISOString(),
+  };
+  await setState(env, next);
+  await sendMessage(env, chatId, escapeMarkdownV2('📍 Hantar lokasi kedai anda dengan butang 📍 di bawah:'), {
+    keyboard: [[{ text: '📍 Kongsi Lokasi Kedai', request_location: true }]],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  });
+}
+// End: Phase 70 - handleSetLokasi Implementation
 
 // Start: Phase 51 - R2 QR Upload Photo Handler (Fasal 8 storage wiring)
-/**
- * handleMerchantPhoto
- * Tangkap foto dari peniaga (state awaiting_qr_upload), download dari Telegram
- * via getFile, upload ke R2 (uploadMerchantAsset), dan patch duitnow_qr_url
- * di senarai_kedai. Soft-fail: mesej ralat tanpa crash (Fasal 7 Strategy 4).
- * @returns true jika foto diuruskan (QR upload path)
- */
 export async function handleMerchantPhoto(
   env: Env,
   chatId: number,
@@ -561,13 +467,11 @@ export async function handleMerchantPhoto(
   if (!st || (st as unknown as { step?: string }).step !== 'awaiting_qr_upload') return false;
 
   try {
-    // 0. Guard storan sebelum download (jimat bandwidth, Fasal 8).
     const guard = await guardUpload(env, tgId, 2_000_000);
     if (!guard.ok) {
       await sendMessage(env, chatId, escapeMarkdownV2(`⚠️ ${guard.reason ?? 'Storan penuh'}`));
       return true;
     }
-    // 1. Dapatkan path fail dari Telegram getFile
     const gfUrl = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`;
     const gfRes = await fetch(gfUrl, { method: 'GET' });
     if (!gfRes.ok) {
@@ -579,7 +483,6 @@ export async function handleMerchantPhoto(
       await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Fail tidak sah. Cuba lagi.'));
       return true;
     }
-    // 2. Download byte imej
     const dlUrl = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/${gf.result.file_path}`;
     const dlRes = await fetch(dlUrl, { method: 'GET' });
     if (!dlRes.ok) {
@@ -587,15 +490,11 @@ export async function handleMerchantPhoto(
       return true;
     }
     const buf = new Uint8Array(await dlRes.arrayBuffer());
-
-    // 3. Upload ke R2 (validasi WebP + 2MB auto-dalam storage.ts)
     const up = await uploadMerchantAsset(env, tgId, 'duitnow_qr', buf);
     if (!up.success || !up.url) {
       await sendMessage(env, chatId, escapeMarkdownV2(`⚠️ Gagal simpan QR: ${up.error ?? 'R2 tiada'}`));
       return true;
     }
-
-    // 4. Patch duitnow_qr_url ke senarai_kedai (RLS bind tgId)
     const kedaiId = await getKedaiIdByMerchant(env, tgId);
     if (kedaiId) {
       const patchUrl = `${env.SUPABASE_URL}/rest/v1/senarai_kedai?id=eq.${encodeURIComponent(kedaiId)}`;
@@ -609,8 +508,6 @@ export async function handleMerchantPhoto(
         body: JSON.stringify({ duitnow_qr_url: up.url }),
       });
     }
-
-    // 5. Reset state + confirm
     await setState(env, {
       merchant_telegram_id: tgId,
       step: 'idle',
@@ -623,8 +520,6 @@ export async function handleMerchantPhoto(
     return true;
   }
 }
-// End: Phase 51 - R2 QR Upload Photo Handler (Fasal 8 storage wiring)
-
-// End: Phase 23 - Merchant Geolocation Intercept
+// End: Phase 51 - R2 QR Upload Photo Handler
 
 // End: JomOrder Fasa 9 - Modular Merchant Handler (File 2)

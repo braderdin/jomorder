@@ -6,6 +6,8 @@
 set -euo pipefail
 
 DEV_VARS=".dev.vars"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 if [[ ! -f "$DEV_VARS" ]]; then
   echo "ERROR: $DEV_VARS tidak dijumpai. Pastikan berada di root projek."
   exit 1
@@ -86,48 +88,20 @@ fi
 
 echo "Phase39: Pendaftaran webhook selesai."
 
-# Start: Phase 44 - Re-Sync 22 Native Commands (termasuk /status)
-echo "Phase44: Menyelaraskan 22 perintah natif (setMyCommands) ..."
-SET_CMD_RESP="$(curl -s -X POST \
-  "${TELEGRAM_API_BASE_URL}${BOT_TOKEN}/setMyCommands" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "commands": [
-      {"command":"/start","description":"Mula & pilih peranan"},
-      {"command":"/bantuan","description":"Panduan interaktif bot"},
-      {"command":"/menu","description":"Senarai kedai aktif"},
-      {"command":"/menu_kedai","description":"Lihat menu kedai"},
-      {"command":"/urus_kedai","description":"Urus kedai saya"},
-      {"command":"/daftar","description":"Daftar kedai baharu"},
-      {"command":"/tambah_menu","description":"Tambah item menu"},
-      {"command":"/senarai_menu","description":"Senarai menu kedai"},
-      {"command":"/cari_makan","description":"Cari kedai berdekatan"},
-      {"command":"/troli","description":"Lihat troli pesanan"},
-      {"command":"/pesanan_saya","description":"Senarai pesanan aktif"},
-      {"command":"/senarai_pesanan","description":"Senarai pesanan saya"},
-      {"command":"/cipta_kupon","description":"Cipta kupon diskaun"},
-      {"command":"/senarai_kupon","description":"Senarai kupon aktif"},
-      {"command":"/padam_kupon","description":"Padam kupon diskaun"},
-      {"command":"/promo","description":"Lihat promosi aktif"},
-      {"command":"/invois","description":"Jana invois digital"},
-      {"command":"/laporan_jualan","description":"Laporan jualan kedai"},
-      {"command":"/tetapan","description":"Tetapan akaun peniaga"},
-      {"command":"/set_lokasi","description":"Tetapkan koordinat kedai"},
-      {"command":"/sejarah_pesanan","description":"Sejarah pesanan saya"},
-      {"command":"/batalkan_pesanan","description":"Batal pesanan tertunda"},
-      {"command":"/profil","description":"Profil & langganan saya"},
-      {"command":"/naiktaraf","description":"Naik taraf pelan premium"},
-      {"command":"/zon_operasi","description":"Senarai zon operasi"},
-      {"command":"/cart_kosong","description":"Kosongkan troli pesanan"},
-      {"command":"/bantuan_lokasi","description":"Panduan ikut lokasi"},
-      {"command":"/admin_stats","description":"Statistik pentadbir"},
-      {"command":"/senarai_pendaftaran","description":"Senarai peniaga berdaftar"},
-      {"command":"/pengumuman","description":"Pengumuman pentadbir"},
-      {"command":"/status","description":"Semak status bot & akaun"}
-    ]
-  }')"
-echo "Phase44: setMyCommands response: ${SET_CMD_RESP}"
-# End: Phase 44 - Re-Sync 22 Native Commands
+# Start: Phase 70 - Dynamic setMyCommands from bot_commands.json (SSOT)
+# Baca perintah dari fail JSON tunggal untuk elak duplikasi di kod/shell
+CMDS_JSON_PATH="${PROJECT_ROOT}/src/bot_commands.json"
+if [[ -f "${CMDS_JSON_PATH}" ]]; then
+  echo "Phase70: Syncing commands from ${CMDS_JSON_PATH}..."
+  SET_CMD_RESP="$(curl -s -X POST \
+    "${TELEGRAM_API_BASE_URL}${BOT_TOKEN}/setMyCommands" \
+    -H "Content-Type: application/json" \
+    -d "{\"commands\": $(cat "${CMDS_JSON_PATH}")}")"
+  echo "Phase70: setMyCommands response: ${SET_CMD_RESP}"
+else
+  echo "[WARNING] bot_commands.json not found, skipping command sync"
+fi
+# End: Phase 70 - Dynamic setMyCommands from bot_commands.json
 
 # Start: Phase 46 - Dead Callback Repair Verification Note
 # Semua 22 perintah natif di atas TELAH diikat kepada router callback yang aktif.

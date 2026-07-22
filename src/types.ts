@@ -203,47 +203,13 @@ export interface OrderStatusPayload {
   status: OrderStatus;
 }
 
-// Start: Phase 31 - Bot Command Registry (Fasal 4 SOA command tree matrix)
-/** Nama perintah kanonikal yang diaktifkan sepenuhnya dalam Fasa 31. */
-export type BotCommandName =
-  | '/start'
-  | '/mula'
-  | '/help'
-  | '/bantuan'
-  | '/menu'
-  | '/urus'
-  | '/dashboard';
- 
-/** Peranan sasaran setiap perintah (pengasingan multi-tenant Fasa 7 S1). */
-export type BotCommandRole = 'customer' | 'merchant' | 'both';
-
-/** Registri statik memetakan perintah kepada sub-handler khusus (LOOP 1-2 modul). */
-export interface BotCommandRegistry {
-  command: BotCommandName;
-  description: string;
-  role: BotCommandRole;
-  handler: 'handleStart' | 'handleHelp' | 'handleShopMenu' | 'handleMerchantDashboard';
-}
- 
-/** Senarai registri perintah bot (rujukan tunggal router handlers.ts). */
-export const BOT_COMMAND_MATRIX: BotCommandRegistry[] = [
-  { command: '/start', description: 'Mula & pilih peranan', role: 'both', handler: 'handleStart' },
-  { command: '/mula', description: 'Mula (BM) & pilih peranan', role: 'both', handler: 'handleStart' },
-  { command: '/help', description: 'Papar panduan interaktif', role: 'both', handler: 'handleHelp' },
-  { command: '/bantuan', description: 'Papar panduan (BM)', role: 'both', handler: 'handleHelp' },
-  { command: '/menu', description: 'Senarai kedai aktif', role: 'customer', handler: 'handleShopMenu' },
-  { command: '/urus', description: 'Papan pemerintah peniaga', role: 'merchant', handler: 'handleMerchantDashboard' },
-  { command: '/dashboard', description: 'Papan pemerintah (alias)', role: 'merchant', handler: 'handleMerchantDashboard' },
-];
- 
-/** Lanjutan transisi state untuk pokok perintah interaktif (Fasa 7 Strategi 2). */
+/** Lanjutan transisi state untuk pokok perintah interaktif (Fasal 7 Strategi 2). */
 export type InteractiveCommandStep =
   | 'idle'
   | 'dashboard_view'
   | 'dashboard_toggle_pending'
   | 'help_view';
 
-/** State mesin arahan interaktif disimpan bersama MerchantState. */
 /** State mesin perintah interaktif disimpan bersama MerchantState. */
 export interface CommandSessionState {
   telegram_id: number;

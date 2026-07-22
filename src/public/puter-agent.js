@@ -71,14 +71,7 @@
     return true;
   }
 
-  // Pilih model fallback secara round-robin (model lalai di luar senarai ini).
-  function nextFallback() { // Pilih model fallback secara round-robin (model lalai di luar senarai ini).
-    const m = FALLBACK_MODELS[idx % FALLBACK_MODELS.length];
-    idx++;
-    return m;
-  }
-
-  // Public API: run a chat with JomOrder brain.
+   // Public API: run a chat with JomOrder brain.
   // Auto: cuba DEFAULT_MODEL dulu, kalau gagal fallback round-robin.
   // Auto: cuba DEFAULT_MODEL terlebih dahulu, jika gagal gunakan fallback round-robin.
   window.__xAgent = {

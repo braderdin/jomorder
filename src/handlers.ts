@@ -47,72 +47,23 @@ import { NATIVE_COMMAND_LIST } from './types';
 // End: Phase 71 - AI Spell-Checker + Customer FAQ hooks
 // End: Phase 37 - New 22-Command handler imports
 
-// Start: Phase 53 - 30-Command Distributor Routing Matrix (1:1 NATIVE_COMMAND_LIST)
-// Satu sumber benar memetakan kesemua 30 arahan natif ke handler aktif.
-// Selari dengan types.ts NATIVE_COMMAND_LIST + telegram_setup.ts BOT_COMMANDS.
-export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
-  command: string;
-  handler: string;
-  active: true;
-}> = [
-  { command: '/start', handler: 'handleStartDeepLink', active: true }, // both
-  { command: '/bantuan', handler: 'handleHelp', active: true }, // both
-  { command: '/menu', handler: 'handleShopMenu', active: true }, // customer
-  { command: '/menu_kedai', handler: 'handleMenuKedai', active: true }, // merchant
-  { command: '/urus_kedai', handler: 'handleMerchantDashboard', active: true }, // merchant
-  { command: '/daftar', handler: 'handleMerchantMessage', active: true }, // merchant (onboarding)
-  { command: '/tambah_menu', handler: 'handleTambahMenu', active: true }, // merchant
-  { command: '/senarai_menu', handler: 'handleSenaraiMenu', active: true }, // merchant
-  { command: '/cari_makan', handler: 'handleCariMakan', active: true }, // customer
-  { command: '/troli', handler: 'handleViewCart', active: true }, // customer
-  { command: '/pesanan_saya', handler: 'handlePesananSaya', active: true }, // customer
-  { command: '/senarai_pesanan', handler: 'handlePesananSaya', active: true }, // customer (alias)
-  { command: '/cipta_kupon', handler: 'handleCreateCoupon', active: true }, // merchant
-  { command: '/senarai_kupon', handler: 'handleListCoupons', active: true }, // merchant
-  { command: '/padam_kupon', handler: 'handleDeleteCoupon', active: true }, // merchant
-  { command: '/promo', handler: 'handlePromo', active: true }, // customer
-  { command: '/invois', handler: 'handleMerchantInvoiceText', active: true }, // merchant
-  { command: '/laporan_jualan', handler: 'handleLaporanJualan', active: true }, // merchant
-  { command: '/tetapan', handler: 'handleTetapan', active: true }, // merchant
-  { command: '/set_lokasi', handler: 'handleSetLokasi', active: true }, // merchant
-  { command: '/sejarah_pesanan', handler: 'handleSejarahPesanan', active: true }, // customer
-  { command: '/batalkan_pesanan', handler: 'handleBatalkanPesanan', active: true }, // customer
-  { command: '/profil', handler: 'handleProfil', active: true }, // customer
-  { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true }, // merchant
-  { command: '/zon_operasi', handler: 'handleMerchantMessage', active: true }, // merchant (placeholder)
-  { command: '/cart_kosong', handler: 'handleCartKosong', active: true }, // customer
-  { command: '/bantuan_lokasi', handler: 'handleBantuanLokasi', active: true }, // both
-  { command: '/admin_stats', handler: 'handleAdminStats', active: true }, // admin
-  { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true }, // admin
-  { command: '/pengumuman', handler: 'handlePengumumanBroadcast', active: true }, // admin
-  { command: '/status', handler: 'handleStatus', active: true }, // both
-];
-// End: Phase 53 - 30-Command Distributor Routing Matrix
-
-// Start: Phase 39 - Command Username Sanitizer Overhaul (DISTRIBUTOR_COMMAND_MAP parser)
-// Telegram menghantar perintah dengan suffix@BotName (contoh: '/start@JomOrderBot').
-// Parser wajib membuang suffix supaya padanan grid routing yang bersih ke peta 22-perintah.
-// Fasa 39: mengendalikan pelbagai @ (rantai pemajuan bot) dan melindungi input kosong.
+// Start: Phase 70 - Dynamic Command Router (SSOT from NATIVE_COMMAND_LIST)
+// Buat peta handler secara dinamis daripada NATIVE_COMMAND_LIST untuk elak duplikasi.
+// Handler mapping: command -> handler function (dinamis ikut NATIVE_COMMAND_LIST).
 const COMMAND_USERNAME_RE = /@[\w]+/g;
 function normalizeCommand(raw?: string): string {
   if (!raw) return '';
   const t = raw.trim();
   if (!t) return '';
-  // Buang semua kemunculan @BotName (bukan cuma akhir) untuk routing bersih.
   const cleaned = t.replace(COMMAND_USERNAME_RE, '').trim();
   return cleaned;
 }
-// Bina carian kanonikal daripada DISTRIBUTOR_COMMAND_MAP untuk validasi pantas.
-const ACTIVE_COMMAND_SET: ReadonlySet<string> = new Set(
-  DISTRIBUTOR_COMMAND_MAP.map((e) => e.command)
+
+/** Set semua perintah natif untuk validasi pantas (dibentuk dari NATIVE_COMMAND_LIST). */
+export const ACTIVE_COMMAND_SET: ReadonlySet<string> = new Set(
+  NATIVE_COMMAND_LIST.map((c) => c.command)
 );
-/** Bersihkan + mengesahkan perintah wujud dalam grid 22-perintah (Fasa 7 S1 isolation). */
-export function resolveCommand(raw: string): string | null {
-  const c = normalizeCommand(raw);
-  if (!c) return null;
-  return ACTIVE_COMMAND_SET.has(c) ? c : c;
-}
-// End: Phase 39 - Command Username Sanitizer Overhaul
+// End: Phase 70 - Dynamic Command Router (SSOT from NATIVE_COMMAND_LIST)
 /** Papan kekunci ucapan bersatu (Fasa 6 maks 2-3 butang/baris, dioptimumkan untuk mudah alih). */
 function unifiedGreetingKeyboard() {
   return {
@@ -226,190 +177,13 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
       return;
     }
 
-    // Default command handling
+    // Default command handling (dinamis dari commandHandlers map)
     if (cmd && commandHandlers[cmd]) {
       await withCommandGuard(env, chatId, cmd, () => commandHandlers[cmd](env, chatId, msg.from));
     }
     return;
   }
-
-  // Old command blocks (can be removed after verifying the map works)
-  /*
-  if (cmd === '/help' || cmd === '/bantuan') { // Redundant after map
-    await withCommandGuard(env, chatId, '/help', () => handleHelp(env, chatId, msg.from));
-    return;
-  }
-  if (cmd === '/menu') {
-    await withCommandGuard(env, chatId, '/menu', () => handleShopMenu(env, chatId));
-    return;
-  }
-  if (cmd === '/menu_kedai') {
-    await withCommandGuard(env, chatId, '/menu_kedai', () => handleMenuKedai(env, chatId));
-    return;
-  }
-  if (cmd === '/tetapan') {
-    await withCommandGuard(env, chatId, '/tetapan', () => handleTetapan(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/cart_kosong') {
-    await withCommandGuard(env, chatId, '/cart_kosong', () => handleCartKosong(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/promo') {
-    await withCommandGuard(env, chatId, '/promo', () => handlePromo(env, chatId));
-    return;
-  }
-  if (cmd === '/bantuan_lokasi') {
-    await withCommandGuard(env, chatId, '/bantuan_lokasi', () => handleBantuanLokasi(env, chatId));
-    return;
-  }
-  if (cmd === '/urus' || cmd === '/dashboard') {
-    await withCommandGuard(env, chatId, '/urus', () => handleMerchantDashboard(env, chatId, tgId));
-    return;
-  }
-  // Start: Phase 32 - 16-Command Activation Matrix (Commerce/Marketing/Admin)
-  // Deep-link: /start dengan payload ?startapp=kedai_id=XXX.
-  if (cmd.startsWith('/start')) {
-    const payload = cmd.includes(' ') ? cmd.split(/\s+/)[1] : undefined;
-    if (payload && payload.startsWith('menu')) {
-      // Phase 58: deep-link ?start=menu -> terus ke GUI pelanggan (menu showcase).
-      await handleCustomerGui(env, chatId, tgId);
-      return;
-    }
-    if (payload && payload.startsWith('app')) {
-      await withCommandGuard(env, chatId, '/start', () => handleStartDeepLink(env, chatId, msg.from, payload));
-      return;
-    }
-    // Lalai /start -> mengesan peranan secara automatik dan memaparkan GUI (Fasa 58 auto-peranan).
-    await handleStart(env, chatId, msg.from);
-    return;
-  }
-  // Marketing coupon commands (merchant).
-  if (cmd.startsWith('/cipta_kupon')) {
-    await withCommandGuard(env, chatId, '/cipta_kupon', () => handleCreateCoupon(env, chatId, tgId, cmd));
-    return;
-  }
-  if (cmd === '/senarai_kupon') {
-    await withCommandGuard(env, chatId, '/senarai_kupon', () => handleListCoupons(env, chatId, tgId));
-    return;
-  }
-  if (cmd.startsWith('/padam_kupon')) {
-    await withCommandGuard(env, chatId, '/padam_kupon', () => handleDeleteCoupon(env, chatId, tgId, cmd));
-    return;
-  }
-  // Customer commerce commands.
-  if (cmd === '/cari_makan') {
-    await withCommandGuard(env, chatId, '/cari_makan', () => handleCariMakan(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/pesanan_saya') {
-    await withCommandGuard(env, chatId, '/pesanan_saya', () => handlePesananSaya(env, chatId, tgId));
-    return;
-  }
-  // Admin protected commands.
-  if (cmd === '/admin_stats') {
-    await withCommandGuard(env, chatId, '/admin_stats', () => handleAdminStats(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/senarai_pendaftaran') {
-    await withCommandGuard(env, chatId, '/senarai_pendaftaran', () => handleSenaraiPendaftaran(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/naiktaraf') {
-    await withCommandGuard(env, chatId, '/naiktaraf', () => handleNaikTaraf(env, chatId, tgId));
-    return;
-  }
-  // Start: Phase 37 - New 6-Command Activation Matrix (22-command convergence)
-  if (cmd === '/senarai_menu') {
-    await withCommandGuard(env, chatId, '/senarai_menu', () => handleSenaraiMenu(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/set_lokasi') {
-    await withCommandGuard(env, chatId, '/set_lokasi', () => handleSetLokasi(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/sejarah_pesanan') {
-    await withCommandGuard(env, chatId, '/sejarah_pesanan', () => handleSejarahPesanan(env, chatId, tgId));
-    return;
-  }
-  if (cmd.startsWith('/batalkan_pesanan')) {
-    await withCommandGuard(env, chatId, '/batalkan_pesanan', () => handleBatalkanPesanan(env, chatId, tgId, cmd));
-    return;
-  }
-  if (cmd === '/pengumuman') {
-    await withCommandGuard(env, chatId, '/pengumuman', () => handlePengumumanBroadcast(env, chatId, tgId));
-    return;
-  }
-  if (cmd === '/laporan_jualan') {
-    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
-      return;
-    }
-    await withCommandGuard(env, chatId, '/laporan_jualan', () => handleLaporanJualan(env, chatId, tgId));
-    return;
-  }
-  // Start: Phase 41 - 22 Command BM Activation Matrix (alias + profil)
-  // /daftar -> onboarding kedai baharu (alias daftarKedaiPermulaan).
-  if (cmd === '/daftar') {
-    await withCommandGuard(env, chatId, '/daftar', () => handleMerchantMessage(env, chatId, tgId, '/daftar'));
-    return;
-  }
-  // /tambah_menu -> aliran tambah item menu (alias handleTambahMenu).
-  if (cmd.startsWith('/tambah_menu')) {
-    await withCommandGuard(env, chatId, '/tambah_menu', () => handleTambahMenu(env, chatId, tgId));
-    return;
-  }
-  // Start: Phase 70 - AI Menu Writer command (/tambah_menu_ai)
-  // Peniaga menaip /tambah_menu_ai <nama> -> AI menjana butiran menu.
-  if (cmd.startsWith('/tambah_menu_ai')) {
-    const nama = cmd.split(/\s+/).slice(1).join(' ').trim();
-    if (!nama) {
-      await sendMessage(env, chatId, escapeMarkdownV2('🤖 Taip nama hidangan: /tambah_menu_ai Nasi Lemak'));
-      return;
-    }
-    await sendMessage(env, chatId, escapeMarkdownV2('🤖 AI sedang menjana menu...'));
-    const hasil = await aiMenuWriter(env, nama);
-    await sendMessage(env, chatId, escapeMarkdownV2(`🎨 Hasil AI:\\n${hasil}\\n\\nSalin dan gunakan di /tambah_menu.`));
-    return;
-  }
-  // End: Phase 70 - AI Menu Writer command
-  // /urus_kedai -> alias papan pemuka peniaga.
-  if (cmd === '/urus_kedai') {
-    await withCommandGuard(env, chatId, '/urus_kedai', () => handleMerchantDashboard(env, chatId, tgId));
-    return;
-  }
-  // /senarai_pesanan -> alias senarai pesanan aktif.
-  if (cmd === '/senarai_pesanan') {
-    await withCommandGuard(env, chatId, '/senarai_pesanan', () => handlePesananSaya(env, chatId, tgId));
-    return;
-  }
-  // /bantuan -> panduan interaktif (alias handleHelp).
-  if (cmd === '/bantuan') {
-    await withCommandGuard(env, chatId, '/bantuan', () => handleHelp(env, chatId, msg.from));
-    return;
-  }
-  // /profil -> handler profil & langganan baharu.
-  // /profil -> handler profil dan langganan baharu.
-  if (cmd === '/profil') {
-    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
-      return;
-    }
-    await withCommandGuard(env, chatId, '/profil', () => handleProfil(env, chatId, tgId));
-    return;
-  }
-  // /status -> kad status bot & akaun (Phase 44).
-  // /status -> kad status bot dan akaun (Fasa 44).
-  if (cmd === '/status') {
-    if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
-      await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
-      return;
-    }
-    await withCommandGuard(env, chatId, '/status', () => handleStatus(env, chatId, tgId));
-    return;
-  }
-  */
-  // End of refactored command dispatch
+  // End of refactored command dispatch (SSOT from NATIVE_COMMAND_LIST)
 
   // Start: Phase 23 - Geolocation routing (merchant intercept vs customer pipeline)
   // Jika peniaga sedang dalam awaiting_shop_location, lokasi ke merchant handler.
