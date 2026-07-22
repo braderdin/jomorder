@@ -34,11 +34,6 @@ if [[ -z "$WORKER_URL" ]]; then
   exit 1
 fi
 
-# Validasi dasar untuk WORKER_URL
-if ! echo "$WORKER_URL" | grep -q '^https?://'; then
-  echo "ERROR: WORKER_URL ('$WORKER_URL') tidak sah. Mesti bermula dengan http:// atau https://."
-  exit 1
-fi
 # Bersihkan trailing slash pada WORKER_URL.
 WORKER_URL="${WORKER_URL%/}"
 WEBHOOK_URL="${WORKER_URL}/"
