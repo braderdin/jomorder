@@ -166,4 +166,30 @@ export async function handleFounderView(env: Env, chatId: number): Promise<void>
 }
 // End: Phase 60 - Founder Demo Shop View
 
+// Start: Phase 38 - Deep-Link Handler (startapp=xxx)
+/**
+ * handleStartDeepLink
+ * Tangani /start dengan payload deep-link (contoh: ?startapp=menu).
+ * Router ke GUI yang sesuai berdasarkan payload.
+ */
+export async function handleStartDeepLink(
+  env: Env,
+  chatId: number,
+  user: TelegramUser | undefined,
+  payload: string
+): Promise<void> {
+  const tgId = user?.id ?? chatId;
+  if (payload.startsWith('menu')) {
+    await handleCustomerGui(env, chatId, tgId);
+    return;
+  }
+  if (payload.startsWith('app')) {
+    await handleCustomerGui(env, chatId, tgId);
+    return;
+  }
+  // Fallback: papar welcome standard
+  await handleAdaptiveWelcome(env, chatId, user);
+}
+// End: Phase 38 - Deep-Link Handler
+
 // End: Phase 31 - /start & /mula Command Controller
