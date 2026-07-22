@@ -3,14 +3,14 @@
 
 import { Env, MerchantState } from '../types';
 import { setState, getState, checkMerchantExists } from '../redis'; // Assuming redis.ts is core and available
-import { sendMessage, escapeMarkdownV2 } from '../telegram';
+import { sendMessage, escapeMarkdownV2, merchantReplyKeyboard } from '../telegram'; // Import merchantReplyKeyboard
 // Assuming UI helpers and validators are in separate files, though not yet separated.
 // For now, duplicating placeholder functions or assuming they are accessible.
 
 // Placeholder for UI helpers
 function daftarKedaiKeyboard() {
     return {
-        keyboard: [[{ text: '🏪 Daftar Kedai Saya' }]],
+        keyboard: [[{ text: '🏪 Daftar Kedai Saya' }]], // Ini akan dihapus atau diganti
         resize_keyboard: true,
         one_time_keyboard: false,
     };
@@ -46,11 +46,13 @@ export async function handleMerchantOnboarding(
 ): Promise<boolean> {
     // Phase 39: Responsive Onboarding Thread Lock-Clear (anti-abandon)
     // Handles /daftar, /set_lokasi, /urus_kedai interactively with state persistence.
+    console.log(`[MerchantOnboarding] handleMerchantOnboarding called for tgId: ${tgId}, text: ${text}`);
     if (text === '/daftar' || text === '/urus_kedai' || text === '/set_lokasi') {
         const exists = await checkMerchantExists(env, tgId);
+        console.log(`[MerchantOnboarding] Merchant exists: ${exists}`);
         if (text === '/set_lokasi') {
             if (!exists) {
-                await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum daftar kedai. Taip /daftar untuk mula.'), daftarKedaiKeyboard());
+                await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Anda belum mendaftar kedai. Taip /daftar untuk bermula.'), merchantReplyKeyboard());
                 return true; // Handled
             }
             await setState(env, {
@@ -58,17 +60,19 @@ export async function handleMerchantOnboarding(
                 step: 'awaiting_shop_location',
                 last_active: new Date().toISOString(),
             });
+            console.log(`[MerchantOnboarding] State set to awaiting_shop_location for tgId: ${tgId}`);
             await sendMessage(env, chatId, escapeMarkdownV2('📍 Hantar lokasi baharu kedai anda dengan butang 📍 di bawah:'), kongsiLokasiKeyboard());
             return true; // Handled
         }
         // /daftar & /urus_kedai
         if (exists) {
+            console.log(`[MerchantOnboarding] Merchant already exists for tgId: ${tgId}. Redirecting to merchant dashboard.`);
             await setState(env, {
                 merchant_telegram_id: tgId,
                 step: 'idle', // Reset to idle after existing registration
                 last_active: new Date().toISOString(),
             });
-            await sendMessage(env, chatId, escapeMarkdownV2('🏪 Kedai anda sudah berdaftar. Gunakan butang di bawah untuk urus operasi.'), daftarKedaiKeyboard()); 
+            await sendMessage(env, chatId, escapeMarkdownV2('🏪 Kedai anda sudah berdaftar. Gunakan butang di bawah untuk mengurus operasi.'), merchantReplyKeyboard());
             return true; // Handled
         }
         await setState(env, {
@@ -76,16 +80,18 @@ export async function handleMerchantOnboarding(
             step: 'awaiting_shop_name',
             last_active: new Date().toISOString(),
         });
-        await sendMessage(env, chatId, escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:'), daftarKedaiKeyboard());
+        console.log(`[MerchantOnboarding] State set to awaiting_shop_name for tgId: ${tgId}`);
+        await sendMessage(env, chatId, escapeMarkdownV2('Taip nama kedai anda untuk mendaftar:')); // Tanpa keyboard yang membingungkan
         return true; // Handled
     }
 
     // Check if current state requires shop name input (after /daftar command)
     const current = await getState(env, tgId);
+    console.log(`[MerchantOnboarding] Current state for tgId ${tgId}: ${current?.step}`);
     if (current?.step === 'awaiting_shop_name') {
         const cleanName = sanitizeShopName(text);
         if (!isValidNameKedai(cleanName)) {
-            await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Nama kedai tidak sah. Sila taip nama kedai yang sah (1-60 aksara).'), daftarKedaiKeyboard());
+            await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Nama kedai tidak sah. Sila taip nama kedai yang sah (1-60 aksara).')); // Tanpa keyboard
             return true; // Handled
         }
         // Store shop name and prompt for location
@@ -96,6 +102,7 @@ export async function handleMerchantOnboarding(
             last_active: new Date().toISOString(),
         };
         await setState(env, next);
+        console.log(`[MerchantOnboarding] Shop name "${cleanName}" received. State set to awaiting_shop_location.`);
         await sendMessage(
             env,
             chatId,
@@ -126,8 +133,10 @@ export async function handleMerchantRegistrasiLocation(
     const current = await getState(env, tgId);
     if (!current || current.step !== 'awaiting_shop_location') return false; // Not in location state
 
+    console.log(`[MerchantOnboarding] Location received for tgId: ${tgId}, lat: ${latitude}, long: ${longitude}`);
     const namaKedai = current.shop_name || 'Kedai Tanpa Nama'; // Fetch stored shop name
     const ok = await daftarKedaiPermulaan(env, tgId, namaKedai, latitude, longitude); // Persist to DB
+    console.log(`[MerchantOnboarding] daftarKedaiPermulaan result: ${ok}`);
     
     const next: MerchantState = { // Update state after registration attempt
         merchant_telegram_id: tgId,
@@ -138,13 +147,15 @@ export async function handleMerchantRegistrasiLocation(
     await setState(env, next);
 
     if (ok) {
+        console.log(`[MerchantOnboarding] Shop "${namaKedai}" registered successfully.`);
         await sendMessage(
             env,
             chatId,
             escapeMarkdownV2(`✅ Kedai "${namaKedai}" berjaya didaftarkan dengan lokasi! Status: MENUNGGU PENGESAHAN. Sila tunggu kelulusan admin.`),
-            daftarKedaiKeyboard() // Using daftarKedaiKeyboard as in original for consistency, though merchantMenuKeyboard might be more appropriate post-registration.
+            merchantReplyKeyboard() // Menggunakan papan kekunci peniaga yang sesuai
         );
     } else {
+        console.error(`[MerchantOnboarding] Failed to register location for shop "${namaKedai}".`);
         await sendMessage(
             env,
             chatId,
