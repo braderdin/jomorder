@@ -3,7 +3,7 @@
 // Arahan: kenal pasti identiti user (customer vs merchant) lalu render interface sesuai.
 // Phase 38: deep-link payload slicing isolation (ref=xxx) -> Redis state bind.
 import { Env, TelegramUser } from '../types';
-import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboard, navGrid, merchantReplyKeyboard, customerReplyKeyboard } from '../telegram';
+import { sendMessage, escapeMarkdownV2, customerMenuKeyboard, merchantMenuKeyboard, navGrid, merchantReplyKeyboard, customerReplyKeyboard, startCustomerGrid } from '../telegram';
 import { checkMerchantExists } from '../db';
 import { setState } from '../redis';
 import { handleHelpCategory } from './help';
@@ -16,7 +16,7 @@ import { getFounderShop, getFounderMenu } from '../db';
 
 // Start: Phase 55 - Main Menu Navigation Grid (3-col + BACK + BM/EN)
 function startQuickActionKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-  return navGrid();
+  return startCustomerGrid(); // 10 button untuk pelanggan (matching customer_gui.ts)
 }
 // End: Phase 55 - Main Menu Navigation Grid
 

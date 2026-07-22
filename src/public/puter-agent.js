@@ -51,7 +51,6 @@
     'JANGAN berbohong tentang ciri yang tidak wujud. Fokus membantu pelawat memahami dan mencuba JomOrder.'
   ].join(' ');
 
-  let idx = 0;
   let sdk = null; // SDK Puter.com
 
   function loadSdk() {
@@ -83,6 +82,7 @@
   // Auto: cuba DEFAULT_MODEL dulu, kalau gagal fallback round-robin.
   // Auto: cuba DEFAULT_MODEL terlebih dahulu, jika gagal gunakan fallback round-robin.
   window.__xAgent = {
+    _fallbackIdx: 0, // Internal index for round-robin fallback
     async run(prompt, opts) {
       try {
         await ensureAuth();
@@ -101,7 +101,7 @@
         } catch (e) {
           let lastErr;
           for (let i = 0; i < FALLBACK_MODELS.length; i++) {
-            const fb = nextFallback();
+            const fb = FALLBACK_MODELS[this._fallbackIdx++ % FALLBACK_MODELS.length]; // Use internal index
             usedModel = fb;
             try {
               resp = await tryModel(fb);
@@ -139,7 +139,7 @@
 
   // Auto-init on idle (visitor not prompted; used for page enrichment only).
   document.addEventListener('DOMContentLoaded', () => {
-    loadSdk().catch(() => {});
+    loadSdk().catch(err => console.error('Failed to load Puter SDK:', err)); // Log error instead of swallowing
   });
 })();
 // End: Phase 69c - Hidden AI Agent + JomOrder Brain

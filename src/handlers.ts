@@ -55,37 +55,37 @@ export const DISTRIBUTOR_COMMAND_MAP: ReadonlyArray<{
   handler: string;
   active: true;
 }> = [
-  { command: '/start', handler: 'handleStartDeepLink', active: true },
-  { command: '/bantuan', handler: 'handleHelp', active: true },
-  { command: '/menu', handler: 'handleShopMenu', active: true },
-  { command: '/menu_kedai', handler: 'handleMenuKedai', active: true },
-  { command: '/urus_kedai', handler: 'handleMerchantDashboard', active: true },
-  { command: '/daftar', handler: 'handleMerchantMessage', active: true },
-  { command: '/tambah_menu', handler: 'handleTambahMenu', active: true },
-  { command: '/senarai_menu', handler: 'handleSenaraiMenu', active: true },
-  { command: '/cari_makan', handler: 'handleCariMakan', active: true },
-  { command: '/troli', handler: 'handleViewCart', active: true },
-  { command: '/pesanan_saya', handler: 'handlePesananSaya', active: true },
-  { command: '/senarai_pesanan', handler: 'handlePesananSaya', active: true },
-  { command: '/cipta_kupon', handler: 'handleCreateCoupon', active: true },
-  { command: '/senarai_kupon', handler: 'handleListCoupons', active: true },
-  { command: '/padam_kupon', handler: 'handleDeleteCoupon', active: true },
-  { command: '/promo', handler: 'handlePromo', active: true },
-  { command: '/invois', handler: 'handleMerchantInvoiceText', active: true },
-  { command: '/laporan_jualan', handler: 'handleLaporanJualan', active: true },
-  { command: '/tetapan', handler: 'handleTetapan', active: true },
-  { command: '/set_lokasi', handler: 'handleSetLokasi', active: true },
-  { command: '/sejarah_pesanan', handler: 'handleSejarahPesanan', active: true },
-  { command: '/batalkan_pesanan', handler: 'handleBatalkanPesanan', active: true },
-  { command: '/profil', handler: 'handleProfil', active: true },
-  { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true },
-  { command: '/zon_operasi', handler: 'handleMerchantMessage', active: true },
-  { command: '/cart_kosong', handler: 'handleCartKosong', active: true },
-  { command: '/bantuan_lokasi', handler: 'handleBantuanLokasi', active: true },
-  { command: '/admin_stats', handler: 'handleAdminStats', active: true },
-  { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true },
-  { command: '/pengumuman', handler: 'handlePengumumanBroadcast', active: true },
-  { command: '/status', handler: 'handleStatus', active: true },
+  { command: '/start', handler: 'handleStartDeepLink', active: true }, // both
+  { command: '/bantuan', handler: 'handleHelp', active: true }, // both
+  { command: '/menu', handler: 'handleShopMenu', active: true }, // customer
+  { command: '/menu_kedai', handler: 'handleMenuKedai', active: true }, // merchant
+  { command: '/urus_kedai', handler: 'handleMerchantDashboard', active: true }, // merchant
+  { command: '/daftar', handler: 'handleMerchantMessage', active: true }, // merchant (onboarding)
+  { command: '/tambah_menu', handler: 'handleTambahMenu', active: true }, // merchant
+  { command: '/senarai_menu', handler: 'handleSenaraiMenu', active: true }, // merchant
+  { command: '/cari_makan', handler: 'handleCariMakan', active: true }, // customer
+  { command: '/troli', handler: 'handleViewCart', active: true }, // customer
+  { command: '/pesanan_saya', handler: 'handlePesananSaya', active: true }, // customer
+  { command: '/senarai_pesanan', handler: 'handlePesananSaya', active: true }, // customer (alias)
+  { command: '/cipta_kupon', handler: 'handleCreateCoupon', active: true }, // merchant
+  { command: '/senarai_kupon', handler: 'handleListCoupons', active: true }, // merchant
+  { command: '/padam_kupon', handler: 'handleDeleteCoupon', active: true }, // merchant
+  { command: '/promo', handler: 'handlePromo', active: true }, // customer
+  { command: '/invois', handler: 'handleMerchantInvoiceText', active: true }, // merchant
+  { command: '/laporan_jualan', handler: 'handleLaporanJualan', active: true }, // merchant
+  { command: '/tetapan', handler: 'handleTetapan', active: true }, // merchant
+  { command: '/set_lokasi', handler: 'handleSetLokasi', active: true }, // merchant
+  { command: '/sejarah_pesanan', handler: 'handleSejarahPesanan', active: true }, // customer
+  { command: '/batalkan_pesanan', handler: 'handleBatalkanPesanan', active: true }, // customer
+  { command: '/profil', handler: 'handleProfil', active: true }, // customer
+  { command: '/naiktaraf', handler: 'handleNaikTaraf', active: true }, // merchant
+  { command: '/zon_operasi', handler: 'handleMerchantMessage', active: true }, // merchant (placeholder)
+  { command: '/cart_kosong', handler: 'handleCartKosong', active: true }, // customer
+  { command: '/bantuan_lokasi', handler: 'handleBantuanLokasi', active: true }, // both
+  { command: '/admin_stats', handler: 'handleAdminStats', active: true }, // admin
+  { command: '/senarai_pendaftaran', handler: 'handleSenaraiPendaftaran', active: true }, // admin
+  { command: '/pengumuman', handler: 'handlePengumumanBroadcast', active: true }, // admin
+  { command: '/status', handler: 'handleStatus', active: true }, // both
 ];
 // End: Phase 53 - 30-Command Distributor Routing Matrix
 
@@ -143,11 +143,99 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   const chatId = msg.chat.id;
   const tgId = msg.from.id;
 
-  // Start: Phase 31 - Core Bot Command Activation Matrix (Fasal 4 SOA delegation)
   const state = await getState(env, tgId); // Mengambil state di awal
-  // Perintah teks didelegasikan kepada sub-handler khusus (LOOP 1-2 modul).
   const cmd = normalizeCommand(msg.text);
-  if (cmd === '/help' || cmd === '/bantuan') {
+
+  // Peta handler untuk penghalaan perintah yang lebih bersih
+  const commandHandlers: { [key: string]: Function } = {
+    '/start': handleStartDeepLink, // handleStartDeepLink juga mengendalikan /start tanpa payload
+    '/bantuan': handleHelp,
+    '/menu': handleShopMenu,
+    '/menu_kedai': handleMenuKedai,
+    '/tetapan': handleTetapan,
+    '/cart_kosong': handleCartKosong,
+    '/promo': handlePromo,
+    '/bantuan_lokasi': handleBantuanLokasi,
+    '/urus': handleMerchantDashboard,
+    '/dashboard': handleMerchantDashboard,
+    '/cipta_kupon': handleCreateCoupon,
+    '/senarai_kupon': handleListCoupons,
+    '/padam_kupon': handleDeleteCoupon,
+    '/cari_makan': handleCariMakan,
+    '/pesanan_saya': handlePesananSaya,
+    '/admin_stats': handleAdminStats,
+    '/senarai_pendaftaran': handleSenaraiPendaftaran,
+    '/naiktaraf': handleNaikTaraf,
+    '/senarai_menu': handleSenaraiMenu,
+    '/set_lokasi': handleSetLokasi,
+    '/sejarah_pesanan': handleSejarahPesanan,
+    '/batalkan_pesanan': handleBatalkanPesanan,
+    '/pengumuman': handlePengumumanBroadcast,
+    '/laporan_jualan': handleLaporanJualan,
+    '/daftar': handleMerchantMessage, // Onboarding flow
+    '/tambah_menu': handleTambahMenu,
+    '/urus_kedai': handleMerchantDashboard, // Alias
+    '/senarai_pesanan': handlePesananSaya, // Alias
+    '/profil': handleProfil,
+    '/status': handleStatus,
+    '/invois': handleMerchantInvoiceText,
+    '/zon_operasi': handleMerchantMessage, // Placeholder, will be handled by merchant_onboarding if in state
+  };
+
+  // Cuba untuk menghalakan perintah menggunakan peta handler
+  if (cmd && commandHandlers[cmd]) {
+    // Handle special cases for commands that need specific parsing or rate limiting
+    if (cmd.startsWith('/start')) {
+      const payload = cmd.includes(' ') ? cmd.split(/\s+/)[1] : undefined;
+      if (payload && payload.startsWith('menu')) {
+        await handleCustomerGui(env, chatId, tgId);
+        return;
+      }
+      if (payload && payload.startsWith('app')) {
+        await withCommandGuard(env, chatId, '/start', () => commandHandlers[cmd](env, chatId, msg.from, payload));
+        return;
+      }
+      await handleStart(env, chatId, msg.from); // Default /start
+      return;
+    }
+
+    if (cmd.startsWith('/cipta_kupon') || cmd.startsWith('/padam_kupon')) {
+      await withCommandGuard(env, chatId, cmd, () => commandHandlers[cmd](env, chatId, tgId, cmd));
+      return;
+    }
+
+    if (cmd === '/laporan_jualan' || cmd === '/profil' || cmd === '/status' || cmd === '/troli' || cmd === '/invois') {
+      if (!(await checkRateLimit(env, rateLimitKey(String(tgId))))) {
+        await sendMessage(env, chatId, escapeMarkdownV2('⏳ Terlalu banyak permintaan. Sila cuba sebentar lagi.'));
+        return;
+      }
+      await withCommandGuard(env, chatId, cmd, () => commandHandlers[cmd](env, chatId, tgId));
+      return;
+    }
+
+    // Handle AI commands
+    if (cmd.startsWith('/tambah_menu_ai')) {
+      const nama = cmd.split(/\s+/).slice(1).join(' ').trim();
+      if (!nama) {
+        await sendMessage(env, chatId, escapeMarkdownV2('🤖 Taip nama hidangan: /tambah_menu_ai Nasi Lemak'));
+        return;
+      }
+      await sendMessage(env, chatId, escapeMarkdownV2('🤖 AI sedang menjana menu...'));
+      const hasil = await aiMenuWriter(env, nama);
+      await sendMessage(env, chatId, escapeMarkdownV2(`🎨 Hasil AI:\\n${hasil}\\n\\nSalin dan gunakan di /tambah_menu.`));
+      return;
+    }
+
+    // Default command handling
+    if (cmd && commandHandlers[cmd]) {
+      await withCommandGuard(env, chatId, cmd, () => commandHandlers[cmd](env, chatId, msg.from));
+    }
+    return;
+  }
+
+  // Old command blocks (can be removed after verifying the map works)
+  /*
+  if (cmd === '/help' || cmd === '/bantuan') { // Redundant after map
     await withCommandGuard(env, chatId, '/help', () => handleHelp(env, chatId, msg.from));
     return;
   }
@@ -163,7 +251,6 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await withCommandGuard(env, chatId, '/tetapan', () => handleTetapan(env, chatId, tgId));
     return;
   }
-  // Start: Phase 52 - New 3-Command Activation (cart_kosong, promo, bantuan_lokasi)
   if (cmd === '/cart_kosong') {
     await withCommandGuard(env, chatId, '/cart_kosong', () => handleCartKosong(env, chatId, tgId));
     return;
@@ -176,7 +263,6 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await withCommandGuard(env, chatId, '/bantuan_lokasi', () => handleBantuanLokasi(env, chatId));
     return;
   }
-  // End: Phase 52 - New 3-Command Activation
   if (cmd === '/urus' || cmd === '/dashboard') {
     await withCommandGuard(env, chatId, '/urus', () => handleMerchantDashboard(env, chatId, tgId));
     return;
@@ -322,10 +408,8 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
     await withCommandGuard(env, chatId, '/status', () => handleStatus(env, chatId, tgId));
     return;
   }
-  // End: Phase 41 - 22 Command BM Activation Matrix
-  // End: Phase 37 - New 6-Command Activation Matrix
-  // End: Phase 32 - 16-Command Activation Matrix
-  // End: Phase 31 - Core Bot Command Activation Matrix
+  */
+  // End of refactored command dispatch
 
   // Start: Phase 23 - Geolocation routing (merchant intercept vs customer pipeline)
   // Jika peniaga sedang dalam awaiting_shop_location, lokasi ke merchant handler.

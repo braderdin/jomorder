@@ -257,6 +257,7 @@ export interface CommandSessionState {
 export interface TelegramBotCommand {
   command: string; // mesti bermula dengan '/'
   description: string; // max ~32 aksara (BM)
+  role: CommandRole; // Peranan: customer/merchant/admin/both
 }
 
 /** Response wrapper spesifik setMyCommands. */
@@ -280,37 +281,37 @@ export type CommandRole = 'customer' | 'merchant' | 'admin' | 'both';
 // Start: Phase 53 - 30 Command Master Sync (Fasal 4 SOA single source of truth)
 // Exact 30 UNIQUE commands, 1:1 with DISTRIBUTOR_COMMAND_MAP + BOT_COMMANDS.
 export const NATIVE_COMMAND_LIST: TelegramBotCommand[] = [
-  { command: '/start', description: 'Mula & pilih peranan' },
-  { command: '/bantuan', description: 'Panduan interaktif bot' },
-  { command: '/menu', description: 'Senarai kedai aktif' },
-  { command: '/menu_kedai', description: 'Lihat menu kedai' },
-  { command: '/urus_kedai', description: 'Urus kedai saya' },
-  { command: '/daftar', description: 'Daftar kedai baharu' },
-  { command: '/tambah_menu', description: 'Tambah item menu' },
-  { command: '/senarai_menu', description: 'Senarai menu kedai' },
-  { command: '/cari_makan', description: 'Cari kedai berdekatan' },
-  { command: '/troli', description: 'Lihat troli pesanan' },
-  { command: '/pesanan_saya', description: 'Senarai pesanan aktif' },
-  { command: '/senarai_pesanan', description: 'Senarai pesanan saya' },
-  { command: '/cipta_kupon', description: 'Cipta kupon diskaun' },
-  { command: '/senarai_kupon', description: 'Senarai kupon aktif' },
-  { command: '/padam_kupon', description: 'Padam kupon diskaun' },
-  { command: '/promo', description: 'Lihat promosi aktif' },
-  { command: '/invois', description: 'Jana invois digital' },
-  { command: '/laporan_jualan', description: 'Laporan jualan kedai' },
-  { command: '/tetapan', description: 'Tetapan akaun peniaga' },
-  { command: '/set_lokasi', description: 'Tetapkan koordinat kedai' },
-  { command: '/sejarah_pesanan', description: 'Sejarah pesanan saya' },
-  { command: '/batalkan_pesanan', description: 'Batal pesanan tertunda' },
-  { command: '/profil', description: 'Profil & langganan saya' },
-  { command: '/naiktaraf', description: 'Naik taraf pelan premium' },
-  { command: '/zon_operasi', description: 'Senarai zon operasi' },
-  { command: '/cart_kosong', description: 'Kosongkan troli pesanan' },
-  { command: '/bantuan_lokasi', description: 'Panduan ikut lokasi' },
-  { command: '/admin_stats', description: 'Statistik pentadbir' },
-  { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar' },
-  { command: '/pengumuman', description: 'Pengumuman pentadbir' },
-  { command: '/status', description: 'Semak status bot & akaun' },
+  { command: '/start', description: 'Mula & pilih peranan', role: 'both' },
+  { command: '/bantuan', description: 'Panduan interaktif bot', role: 'both' },
+  { command: '/menu', description: 'Senarai kedai aktif', role: 'customer' },
+  { command: '/menu_kedai', description: 'Lihat menu kedai', role: 'merchant' },
+  { command: '/urus_kedai', description: 'Urus kedai saya', role: 'merchant' },
+  { command: '/daftar', description: 'Daftar kedai baharu', role: 'merchant' },
+  { command: '/tambah_menu', description: 'Tambah item menu', role: 'merchant' },
+  { command: '/senarai_menu', description: 'Senarai menu kedai', role: 'merchant' },
+  { command: '/cari_makan', description: 'Cari kedai berdekatan', role: 'customer' },
+  { command: '/troli', description: 'Lihat troli pesanan', role: 'customer' },
+  { command: '/pesanan_saya', description: 'Senarai pesanan aktif', role: 'customer' },
+  { command: '/senarai_pesanan', description: 'Senarai pesanan saya', role: 'customer' },
+  { command: '/cipta_kupon', description: 'Cipta kupon diskaun', role: 'merchant' },
+  { command: '/senarai_kupon', description: 'Senarai kupon aktif', role: 'merchant' },
+  { command: '/padam_kupon', description: 'Padam kupon diskaun', role: 'merchant' },
+  { command: '/promo', description: 'Lihat promosi aktif', role: 'customer' },
+  { command: '/invois', description: 'Jana invois digital', role: 'merchant' },
+  { command: '/laporan_jualan', description: 'Laporan jualan kedai', role: 'merchant' },
+  { command: '/tetapan', description: 'Tetapan akaun peniaga', role: 'merchant' },
+  { command: '/set_lokasi', description: 'Tetapkan koordinat kedai', role: 'merchant' },
+  { command: '/sejarah_pesanan', description: 'Sejarah pesanan saya', role: 'customer' },
+  { command: '/batalkan_pesanan', description: 'Batal pesanan tertunda', role: 'customer' },
+  { command: '/profil', description: 'Profil & langganan saya', role: 'customer' },
+  { command: '/naiktaraf', description: 'Naik taraf pelan premium', role: 'merchant' },
+  { command: '/zon_operasi', description: 'Senarai zon operasi', role: 'merchant' },
+  { command: '/cart_kosong', description: 'Kosongkan troli pesanan', role: 'customer' },
+  { command: '/bantuan_lokasi', description: 'Panduan ikut lokasi', role: 'both' },
+  { command: '/admin_stats', description: 'Statistik pentadbir', role: 'admin' },
+  { command: '/senarai_pendaftaran', description: 'Senarai peniaga berdaftar', role: 'admin' },
+  { command: '/pengumuman', description: 'Pengumuman pentadbir', role: 'admin' },
+  { command: '/status', description: 'Semak status bot & akaun', role: 'both' },
 ];
 // End: Phase 53 - 30 Command Master Sync
 
@@ -343,7 +344,7 @@ export interface CouponDeleteCallback {
 /** Statistiks kesihatan rangkaian untuk endpoint pemantauan (sentinel.ts). */
 export interface NetworkTelemetryStats {
   ts: string; // ISO timestamp bila sampel diambil
-  worker_region?: string; // Rantau Cloudflare (contoh: "ap-southeast-1")
+  worker_region?: string; // Rantai Cloudflare (contoh: "ap-southeast-1")
   upstream_latency_ms: number; // Kelewatan ke Supabase/Upstash (ms)
   db_status: 'OK' | 'DEGRADED' | 'DOWN';
   redis_status: 'OK' | 'DEGRADED' | 'DOWN';

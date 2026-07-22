@@ -1,7 +1,7 @@
 // Start: Phase 31 - /help & /bantuan Command Controller (LOOP 1 File 2)
 // Fasa 4 (SOA) + Fasa 6 (panduan HTML + barisan operator inline)
 // Perintah: memaparkan panduan interaktif HTML dengan butang dinamik ke barisan operator.
-import { Env, TelegramUser } from '../types';
+import { Env, TelegramUser, NATIVE_COMMAND_LIST } from '../types';
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
  
@@ -40,15 +40,21 @@ async function sendHtmlMessage(
  * terus menghubungkan ke barisan operator sokongan (Fasa 6 mobile grid).
  */ 
 export async function handleHelp(env: Env, chatId: number, _user: TelegramUser | undefined): Promise<void> {
+  const customerCommands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'customer' || cmd.role === 'both');
+  const merchantCommands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'merchant' || cmd.role === 'both');
+  const adminCommands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'admin' || cmd.role === 'both');
+
   const html =
     '<b>📖 PANDUAN JomOrder Modern-Siber</b>\n\n' +
     'Pilih peranan anda untuk panduan lengkap:\\n\\n' +
-    '👨‍🍳 <b>Peniaga (13):</b> /daftar · /tambah_menu · /senarai_menu · /urus_kedai · /laporan_jualan · /cipta_kupon · /senarai_kupon · /padam_kupon · /invois · /tetapan · /set_lokasi · /zon_operasi · /naiktaraf\n\n' +
-    '🛒 <b>Pelanggan (11):</b> /cari_makan · /menu · /menu_kedai · /troli · /cart_kosong · /pesanan_saya · /senarai_pesanan · /sejarah_pesanan · /promo · /profil · /batalkan_pesanan · /bantuan_lokasi\n\n' +
-    '⚙️ <b>Pentadbir (6):</b> /admin_stats · /senarai_pendaftaran · /pengumuman · /status · /bantuan · /start\n\n' +
-    '✅ <b>JUMLAH 30 PERINTAH AKTIF</b>\n\n' +
+    `👨‍🍳 <b>Peniaga (${merchantCommands.length}):</b> ${merchantCommands.map(c => c.command).join(' · ')}\n\n` +
+    `🛒 <b>Pelanggan (${customerCommands.length}):</b> ${customerCommands.map(c => c.command).join(' · ')}\n\n` +
+    `⚙️ <b>Pentadbir (${adminCommands.length}):</b> ${adminCommands.map(c => c.command).join(' · ')}\n\n` +
+    `✅ <b>JUMLAH ${NATIVE_COMMAND_LIST.length} PERINTAH AKTIF</b>\n\n` +
     '🚀 <b>Cara membuat pesanan:</b> tekan 📍 Kedai Berdekatan → pilih kedai → tambah ke troli → 💳 Bayar Sekarang.\n\n' +
     'Ada masalah? Hubungi barisan operator kami di bawah 👇';
+
+
  
   const inline = {
     inline_keyboard: [
@@ -75,68 +81,43 @@ export async function handleHelpCategory(
 ): Promise<void> {
   let html = '<b>📖 PANDUAN JomOrder</b>\n\n';
   if (locale === 'en') {
-    // Start: Phase 48 - English locale block (formal EN, no BM slang)
     if (category === 'peniaga') {
+      const commands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'merchant' || cmd.role === 'both');
       html +=
         '👨‍🍳 <b>MERCHANT GUIDE</b>\n\n' +
-        '• <b>/daftar</b> — Register a new shop\n' +
-        '• <b>/tambah_menu</b> — Add menu item\n' +
-        '• <b>/senarai_menu</b> — View & toggle menu\n' +
-        '• <b>/urus_kedai</b> — Control panel\n' +
-        '• <b>/laporan_jualan</b> — Sales analytics\n' +
-        '• <b>/cipta_kupon</b> — Create discount (PREMIUM)\n' +
-        '• <b>/naiktaraf</b> — Upgrade to PREMIUM\n\n' +
+        commands.map(c => `• <b>${c.command}</b> — ${c.description}`).join('\n') + '\n\n' +
         'Use the 📍 Share Location button to set shop location.';
     } else if (category === 'pelanggan') {
+      const commands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'customer' || cmd.role === 'both');
       html +=
         '🛒 <b>CUSTOMER GUIDE</b>\n\n' +
-        '• <b>/start</b> — Start & choose role\n' +
-        '• <b>/cari_makan</b> — Find nearby shops\n' +
-        '• <b>/troli</b> — View order cart\n' +
-        '• <b>/pesanan_saya</b> — Active orders\n' +
-        '• <b>/sejarah_pesanan</b> — Full history\n' +
-        '• <b>/profil</b> — Profile & subscription\n\n' +
+        commands.map(c => `• <b>${c.command}</b> — ${c.description}`).join('\n') + '\n\n' +
         'To order: 📍 Nearby Shops → choose → cart → 💳 Pay.';
     } else {
+      const commands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'admin' || cmd.role === 'both');
       html +=
         '⚙️ <b>ADMIN GUIDE</b>\n\n' +
-        '• <b>/admin_stats</b> — SaaS metrics\n' +
-        '• <b>/senarai_pendaftaran</b> — Merchant list\n' +
-        '• <b>/pengumuman</b> — Platform broadcast\n' +
-        '• <b>/status</b> — Bot & account status\n\n' +
+        commands.map(c => `• <b>${c.command}</b> — ${c.description}`).join('\n') + '\n\n' +
         'Access restricted to Chip Besar only.';
     }
-    // End: Phase 48 - English locale block
   } else {
     if (category === 'peniaga') {
+      const commands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'merchant' || cmd.role === 'both');
       html +=
         '👨‍🍳 <b>PANDUAN PENIAGA</b>\n\n' +
-        '• <b>/daftar</b> — Daftar kedai baharu\n' +
-        '• <b>/tambah_menu</b> — Tambah item menu\n' +
-        '• <b>/senarai_menu</b> — Lihat & togol menu\n' +
-        '• <b>/urus_kedai</b> — Papan pemerintah\n' +
-        '• <b>/laporan_jualan</b> — Analitik jualan\n' +
-        '• <b>/cipta_kupon</b> — Cipta diskaun (PREMIUM)\n' +
-        '• <b>/naiktaraf</b> — Naik taraf PREMIUM\n\n' +
-        'Guna butang 📍 Kongsi Lokasi untuk set lokasi kedai.';
+        commands.map(c => `• <b>${c.command}</b> — ${c.description}`).join('\n') + '\n\n' +
         'Gunakan butang 📍 Kongsi Lokasi untuk menetapkan lokasi kedai.';
     } else if (category === 'pelanggan') {
+      const commands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'customer' || cmd.role === 'both');
       html +=
         '🛒 <b>PANDUAN PELANGGAN</b>\n\n' +
-        '• <b>/start</b> — Mula & pilih peranan\n' +
-        '• <b>/cari_makan</b> — Cari kedai berdekatan\n' +
-        '• <b>/troli</b> — Lihat troli pesanan\n' +
-        '• <b>/pesanan_saya</b> — Pesanan aktif\n' +
-        '• <b>/sejarah_pesanan</b> — Sejarah lengkap\n' +
-        '• <b>/profil</b> — Profil & langganan\n\n' +
+        commands.map(c => `• <b>${c.command}</b> — ${c.description}`).join('\n') + '\n\n' +
         'Buat pesanan: 📍 Kedai Berdekatan → pilih → troli → 💳 Bayar.';
     } else {
+      const commands = NATIVE_COMMAND_LIST.filter(cmd => cmd.role === 'admin' || cmd.role === 'both');
       html +=
         '⚙️ <b>PANDUAN PENTADBIR</b>\n\n' +
-        '• <b>/admin_stats</b> — Metrik SaaS\n' +
-        '• <b>/senarai_pendaftaran</b> — Senarai peniaga\n' +
-        '• <b>/pengumuman</b> — Broadcast platform\n' +
-        '• <b>/status</b> — Status bot & akaun\n\n' +
+        commands.map(c => `• <b>${c.command}</b> — ${c.description}`).join('\n') + '\n\n' +
         'Akses terhad kepada Chip Besar sahaja.';
     }
   }

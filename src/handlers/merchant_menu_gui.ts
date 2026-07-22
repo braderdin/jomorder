@@ -3,18 +3,10 @@
 // menu items: senarai / tambah / edit / padam / toggle foto WebP.
 // BACK nested: back:merchant / back:menu.
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, inlineKeyboard, answerCallbackQuery } from '../telegram';
+import { sendMessage, escapeMarkdownV2, inlineKeyboard, answerCallbackQuery, svcHeaders } from '../telegram'; // Import svcHeaders
 import { getState } from '../redis';
 
 const SUPABASE_REST = (env: Env) => `${env.SUPABASE_URL}/rest/v1`;
-
-function svcHeaders(env: Env): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-  };
-}
 
 /**
  * handleMerchantMenuGui

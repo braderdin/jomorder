@@ -14,11 +14,11 @@ if [ ! -f "$DEV_VARS" ]; then
 fi
 
 # Parse DATABASE_URL_DIRECT_UNPOOLED (?pgbouncer=false) dari .dev.vars
-DB_URL="$(grep '^DATABASE_URL_DIRECT_UNPOOLED=' "$DEV_VARS" | head -n1 | cut -d'=' -f2- | tr -d '\"')"
+DB_URL="$(sed -n 's/^DATABASE_URL_DIRECT_UNPOOLED=\(.*\)/\1/p' "$DEV_VARS" | tr -d '\"')"
 
 if [ -z "$DB_URL" ]; then
   # Fallback ke DIRECT_URL_UNPOOLED
-  DB_URL="$(grep '^DIRECT_URL_UNPOOLED=' "$DEV_VARS" | head -n1 | cut -d'=' -f2- | tr -d '\"')"
+  DB_URL="$(sed -n 's/^DIRECT_URL_UNPOOLED=\(.*\)/\1/p' "$DEV_VARS" | tr -d '\"')"
 fi
 
 if [ -z "$DB_URL" ]; then
@@ -40,7 +40,7 @@ else
 fi
 
 # Compile + run standalone pg script (Fasal 11: tulis ke /tmp, jangan hardcode secret)
-cat > /tmp/db_query_run.js <<'EOF'
+cat > "/tmp/db_query_run_$(date +%s%N).js" <<'EOF'
 const { Client } = require('pg');
 const sql = process.env.RUN_SQL;
 (async () => {
@@ -53,7 +53,7 @@ const sql = process.env.RUN_SQL;
     } else {
       console.log('OK|' + res.command + '|rowCount=' + res.rowCount);
     }
-    await client.end();
+    await client.end(); // Pastikan sambungan ditutup
   } catch (e) {
     console.log('SQL_ERR|' + e.message.split('\n')[0]);
     process.exit(2);
@@ -61,5 +61,5 @@ const sql = process.env.RUN_SQL;
 })();
 EOF
 
-RUN_SQL="$SQL" node /tmp/db_query_run.js
+RUN_SQL="$SQL" node "/tmp/db_query_run_$(date +%s%N).js"
 # End: Supabase Direct DB Query Helper

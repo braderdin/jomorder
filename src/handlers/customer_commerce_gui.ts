@@ -3,20 +3,10 @@
 // cari kedai -> lihat menu -> tambah troli -> checkout -> bayar.
 // Semua butang inline + BACK nested (back:customer / back:cart / back:shop).
 import { Env } from '../types';
-import { sendMessage, escapeMarkdownV2, inlineKeyboard, customerReplyKeyboard, navGrid } from '../telegram';
+import { sendMessage, escapeMarkdownV2, inlineKeyboard, customerReplyKeyboard, navGrid, svcHeaders } from '../telegram'; // Import svcHeaders
 import { handleCustomerNearby, handleViewShopMenu, handleAddToCart } from './customer';
 import { handleViewCart } from './customer_cart';
 import { getState } from '../redis';
-
-const SUPABASE_REST = (env: Env) => `${env.SUPABASE_URL}/rest/v1`;
-
-function svcHeaders(env: Env): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-  };
-}
 
 /**
  * handleCustomerCommerceGui

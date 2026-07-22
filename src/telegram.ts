@@ -5,6 +5,16 @@ import { bridgeSendMessage, bridgeSendPhoto } from './services/telegram_retry_br
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 
+/** Header service-role untuk sinkron schema tracking pelanggan (Fasal 7 S1). */
+export function svcHeaders(env: Env): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+  };
+}
+
+
 /**
  * Sanitize string untuk elak Telegram parsing crash (Fasal 6).
  * Escape special chars: . - ! ( ) _ *
@@ -169,7 +179,7 @@ export function inlineKeyboard(buttons: Array<Array<{ text: string; callback_dat
 
 // Start: Phase 52 - Merchant Dashboard V3 Grid Helper (Fasal 6 mobile-optimized)
 /**
- * merchantDashboardKeyboardV3
+ * merchantDashboardKeyboardV2
  * Papan pemerintah peniaga versi 3 dengan grid 2 butang sebaris,
  * toggle_status diikuti kedaiId (router perlu id), tambah butang
  * Menu Kedai (/menu_kedai) dan Tetapan (/tetapan) quick deep-link.
@@ -297,6 +307,21 @@ export function navGrid() {
     ],
   };
 }
+
+// Start: Phase 55 - Customer Start Grid (10 buttons - matches customer_gui.ts)
+/** Inline keyboard pelanggan untuk /start (10 butang penuh). */
+export function startCustomerGrid() {
+  return {
+    inline_keyboard: [
+      [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🏪 Menu Kedai', callback_data: 'open_shops' }],
+      [{ text: '🛒 Troli', callback_data: 'open_cart' }, { text: '🎟️ Promo', callback_data: 'open_promo' }],
+      [{ text: '📖 Sejarah', callback_data: 'open_history' }, { text: '👤 Profil', callback_data: 'open_profile' }],
+      [{ text: '💳 Bayar', callback_data: 'open_pay' }, { text: '⭐ Nilai', callback_data: 'open_review' }],
+      [{ text: '🏆 Kedai Contoh', callback_data: 'founder_view' }, { text: '⬅️ Kembali', callback_data: 'nav:main' }],
+    ],
+  };
+}
+// End: Phase 55 - Customer Start Grid
 
 // Start: Phase 41 - Merchant Onboarding Keyboards (Fasal 6 mobile-optimized)
 /** Custom keyboard untuk butang daftar kedai (onboarding entry point). */
