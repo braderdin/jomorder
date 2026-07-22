@@ -2,15 +2,14 @@
 // Extracted from src/handlers/merchant.ts for modularity (Fasal 4).
 
 import { Env, MerchantState } from '../types';
-import { setState, getState, checkMerchantExists } from '../redis'; // Assuming redis.ts is core and available
-import { sendMessage, escapeMarkdownV2, merchantReplyKeyboard } from '../telegram'; // Import merchantReplyKeyboard
-// Assuming UI helpers and validators are in separate files, though not yet separated.
-// For now, duplicating placeholder functions or assuming they are accessible.
+import { setState, getState } from '../redis';
+import { sendMessage, escapeMarkdownV2, merchantReplyKeyboard } from '../telegram';
+import { checkMerchantExists, daftarKedaiPermulaan } from '../db';
 
 // Placeholder for UI helpers
 function daftarKedaiKeyboard() {
     return {
-        keyboard: [[{ text: '🏪 Daftar Kedai Saya' }]], // Ini akan dihapus atau diganti
+        keyboard: [[{ text: '🏪 Daftar Kedai Saya' }]],
         resize_keyboard: true,
         one_time_keyboard: false,
     };

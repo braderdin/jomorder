@@ -298,4 +298,17 @@ export function navGrid() {
   };
 }
 
+// Start: Phase 41 - Merchant Onboarding Keyboards (Fasal 6 mobile-optimized)
+/** Custom keyboard untuk butang daftar kedai (onboarding entry point). */
+export function daftarKedaiKeyboard() {
+  return {
+    keyboard: [
+      [{ text: '🏪 Daftar Kedai Saya' }],
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+}
+// End: Phase 41 - Merchant Onboarding Keyboards
+
 // End: JomOrder Fasa 3 - Telegram API Utility Module

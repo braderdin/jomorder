@@ -6,7 +6,6 @@ import { handleMerchantCallback, handleMerchantMessage, handleMerchantLocation, 
 import { getState, checkRateLimit, rateLimitKey } from './redis';
 import { handleCustomerLocation, handleCustomerNearby, handlePayNow, handleCheckout, handleApplyCoupon, handleViewShopMenu, handleAddToCart } from './handlers/customer';
 import { handleViewCart } from './handlers/customer_cart';
-import { handleAdminMessage } from './handlers/admin';
 import { invalidateSubscriptionCacheBatch } from './redis';
 import { dispatchSubscriptionAlerts } from './services/scheduler';
 import { fetchSaasMetrics, fetchPublicStats } from './services/analytics';
@@ -32,7 +31,7 @@ import { handleAdminStats, handleSenaraiPendaftaran, handleNaikTaraf } from './h
 import { handleSenaraiMenu, handleSetLokasi } from './handlers/merchant';
 import { handleProfil } from './handlers/customer';
 import { handleSejarahPesanan, handleBatalkanPesanan } from './handlers/customer_archive';
-import { handlePengumumanBroadcast } from './handlers/admin';
+import { handlePengumumanBroadcast, handleAdminMessage } from './handlers/admin';
 import { handleStatus } from './handlers/status';
 import { routeCallbackQuery } from './handlers/router_callbacks';
 import { fetchMerchantSalesSummary } from './services/analytics';
@@ -145,6 +144,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   const tgId = msg.from.id;
 
   // Start: Phase 31 - Core Bot Command Activation Matrix (Fasal 4 SOA delegation)
+  const state = await getState(env, tgId); // Mengambil state di awal
   // Perintah teks didelegasikan kepada sub-handler khusus (LOOP 1-2 modul).
   const cmd = normalizeCommand(msg.text);
   if (cmd === '/help' || cmd === '/bantuan') {
@@ -447,7 +447,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // Jika state peniaga wujud (namespace jo:state:{id}), delegate ke merchant handler.
   // Jika state peniaga wujud (namespace jo:state:{id}), mendelegasikan kepada merchant handler.
   // Default: semua teks lain -> merchant handler (dashboard/daftar/fallback).
-  if (state && (state.step.startsWith('merchant:') || state.step !== 'idle')) {
+  if (state && (state.step.startsWith('merchant:') || state.step !== 'idle')) { // Menggunakan state yang sudah diambil
     await handleMerchantMessage(env, chatId, tgId, text);
     return;
   }
@@ -505,17 +505,6 @@ export async function runScheduledMaintenance(env: Env): Promise<number> {
 // Dipanggil dari index.ts GET /api/public-stats (bypass webhook secret).
 // Env penuh (termasuk UPSTASH_REDIS_REST_URL/TOKEN) diserahkan kepada lapisan analitik
 // supaya grid cache 60s boleh dimanfaatkan tanpa perlu mengambil semula binding.
-export async function handlePublicStats(env: Env): Promise<ReturnType<typeof fetchPublicStats> extends Promise<infer T> ? T : never> {
-  const payload = await fetchPublicStats(env);
-  return payload;
-}
-// End: Phase 28 - Public Stats Controller Linkage
-
-// Start: Phase 28 - Public Stats Controller Linkage (Redis KV bindings passthrough)
-// Expose unauthenticated aggregate stats untuk frontend hydration (ganti N/A).
-// Dipanggil dari index.ts GET /api/public-stats (bypass webhook secret).
-// Env penuh (termasuk UPSTASH_REDIS_REST_URL/TOKEN) diserahkan ke analytics
-// layer supaya cache grid 60s boleh dimanfaatkan tanpa re-fetch binding.
 export async function handlePublicStats(env: Env): Promise<ReturnType<typeof fetchPublicStats> extends Promise<infer T> ? T : never> {
   const payload = await fetchPublicStats(env);
   return payload;

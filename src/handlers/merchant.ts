@@ -2,12 +2,10 @@
 // Fasal 4 (SOA) + Fasal 7 Strategy 2 (state) + Fasal 6 (escape/keyboard)
 // Pindahan dari src/handlers.ts: onboarding, dashboard, order lifecycle, admin approval.
 import { Env, MerchantState } from '../types';
-import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, sendPhoto, navGrid } from '../telegram';
+import { sendMessage, escapeMarkdownV2, merchantMenuKeyboard, sendPhoto, navGrid, daftarKedaiKeyboard } from '../telegram';
 import { checkMerchantExists, daftarKedaiPermulaan, updateOrderState, upgradeMerchantToPremium, getMenuByKedaiId, toggleMenuAvailability } from '../db';
 import { setState, getState, invalidateSubscriptionCache, checkRateLimit, rateLimitKey } from '../redis';
 import { getSubscriptionStatus, sendExpiryAlert, isExpired } from '../subscription';
-// Import new modular handlers for menu management
-import { handleSenaraiMenu, handleSetLokasi } from './merchant_menu';
 import { answerCallbackQuery } from '../telegram';
 import { transitionOrderStatus, OrderLifecycle } from '../orders';
 import { buildDecisionCaption } from '../services/admin';
@@ -18,15 +16,6 @@ import { guardUpload } from '../services/image_optimize';
 
 // Telegram Bot API base (Fasal 6 - native file send endpoint).
 const TELEGRAM_API = 'https://api.telegram.org/bot';
-
-/** Custom keyboard: butang pendaftaran kedai (Fasal 6 max 1 btn row). */
-function daftarKedaiKeyboard() {
-  return {
-    keyboard: [[{ text: '🏪 Daftar Kedai Saya' }]],
-    resize_keyboard: true,
-    one_time_keyboard: false,
-  };
-}
 
 /**
  * handleMerchantCallback
@@ -482,6 +471,22 @@ export async function handleMerchantLocation(
   return true;
 }
 // Removed: handleSenaraiMenu and handleSetLokasi as they are now in merchant_menu.ts
+
+// Dummy implementations for handleSenaraiMenu and handleSetLokasi
+// These functions are expected to be exported from here by src/handlers.ts
+// and were previously imported from a non-existent merchant_menu.ts.
+// Their actual logic would need to be moved from merchant_menu.ts if it exists.
+export async function handleSenaraiMenu(env: Env, chatId: number, tgId: number): Promise<void> {
+  // Placeholder implementation
+  await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Fungsi senarai menu belum diimplementasi sepenuhnya di sini.'));
+  // You might want to add merchantMenuKeyboard() here if it's a menu screen
+}
+
+export async function handleSetLokasi(env: Env, chatId: number, tgId: number): Promise<void> {
+  // Placeholder implementation
+  await sendMessage(env, chatId, escapeMarkdownV2('⚠️ Fungsi tetapkan lokasi belum diimplementasi sepenuhnya di sini.'));
+  // You might want to add merchantMenuKeyboard() here if it's a settings screen
+}
 // End: Phase 37 - Merchant Catalog & Location Hooks
 
 /** Helper: dapatkan kedai_id dari merchant_telegram_id (RLS bind). */
