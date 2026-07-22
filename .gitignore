@@ -150,7 +150,7 @@ env.local
 
 # Hidden local session tracker (Fasal: Local Dev Log - never commit)
 .memory_hidden/
-
+.01-UNTUK-CHIP-BESAR-MENULIS-IDEA/
 
 # Secrets & Templates
 .dev.vars

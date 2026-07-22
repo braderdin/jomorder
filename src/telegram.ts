@@ -95,21 +95,7 @@ export function customerMenuKeyboard() {
   };
 }
 
-// Start: Phase 53 - Customer Command Grid (30-command surfacing)
-/** Custom keyboard pelanggan yang paparkan arahan natif utama (max 2 btn/row). */
-export function customerCommandGrid() {
-  return {
-    keyboard: [
-      [{ text: '📍 Cari Makan' }, { text: '🏪 Menu Kedai' }],
-      [{ text: '🛒 Troli' }, { text: '🎟️ Promo' }],
-      [{ text: '📖 Sejarah' }, { text: '👤 Profil' }],
-      [{ text: '❓ Bantuan' }, { text: '📍 Bantuan Lokasi' }],
-    ],
-    resize_keyboard: true,
-    one_time_keyboard: false,
-  };
-}
-// End: Phase 53 - Customer Command Grid
+// End: JomOrder Fasa 3 - Telegram API Utility Module
 
 // Start: Phase 58 - Persistent Reply Keyboard (Zero-Command UX)
 // Keyboard utama yang SENTIASA attach pada mesej (bukan inline).
@@ -335,5 +321,21 @@ export function daftarKedaiKeyboard() {
   };
 }
 // End: Phase 41 - Merchant Onboarding Keyboards
+
+// Start: Phase 73 - Customer Command Grid (SSOT Dynamic Keyboard)
+/**
+ * customerCommandGrid
+ * Inline keyboard pelanggan untuk quick actions (gunakan NATURE command).
+ * Grid 2 butang sebaris, mobile-optimized (Fasal 6).
+ */
+export function customerCommandGrid() {
+  return inlineKeyboard([
+    [{ text: '📍 Cari Kedai', callback_data: 'open_nearby' }, { text: '🏪 Menu Kedai', callback_data: 'open_shops' }],
+    [{ text: '🛒 Troli', callback_data: 'open_cart' }, { text: '🎟️ Promo', callback_data: 'open_promo' }],
+    [{ text: '📖 Sejarah', callback_data: 'open_history' }, { text: '👤 Profil', callback_data: 'open_profile' }],
+    [{ text: '⬅️ Kembali', callback_data: 'nav:main' }],
+  ]);
+}
+// End: Phase 73 - Customer Command Grid
 
 // End: JomOrder Fasa 3 - Telegram API Utility Module
