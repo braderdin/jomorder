@@ -50,7 +50,7 @@ JomOrder membantu peniaga F&B Malaysia menerima pesanan secara digital tanpa kos
 | Peniaga | /daftar · /tambah_menu · /senarai_menu · /urus · /urus_kedai · /laporan_jualan · /cipta_kupon · /senarai_kupon · /padam_kupon · /invois · /tetapan · /set_lokasi · /zon_operasi · /naiktaraf |
 | Pentadbir | /admin_stats · /senarai_pendaftaran · /pengumuman · /status |
 
-Semua perintah dijana secara dinamis daripada `NATIVE_COMMAND_LIST` (types.ts) yang merupakan Single Source of Truth (SSOT). Skrip deployment (`bin/force-webhook-register.sh` dan `bin/deploy-worker.sh`) membaca daripada `src/bot_commands.json` untuk mendaftar perintah Telegram secara automatik. Penghalaan perintah di `src/handlers.ts` menggunakan peta handler yang dibina daripada `ACTIVE_COMMAND_SET` berdasarkan `NATIVE_COMMAND_LIST`.
+**SSOT Architecture (Single Source of Truth):** Semua 31 perintah dijana secara dinamis daripada `NATIVE_COMMAND_LIST` di `src/types.ts`. Setiap perintah mempunyai properti `role: 'customer' | 'merchant' | 'admin' | 'both'`. `bot_commands.json` dan `telegram_setup.ts` mengekstrak data secara automatik untuk mengelakkan duplikasi. Handler di `handlers.ts` menggunakan `ACTIVE_COMMAND_SET` untuk validasi perintah. Panduan di `handlers/help.ts` menapis dan memaparkan perintah mengikut peranan pengguna.
 
 ---
 
