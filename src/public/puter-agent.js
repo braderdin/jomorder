@@ -11,6 +11,10 @@
   // Default model (pantas, sederhana) - dipilih Chip Besar.
   const DEFAULT_MODEL = 'google/gemma-4-26b-a4b-it:free';
 
+  // Konstanta pesan kesalahan
+  const ERROR_LOAD_FAIL = 'load-fail';
+  const ERROR_ALL_MODELS_FAILED = 'all-models-failed';
+
   // Senarai fallback round-robin jika default gagal.
   const FALLBACK_MODELS = [
     'prism-ml/ternary-bonsai-27b',
@@ -48,15 +52,15 @@
   ].join(' ');
 
   let idx = 0;
-  let sdk = null;
+  let sdk = null; // SDK Puter.com
 
   function loadSdk() {
     return new Promise((resolve, reject) => {
       if (window.puter) { sdk = window.puter; return resolve(sdk); }
       const s = document.createElement('script');
       s.src = SCRIPT_SRC;
-      s.onload = () => { sdk = window.puter; resolve(sdk); };
-      s.onerror = () => reject(new Error('load-fail'));
+      s.onload = () => { sdk = window.puter; resolve(sdk); }; // Setelah SDK dimuat, inisialisasi variabel sdk
+      s.onerror = () => reject(new Error(ERROR_LOAD_FAIL));
       document.head.appendChild(s);
     });
   }
@@ -105,7 +109,7 @@
               lastErr = e2;
             }
           }
-          if (resp === undefined) throw lastErr || new Error('all-models-failed');
+          if (resp === undefined) throw lastErr || new Error(ERROR_ALL_MODELS_FAILED);
         }
         return { ok: true, model: usedModel, text: resp || '' };
       } catch (e) {

@@ -22,9 +22,10 @@
 - [x] Cleanup background processes (killed wrangler processes).
 - [x] Verified `src/handlers/merchant.ts` after removing old menu handlers.
 - [x] Declared new handler files (`merchant_onboarding.ts`, `merchant_menu.ts`) in `tsconfig.json`.
+- [x] Updated TODO.md with current progress and next steps.
+- [x] Performed Git commit for refactoring changes.
 
 ## Next Steps:
 - Await `src/handlers/help.ts` code for GUI enhancements.
 - Further modularization of other large handler files as needed.
 - Regular cleanup of background processes.
-- Perform Git commit for current changes.

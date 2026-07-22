@@ -11,16 +11,32 @@ if [[ ! -f "$DEV_VARS" ]]; then
   exit 1
 fi
 
+# Konstanta untuk URL dasar API Telegram
+TELEGRAM_API_BASE_URL="https://api.telegram.org/bot"
+
 # Extract token secara selamat (grep + cut, tiada echo secrets ke log).
 BOT_TOKEN="$(grep -E '^TELEGRAM_BOT_TOKEN=' "$DEV_VARS" | cut -d'=' -f2- | tr -d '\"')"
 SECRET_TOKEN="$(grep -E '^X_TELEGRAM_BOT_API_SECRET_TOKEN=' "$DEV_VARS" | cut -d'=' -f2- | tr -d '\"')"
 WORKER_URL="$(grep -E '^WORKER_URL=' "$DEV_VARS" | cut -d'=' -f2- | tr -d '\"')"
 
-if [[ -z "$BOT_TOKEN" || -z "$SECRET_TOKEN" || -z "$WORKER_URL" ]]; then
-  echo "ERROR: Gagal extract TELEGRAM_BOT_TOKEN / X_TELEGRAM_BOT_API_SECRET_TOKEN / WORKER_URL dari .dev.vars"
+if [[ -z "$BOT_TOKEN" ]]; then
+  echo "ERROR: TELEGRAM_BOT_TOKEN tidak dijumpai atau kosong di $DEV_VARS."
+  exit 1
+fi
+if [[ -z "$SECRET_TOKEN" ]]; then
+  echo "ERROR: X_TELEGRAM_BOT_API_SECRET_TOKEN tidak dijumpai atau kosong di $DEV_VARS."
+  exit 1
+fi
+if [[ -z "$WORKER_URL" ]]; then
+  echo "ERROR: WORKER_URL tidak dijumpai atau kosong di $DEV_VARS."
   exit 1
 fi
 
+# Validasi dasar untuk WORKER_URL
+if ! echo "$WORKER_URL" | grep -q '^https?://'; then
+  echo "ERROR: WORKER_URL ('$WORKER_URL') tidak sah. Mesti bermula dengan http:// atau https://."
+  exit 1
+fi
 # Bersihkan trailing slash pada WORKER_URL.
 WORKER_URL="${WORKER_URL%/}"
 WEBHOOK_URL="${WORKER_URL}/"
@@ -29,9 +45,9 @@ echo "Phase39: Mendaftarkan webhook ke ${WORKER_URL} ..."
 echo "Phase39: Menghantar setWebhook dengan secret token guard (Fasal 10)."
 
 # Panggil Telegram setWebhook API.
-# drop_pending_updates=true -> bersihkan queue lama semasa reconnect.
+# drop_pending_updates=true -> bersihkan queue lama saat reconnect.
 RESPONSE="$(curl -s -X POST \
-  "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+  "${TELEGRAM_API_BASE_URL}${BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
   -d "{
     \"url\": \"${WEBHOOK_URL}\",
@@ -44,14 +60,14 @@ echo "Phase39: Telegram setWebhook response:"
 echo "$RESPONSE"
 
 # Sahkan status webhook.
-echo "Phase39: Mengesahkan getWebhookInfo ..."
-WEBHOOK_INFO=$(curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo")
-echo "$WEBHOOK_INFO"
-echo ""
+echo "Phase39: Mengesahkan getWebhookInfo..."
+WEBHOOK_INFO_JSON=$(curl -s -X POST "${TELEGRAM_API_BASE_URL}${BOT_TOKEN}/getWebhookInfo")
+echo "$WEBHOOK_INFO_JSON"
+echo "" # Tambahkan baris kosong untuk keterbacaan
 
 # Start: Phase 42 - Webhook Live Verification (post-deploy)
-# Parse URL dari getWebhookInfo; sahkan ia point ke worker live kita.
-WEBHOOK_URL_CHECK=$(echo "$WEBHOOK_INFO" | grep -o '"url":"[^"]*"' | head -n1 | sed 's/"url":"//; s/"$//')
+# Parse URL dari getWebhookInfo menggunakan jq; sahkan ia point ke worker live kita.
+WEBHOOK_URL_CHECK=$(echo "$WEBHOOK_INFO_JSON" | jq -r '.result.url')
 if [[ -n "$WEBHOOK_URL_CHECK" && "$WEBHOOK_URL_CHECK" == "${WORKER_URL}/" ]]; then
   echo "[PASS] Phase42: Webhook URL sepadan worker live: ${WEBHOOK_URL_CHECK}"
 else
@@ -60,7 +76,7 @@ else
 fi
 
 # Sahkan pending_update_count = 0 (tiada backlog).
-PENDING_COUNT=$(echo "$WEBHOOK_INFO" | grep -o '"pending_update_count":[0-9]*' | head -n1 | grep -o '[0-9]*')
+PENDING_COUNT=$(echo "$WEBHOOK_INFO_JSON" | jq -r '.result.pending_update_count')
 if [[ "$PENDING_COUNT" == "0" ]]; then
   echo "[PASS] Phase42: pending_update_count=0 (tiada backlog)."
 else
@@ -73,7 +89,7 @@ echo "Phase39: Webhook register selesai."
 # Start: Phase 44 - Re-Sync 22 Native Commands (termasuk /status)
 echo "Phase44: Menyeleraskan 22 command natif (setMyCommands) ..."
 SET_CMD_RESP="$(curl -s -X POST \
-  "https://api.telegram.org/bot${BOT_TOKEN}/setMyCommands" \
+  "${TELEGRAM_API_BASE_URL}${BOT_TOKEN}/setMyCommands" \
   -H "Content-Type: application/json" \
   -d '{
     "commands": [

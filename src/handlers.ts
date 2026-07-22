@@ -452,7 +452,7 @@ export async function handleUpdate(env: Env, update: TelegramUpdate): Promise<vo
   // panggil AI utk betul typo + cadang command betul (soft-fail: fallback ke merchant).
   if (text.startsWith('/')) {
     const fixed = await aiSpellCheck(env, text, (NATIVE_COMMAND_LIST as ReadonlyArray<{ command: string }>).map((c) => c.command));
-    if (fixed && fixed.trim() !== text.trim() && fixed.trim().startsWith('/')) {
+    if (fixed && fixed.trim() !== text.trim() && fixed.trim().startsWith('/') && ACTIVE_COMMAND_SET.has(fixed.trim())) {
       await sendMessage(
         env,
         chatId,
