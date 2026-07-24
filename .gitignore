@@ -167,13 +167,14 @@ PROJECT_SYNC_MASTER.md
 skills-lock.json
 Puter_Ai_Model/
 free_models.txt
+Ai-Openrouter-model-free.md
 
 # Start: Phase 50 - Dev Tooling Artifacts (jangan serabut GitHub)
 # Wrangler dev log dari bin/dev-watch.sh + wrangler dev tmp
 /tmp/jomorder-wrangler.log
 .wrangler/
 .dev.vars.state/
-
+.kilo/
 
 
 # End: Phase 50 - Dev Tooling Artifacts
